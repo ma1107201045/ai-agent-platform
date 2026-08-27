@@ -6,6 +6,7 @@ import com.agent.platform.dao.entity.AgentAppVersion;
 import com.agent.platform.dao.mapper.AgentAppMapper;
 import com.agent.platform.dao.mapper.AgentAppVersionMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -88,7 +89,7 @@ public class AppService {
         versionMapper.insert(version);
 
         // 旧版本取消发布
-        versionMapper.update(null, new LambdaQueryWrapper<AgentAppVersion>()
+        versionMapper.update(null, new LambdaUpdateWrapper<AgentAppVersion>()
                 .eq(AgentAppVersion::getAppId, appId)
                 .eq(AgentAppVersion::getIsPublished, 1)
                 .ne(AgentAppVersion::getId, version.getId())
