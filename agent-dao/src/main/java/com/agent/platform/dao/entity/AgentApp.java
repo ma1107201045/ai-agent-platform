@@ -37,6 +37,9 @@ public class AgentApp {
     /** 状态：0草稿 1已发布 */
     private Integer status;
 
+    /** 编排草稿 DSL（JSON），发布时快照到版本表 */
+    private String workflowJson;
+
     /** 当前发布版本 ID */
     private Long publishedVersionId;
 

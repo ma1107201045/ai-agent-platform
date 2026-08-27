@@ -11,10 +11,13 @@ import com.agent.platform.llm.spi.EmbeddingModel;
 import com.agent.platform.llm.spi.LLMFactory;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -96,6 +99,25 @@ public class ModelService {
     // ---------- LLM 实例 ----------
 
     /**
+     * 可用的对话模型列表（供应商启用 + 模型启用），供前端下拉选择
+     */
+    public List<ChatModelInfo> chatModels() {
+        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
+                .eq(ModelInfo::getModelType, "llm")
+                .eq(ModelInfo::getStatus, 1)
+                .orderByAsc(ModelInfo::getId));
+        List<ChatModelInfo> result = new ArrayList<>();
+        for (ModelInfo info : infos) {
+            ModelProvider provider = providerMapper.selectById(info.getProviderId());
+            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
+                continue;
+            }
+            result.add(new ChatModelInfo(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+        }
+        return result;
+    }
+
+    /**
      * 根据模型记录创建 ChatModel 实例
      */
     public ChatModel chatModelOf(Long modelId) {
@@ -129,5 +151,14 @@ public class ModelService {
                 .apiKey(provider.getApiKey())
                 .modelName(info.getName())
                 .build();
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class ChatModelInfo {
+        private Long id;
+        private String providerName;
+        private String modelName;
+        private Integer contextWindow;
     }
 }

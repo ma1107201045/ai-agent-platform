@@ -10,15 +10,6 @@ const dialogVisible = ref(false)
 const editing = ref<Partial<ModelProvider>>({})
 const isEdit = ref(false)
 
-const modelTypes = [
-  { value: 'llm', label: 'LLM 对话' },
-  { value: 'embedding', label: '向量 Embedding' },
-  { value: 'rerank', label: '重排序 Rerank' },
-  { value: 'tts', label: '语音合成' },
-  { value: 'asr', label: '语音识别' },
-  { value: 'image', label: '图像生成' }
-]
-
 // 展开的供应商及其模型
 const expandedModels = reactive<Record<number, ModelInfo[]>>({})
 
@@ -115,7 +106,7 @@ onMounted(load)
         v-loading="loading"
         :data="providers"
         row-key="id"
-        @expand-change="(row, expanded) => toggleModels(row, expanded)"
+        @expand-change="(row: ModelProvider, expanded: boolean) => toggleModels(row, expanded)"
       >
         <el-table-column type="expand">
           <template #default="{ row }">
