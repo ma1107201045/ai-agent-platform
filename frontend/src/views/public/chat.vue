@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { Promotion, User } from '@element-plus/icons-vue'
 import { publicApi } from '@/api/public'
 import type { PublicAppInfo, PublicChatResult } from '@/api/public'

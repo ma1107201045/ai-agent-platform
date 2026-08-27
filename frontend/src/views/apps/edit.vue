@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, markRaw, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowLeft, CircleCheck, CopyDocument, Cpu, Delete, Document,
-  Link as LinkIcon, Promotion, Share, VideoPlay
+  Aim, ArrowLeft, CircleCheck, Clock, Close, CopyDocument, Cpu, Delete, Document,
+  Files, Link as LinkIcon, MagicStick, Notebook, Promotion, QuestionFilled, Rank,
+  RefreshLeft, RefreshRight, Share, VideoPlay
 } from '@element-plus/icons-vue'
 import { VueFlow, useVueFlow, Handle, Position } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
@@ -16,7 +17,7 @@ import { appApi } from '@/api/app'
 import { knowledgeApi } from '@/api/knowledge'
 import { llmApi } from '@/api/llm'
 import { toolApi } from '@/api/tool'
-import type { AgentTool, ChatModelInfo, KnowledgeDataset, WorkflowNodeType } from '@/api/types'
+import type { AgentAppVersion, AgentTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
 import {
   NODE_TYPE_LIST, NODE_TYPE_META, dslToFlow, flowToDsl, genNodeId
 } from '@/utils/flow'
@@ -28,12 +29,117 @@ const appId = Number(route.params.id)
 // ---------- 画布 ----------
 const nodes = ref<Array<any>>([])
 const edges = ref<Array<any>>([])
-const { screenToFlowCoordinate, addNodes, removeNodes, onConnect } = useVueFlow()
+const { screenToFlowCoordinate, addNodes, removeNodes, onConnect, setCenter } = useVueFlow()
+
+// ---------- 历史（撤销/重做） ----------
+const MAX_HISTORY = 50
+const historyStack = ref<Array<{ nodes: any[]; edges: any[] }>>([])
+const historyIndex = ref(-1)
+let restoring = false
+
+/** 记录当前画布状态到历史栈 */
+function snapshot() {
+  if (restoring) return
+  historyStack.value = historyStack.value.slice(0, historyIndex.value + 1)
+  historyStack.value.push({
+    nodes: JSON.parse(JSON.stringify(nodes.value)),
+    edges: JSON.parse(JSON.stringify(edges.value))
+  })
+  if (historyStack.value.length > MAX_HISTORY) historyStack.value.shift()
+  historyIndex.value = historyStack.value.length - 1
+}
+
+function restore(state: { nodes: any[]; edges: any[] }) {
+  restoring = true
+  nodes.value = JSON.parse(JSON.stringify(state.nodes))
+  edges.value = JSON.parse(JSON.stringify(state.edges))
+  restoring = false
+  selectedNodeId.value = null
+  selectedEdgeId.value = null
+  editBaseline = ''
+}
+
+function undo() {
+  if (historyIndex.value <= 0) return
+  historyIndex.value -= 1
+  restore(historyStack.value[historyIndex.value])
+}
+
+function redo() {
+  if (historyIndex.value >= historyStack.value.length - 1) return
+  historyIndex.value += 1
+  restore(historyStack.value[historyIndex.value])
+}
+
+// ---------- 复制 / 粘贴 ----------
+const clipboard = ref<Array<{ id: string; data: any }> | null>(null)
+
+/** 复制当前选中的节点（含节点间内部连线关系） */
+function copySelected() {
+  const sel = nodes.value.filter((n) => n.selected)
+  if (sel.length === 0) {
+    ElMessage.warning('请先选中要复制的节点（支持框选 / Ctrl 多选）')
+    return
+  }
+  clipboard.value = sel.map((n) => ({
+    id: n.id,
+    data: JSON.parse(JSON.stringify(n.data))
+  }))
+  ElMessage.success(`已复制 ${sel.length} 个节点，按 Ctrl+V 粘贴`)
+}
+
+/** 粘贴剪贴板节点到画布（自动重映射节点 id 与内部连线） */
+function pasteClipboard() {
+  if (!clipboard.value || clipboard.value.length === 0) {
+    ElMessage.warning('剪贴板为空，请先复制节点')
+    return
+  }
+  const idMap: Record<string, string> = {}
+  const baseX = 60 + (Math.random() * 60)
+  const baseY = 60 + (Math.random() * 60)
+  const newNodes = clipboard.value.map((src, i) => {
+    const id = genNodeId()
+    idMap[src.id] = id
+    const data = JSON.parse(JSON.stringify(src.data))
+    delete data.runStatus
+    delete data.runCost
+    delete data.runError
+    delete data.selected
+    return {
+      id,
+      type: 'flow-node',
+      position: { x: baseX + i * 40, y: baseY + i * 40 },
+      data
+    }
+  })
+  const idSet = new Set(clipboard.value.map((c) => c.id))
+  const newEdges: Array<any> = []
+  for (const e of edges.value) {
+    if (idSet.has(e.source) && idSet.has(e.target)) {
+      newEdges.push({
+        id: `edge-${Date.now()}-${newEdges.length}`,
+        source: idMap[e.source],
+        target: idMap[e.target],
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        label: e.label,
+        ...(e.sourceHandle === 'true' || e.sourceHandle === 'false'
+          ? branchLabelStyle(e.sourceHandle)
+          : {})
+      })
+    }
+  }
+  addNodes(newNodes)
+  edges.value = [...edges.value, ...newEdges]
+  snapshot()
+  ElMessage.success(`已粘贴 ${newNodes.length} 个节点`)
+}
 
 // ---------- 数据 ----------
 const appName = ref('')
 const appType = ref('chatflow')
 const selectedNodeId = ref<string | null>(null)
+const selectedEdgeId = ref<string | null>(null)
 const chatModels = ref<ChatModelInfo[]>([])
 const datasets = ref<KnowledgeDataset[]>([])
 const allTools = ref<AgentTool[]>([])
@@ -44,7 +150,12 @@ const openingQuestionsText = ref('')
 const saving = ref(false)
 const urlPlaceholder = 'https://api.example.com/path（支持 {{input}} 变量）'
 const headersPlaceholder = 'JSON 格式，如 X-Api-Key: xxx，支持 {{input}} 变量'
-const codePlaceholder = '例如：{{input.length}} > 10'
+const conditionPlaceholder =
+  '支持比较表达式，字符串请加引号&#10;示例：{{input}} 非空即真&#10;示例：\'{{node1}}\' == \'成功\'&#10;示例：{{count}} >= 3&#10;示例：\'{{input}}\' contains \'关键\''
+const defaultConfigs: Partial<Record<WorkflowNodeType, Record<string, unknown>>> = {
+  template: { template: '{{input}}' },
+  knowledge: { topK: 3, queryTemplate: '{{input}}' }
+}
 const publishing = ref(false)
 const dragType = ref<WorkflowNodeType | null>(null)
 
@@ -53,6 +164,52 @@ const selectedNode = computed(() =>
 )
 const selectedData = computed(() => selectedNode.value?.data ?? null)
 const isStartNode = computed(() => selectedData.value?.nodeType === 'start')
+const hasSelection = computed(
+  () => nodes.value.some((n) => n.selected) || edges.value.some((e) => e.selected)
+)
+const selectedEdge = computed(() => edges.value.find((e) => e.id === selectedEdgeId.value) ?? null)
+const selectedEdgeEnds = computed(() => {
+  const e = selectedEdge.value
+  if (!e) return null
+  const s = nodes.value.find((n) => n.id === e.source)
+  const t = nodes.value.find((n) => n.id === e.target)
+  return {
+    srcType: s?.data?.nodeType ?? 'start',
+    srcLabel: s?.data?.label ?? e.source,
+    tgtType: t?.data?.nodeType ?? 'end',
+    tgtLabel: t?.data?.label ?? e.target,
+    branch: e.sourceHandle === 'true' ? '是' : e.sourceHandle === 'false' ? '否' : null
+  }
+})
+const selectedCount = computed(() => nodes.value.filter((n) => n.selected).length)
+const shortcuts = [
+  { keys: 'Ctrl + Z', desc: '撤销' },
+  { keys: 'Ctrl + Shift + Z', desc: '重做' },
+  { keys: 'Ctrl + C', desc: '复制选中节点' },
+  { keys: 'Ctrl + V', desc: '粘贴节点' },
+  { keys: 'Delete', desc: '删除选中节点 / 连线' },
+  { keys: '拖拽空白区域', desc: '框选多个节点' },
+  { keys: 'Ctrl / Cmd + 点击', desc: '追加多选' },
+  { keys: '对齐 / 分布', desc: '工具栏对齐、等距分布选中节点' },
+  { keys: '自动布局', desc: '一键按流程层级重排全部节点' }
+]
+
+// ---------- 未保存修改追踪 ----------
+const dirty = ref(false)
+const hydrated = ref(false)
+let editBaseline = '' // 当前选中节点的内容基线（区分编辑与切换选中）
+
+watch(
+  [nodes, edges, boundToolIds, boundDatasetIds, welcomeMessage, openingQuestionsText],
+  () => {
+    if (hydrated.value) dirty.value = true
+  },
+  { deep: true }
+)
+watch(selectedData, (val) => {
+  if (!hydrated.value) return
+  if (JSON.stringify(val ?? null) !== editBaseline) dirty.value = true
+}, { deep: true })
 
 /** HTTP 节点 Headers 文本（JSON 字符串 <-> config.headers 对象） */
 const headersText = ref('')
@@ -98,6 +255,7 @@ function tintOf(type: WorkflowNodeType) {
 
 // ---------- 加载 ----------
 async function loadApp() {
+  hydrated.value = false
   const app = await appApi.get(appId)
   appName.value = app.name
   appType.value = app.type || 'chatflow'
@@ -126,6 +284,11 @@ async function loadApp() {
   const { nodes: ns, edges: es } = dslToFlow(app.workflowJson)
   nodes.value = ns
   edges.value = es
+  syncBranchEdges()
+  nextTick(() => {
+    hydrated.value = true
+    dirty.value = false
+  })
 }
 
 async function loadModels() {
@@ -165,47 +328,377 @@ function onDrop(e: DragEvent) {
       data: {
         label: NODE_TYPE_META[type].label,
         nodeType: type,
-        config: {}
+        config: { ...(defaultConfigs[type] ?? {}) }
       }
     }
   ])
   dragType.value = null
+  snapshot()
 }
 
 function onNodeClick({ node }: any) {
   selectedNodeId.value = node.id
+  selectedEdgeId.value = null
+  // 同步更新内容基线：避免 watch(selectedData) 把"切换选中"误判为"编辑"
+  editBaseline = JSON.stringify(node.data ?? null)
   nextTick(syncHeadersText)
 }
 
 function onPaneClick() {
   selectedNodeId.value = null
+  selectedEdgeId.value = null
   headersText.value = ''
 }
 
+function onEdgeClick({ edge }: any) {
+  selectedEdgeId.value = edge.id
+  selectedNodeId.value = null
+  headersText.value = ''
+}
+
+/** 节点拖动结束：记录一次历史快照 */
+function onNodeDragStop() {
+  snapshot()
+}
+
 onConnect((params: any) => {
+  const srcType = nodes.value.find((n) => n.id === params.source)?.data?.nodeType
+  const tgtType = nodes.value.find((n) => n.id === params.target)?.data?.nodeType
+  if (srcType === 'end') {
+    ElMessage.warning('「结束」节点不能连接出边')
+    return
+  }
+  if (tgtType === 'start') {
+    ElMessage.warning('「开始」节点不能有入边')
+    return
+  }
+  if (params.source === params.target) {
+    ElMessage.warning('不能将节点连接到自身')
+    return
+  }
+  const dup = edges.value.some(
+    (e) =>
+      e.source === params.source &&
+      e.target === params.target &&
+      e.sourceHandle === params.sourceHandle &&
+      e.targetHandle === params.targetHandle
+  )
+  if (dup) {
+    ElMessage.warning('已存在相同的连线')
+    return
+  }
+  const isBranch = params.sourceHandle === 'true' || params.sourceHandle === 'false'
   edges.value.push({
     id: genNodeId('edge'),
     source: params.source,
     target: params.target,
     sourceHandle: params.sourceHandle,
-    targetHandle: params.targetHandle
+    targetHandle: params.targetHandle,
+    label: isBranch ? (params.sourceHandle === 'true' ? '是' : '否') : undefined,
+    ...(isBranch ? branchLabelStyle(params.sourceHandle) : {})
   })
+  snapshot()
 })
 
+// ---------- 条件分支双出边 ----------
+/** condition 分支出边样式（true=绿 / false=红），Vue Flow 内置 label 渲染 */
+function branchLabelStyle(handle: string) {
+  const color = handle === 'true' ? '#67c23a' : '#f56c6c'
+  return {
+    labelStyle: {
+      color,
+      fontWeight: '600',
+      fontSize: '11px',
+      background: '#ffffff',
+      border: `1px solid ${color}`,
+      borderRadius: '8px',
+      padding: '1px 6px'
+    },
+    labelShowBg: false,
+    labelBgStyle: { fill: 'transparent' }
+  }
+}
+
+/** 为 condition 分支边补齐默认标签与样式（历史数据 / 回滚后无 labelStyle 时调用） */
+function syncBranchEdges() {
+  for (const e of edges.value) {
+    if (e.sourceHandle === 'true' || e.sourceHandle === 'false') {
+      if (!e.label) e.label = e.sourceHandle === 'true' ? '是' : '否'
+      Object.assign(e, branchLabelStyle(e.sourceHandle))
+    }
+  }
+}
+
 function removeSelected() {
-  if (!selectedNodeId.value) return
-  const id = selectedNodeId.value
-  removeNodes(id)
-  edges.value = edges.value.filter((e) => e.source !== id && e.target !== id)
+  const selNodes = nodes.value.filter((n) => n.selected).map((n) => n.id)
+  const selEdges = edges.value.filter((e) => e.selected).map((e) => e.id)
+  if (selNodes.length === 0 && selEdges.length === 0) return
+  if (selNodes.length > 0) {
+    removeNodes(selNodes)
+    edges.value = edges.value.filter(
+      (e) => !selNodes.includes(e.source) && !selNodes.includes(e.target)
+    )
+  }
+  if (selEdges.length > 0) {
+    edges.value = edges.value.filter((e) => !selEdges.includes(e.id))
+  }
   selectedNodeId.value = null
+  selectedEdgeId.value = null
+  snapshot()
 }
 
 function handleKeydown(e: KeyboardEvent) {
   const target = e.target as HTMLElement
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+  const mod = e.ctrlKey || e.metaKey
+  if (mod && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault()
+    e.shiftKey ? redo() : undo()
+    return
+  }
+  if (mod && (e.key === 'y' || e.key === 'Y')) {
+    e.preventDefault()
+    redo()
+    return
+  }
+  if (mod && (e.key === 'c' || e.key === 'C')) {
+    e.preventDefault()
+    copySelected()
+    return
+  }
+  if (mod && (e.key === 'v' || e.key === 'V')) {
+    e.preventDefault()
+    pasteClipboard()
+    return
+  }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     removeSelected()
   }
+}
+
+// ---------- 节点配置校验 ----------
+interface NodeWarning {
+  severity: 'error' | 'warn'
+  text: string
+}
+
+/** 节点配置完整性检查：llm/http/code 缺关键配置为 error，condition 空表达式为 warn */
+function nodeWarnings(data: any): NodeWarning[] {
+  const cfg = data?.config ?? {}
+  const list: NodeWarning[] = []
+  const str = (v: unknown) => (v == null ? '' : String(v))
+  switch (data?.nodeType) {
+    case 'llm':
+      if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
+      break
+    case 'http':
+      if (!str(cfg.url).trim()) list.push({ severity: 'error', text: '未配置请求地址' })
+      break
+    case 'code':
+      if (!str(cfg.code).trim()) list.push({ severity: 'error', text: '未配置代码脚本' })
+      break
+    case 'condition':
+      if (!str(cfg.expression).trim()) list.push({ severity: 'warn', text: '未配置判断条件，默认走 true 分支' })
+      break
+    case 'template':
+      if (!str(cfg.template).trim()) list.push({ severity: 'error', text: '未配置模板内容' })
+      break
+    case 'knowledge':
+      if (!cfg.datasetId) list.push({ severity: 'error', text: '未选择数据集' })
+      break
+  }
+  return list
+}
+
+function hasNodeError(data: any): boolean {
+  return nodeWarnings(data).some((w) => w.severity === 'error')
+}
+
+/** 运行/发布前统一校验，返回存在 error 级缺失的节点列表 */
+function validateWorkflow(): Array<{ node: any; text: string }> {
+  const errors: Array<{ node: any; text: string }> = []
+  for (const n of nodes.value) {
+    for (const w of nodeWarnings(n.data)) {
+      if (w.severity === 'error') errors.push({ node: n, text: `「${n.data?.label || '未命名'}」${w.text}` })
+    }
+  }
+  return errors
+}
+
+// ---------- 结构健康检查 ----------
+/** 检查流程结构问题：start/end 缺失或重复、孤立节点、循环依赖（返回警告文案列表） */
+function checkStructure(): string[] {
+  const issues: string[] = []
+  const labelOf = (id: string) => nodes.value.find((n) => n.id === id)?.data?.label || id
+
+  const startCount = nodes.value.filter((n) => n.data.nodeType === 'start').length
+  const endCount = nodes.value.filter((n) => n.data.nodeType === 'end').length
+  if (startCount === 0) issues.push('缺少「开始」节点，将默认从第一个节点开始执行')
+  if (startCount > 1) issues.push('存在多个「开始」节点，仅第一个生效')
+  if (endCount === 0) issues.push('缺少「结束」节点，流程执行到无出边的节点即终止')
+  if (endCount > 1) issues.push('存在多个「结束」节点')
+
+  // 孤立节点
+  const hasIn = new Set(edges.value.map((e) => e.target))
+  const hasOut = new Set(edges.value.map((e) => e.source))
+  for (const n of nodes.value) {
+    if (!hasIn.has(n.id) && !hasOut.has(n.id) && nodes.value.length > 1) {
+      issues.push(`节点「${labelOf(n.id)}」未与任何节点连接（孤立节点）`)
+    }
+  }
+
+  // 循环依赖检测（DFS 三色标记）
+  const adj: Record<string, string[]> = {}
+  for (const e of edges.value) (adj[e.source] ??= []).push(e.target)
+  const color: Record<string, number> = {}
+  const inCycle = new Set<string>()
+  const dfs = (u: string, path: string[]) => {
+    color[u] = 1
+    for (const v of adj[u] ?? []) {
+      if (color[v] === 1) {
+        const startIdx = path.indexOf(v)
+        path.slice(startIdx).concat(v).forEach((c) => inCycle.add(c))
+      } else if (!color[v]) {
+        dfs(v, path.concat(v))
+      }
+    }
+    color[u] = 2
+  }
+  for (const n of nodes.value) if (!color[n.id]) dfs(n.id, [n.id])
+  if (inCycle.size > 0) {
+    const names = [...inCycle].map((id) => `「${labelOf(id)}」`).join('、')
+    issues.push(`检测到循环依赖：${names}，执行到环时将被截断`)
+  }
+  return issues
+}
+
+// ---------- 对齐 / 分布 / 自动布局 ----------
+type AlignMode = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
+type DistributeMode = 'horizontal' | 'vertical'
+
+/** 读取选中节点包围盒（尺寸未就绪时使用默认值） */
+function selectedBoxes() {
+  return nodes.value
+    .filter((n) => n.selected)
+    .map((n) => ({
+      n,
+      x: n.position.x,
+      y: n.position.y,
+      w: n.dimensions?.width || 170,
+      h: n.dimensions?.height || 64
+    }))
+}
+
+/** 对齐选中节点：以包围盒为基准，left/hcenter/right 对齐 X 轴，top/vcenter/bottom 对齐 Y 轴 */
+function alignNodes(mode: AlignMode) {
+  const boxes = selectedBoxes()
+  if (boxes.length < 2) {
+    ElMessage.warning('请至少选中 2 个节点再对齐')
+    return
+  }
+  const minX = Math.min(...boxes.map((b) => b.x))
+  const maxX = Math.max(...boxes.map((b) => b.x + b.w))
+  const minY = Math.min(...boxes.map((b) => b.y))
+  const maxY = Math.max(...boxes.map((b) => b.y + b.h))
+  const avgCX = boxes.reduce((s, b) => s + b.x + b.w / 2, 0) / boxes.length
+  const avgCY = boxes.reduce((s, b) => s + b.y + b.h / 2, 0) / boxes.length
+  for (const b of boxes) {
+    switch (mode) {
+      case 'left': b.n.position.x = minX; break
+      case 'hcenter': b.n.position.x = avgCX - b.w / 2; break
+      case 'right': b.n.position.x = maxX - b.w; break
+      case 'top': b.n.position.y = minY; break
+      case 'vcenter': b.n.position.y = avgCY - b.h / 2; break
+      case 'bottom': b.n.position.y = maxY - b.h; break
+    }
+  }
+  snapshot()
+  ElMessage.success('对齐完成')
+}
+
+/** 均匀分布选中节点：沿 X 轴（horizontal）或 Y 轴（vertical）保持首尾不动、间隙相等 */
+function distributeNodes(mode: DistributeMode) {
+  const boxes = selectedBoxes()
+  if (boxes.length < 3) {
+    ElMessage.warning('请至少选中 3 个节点再分布')
+    return
+  }
+  if (mode === 'horizontal') {
+    const sorted = [...boxes].sort((a, b) => a.x - b.x)
+    const totalW = sorted.reduce((s, b) => s + b.w, 0)
+    const span = sorted[sorted.length - 1].x + sorted[sorted.length - 1].w - sorted[0].x
+    const gap = (span - totalW) / (sorted.length - 1)
+    let x = sorted[0].x
+    for (const b of sorted) {
+      b.n.position.x = x
+      x += b.w + gap
+    }
+  } else {
+    const sorted = [...boxes].sort((a, b) => a.y - b.y)
+    const totalH = sorted.reduce((s, b) => s + b.h, 0)
+    const span = sorted[sorted.length - 1].y + sorted[sorted.length - 1].h - sorted[0].y
+    const gap = (span - totalH) / (sorted.length - 1)
+    let y = sorted[0].y
+    for (const b of sorted) {
+      b.n.position.y = y
+      y += b.h + gap
+    }
+  }
+  snapshot()
+  ElMessage.success('分布完成')
+}
+
+/** 自动布局：从「开始」（无则首个节点）BFS 分层，按层逐列排列、层内纵向错开 */
+function autoLayout() {
+  if (nodes.value.length === 0) {
+    ElMessage.warning('画布为空')
+    return
+  }
+  const startId = nodes.value.find((n) => n.data.nodeType === 'start')?.id ?? nodes.value[0].id
+  const depthMap: Record<string, number> = {}
+  const queue: string[] = [startId]
+  depthMap[startId] = 0
+  const visited = new Set([startId])
+  const adj: Record<string, string[]> = {}
+  for (const e of edges.value) (adj[e.source] ??= []).push(e.target)
+  while (queue.length) {
+    const id = queue.shift()!
+    for (const t of adj[id] ?? []) {
+      if (!visited.has(t)) {
+        visited.add(t)
+        depthMap[t] = depthMap[id] + 1
+        queue.push(t)
+      }
+    }
+  }
+  // 未可达节点（环外孤立 / 回边）追加到末尾层，保证全部落位
+  let maxDepth = Math.max(0, ...Object.values(depthMap))
+  for (const n of nodes.value) {
+    if (!visited.has(n.id)) {
+      visited.add(n.id)
+      depthMap[n.id] = ++maxDepth
+    }
+  }
+  const layers: Record<number, string[]> = {}
+  for (const [id, d] of Object.entries(depthMap)) (layers[d] ??= []).push(id)
+  const W = 180
+  const H = 70
+  const GAP_X = 100
+  const GAP_Y = 40
+  const MARGIN = 40
+  for (const d of Object.keys(layers).map(Number).sort((a, b) => a - b)) {
+    const ids = layers[d]
+    const x = MARGIN + d * (W + GAP_X)
+    ids.forEach((id, i) => {
+      const n = nodes.value.find((x) => x.id === id)
+      if (n) {
+        n.position.x = Math.round(x)
+        n.position.y = Math.round(MARGIN + i * (H + GAP_Y))
+      }
+    })
+  }
+  snapshot()
+  ElMessage.success('已按流程层级完成自动布局')
 }
 
 // ---------- 保存 / 发布 ----------
@@ -225,6 +718,7 @@ async function saveDraft() {
       await appApi.update(appId, { workflowJson: flowToDsl(nodes.value, edges.value) })
     }
     ElMessage.success('草稿已保存')
+    dirty.value = false
   } finally {
     saving.value = false
   }
@@ -234,6 +728,19 @@ async function publish() {
   if (appType.value !== 'agent' && nodes.value.length === 0) {
     ElMessage.warning('画布为空，请先拖入节点编排工作流再发布')
     return
+  }
+  if (appType.value !== 'agent') {
+    const errors = validateWorkflow()
+    const structure = checkStructure()
+    const allWarnings = [...structure, ...errors.map((e) => e.text)]
+    if (allWarnings.length > 0) {
+      const proceed = await ElMessageBox.confirm(
+        `发布前检查到以下问题：\n${allWarnings.join('\n')}\n\n仍要继续发布吗？`,
+        '发布前检查',
+        { confirmButtonText: '仍要发布', cancelButtonText: '去完善', type: 'warning' }
+      ).catch(() => false)
+      if (!proceed) return
+    }
   }
   await ElMessageBox.confirm('发布后将生成新版本快照并设为线上版本，确定发布？', '发布确认', {
     confirmButtonText: '发布',
@@ -255,8 +762,236 @@ function goChat() {
   router.push(`/apps/${appId}/chat`)
 }
 
+// ---------- 版本历史 ----------
+const versionsVisible = ref(false)
+const versions = ref<AgentAppVersion[]>([])
+const loadingVersions = ref(false)
+const rollingBack = ref(false)
+
+function formatTime(t?: string) {
+  if (!t) return ''
+  return t.replace('T', ' ').slice(0, 19)
+}
+
+async function openVersions() {
+  versionsVisible.value = true
+  loadingVersions.value = true
+  try {
+    versions.value = await appApi.versions(appId)
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载版本列表失败')
+  } finally {
+    loadingVersions.value = false
+  }
+}
+
+async function rollbackTo(version: AgentAppVersion) {
+  await ElMessageBox.confirm(
+    `将把 v${version.version} 的工作流恢复到当前画布（草稿），不会自动发布，确认回滚？`,
+    '回滚确认',
+    { confirmButtonText: '回滚', cancelButtonText: '取消', type: 'warning' }
+  )
+  rollingBack.value = true
+  try {
+    await appApi.rollback(appId, version.id)
+    ElMessage.success(`已回滚到 v${version.version}，请检查后重新发布`)
+    versionsVisible.value = false
+    await loadApp()
+    clearRunState()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '回滚失败')
+  } finally {
+    rollingBack.value = false
+  }
+}
+
+// ---------- 运行调试 ----------
+const debugVisible = ref(false)
+const debugInput = ref('')
+const running = ref(false)
+const runResult = ref<RunResult | null>(null)
+const highlightedNodeId = ref<string | null>(null)
+const lastRunFailed = ref(false)
+
+function toggleDebug() {
+  debugVisible.value = !debugVisible.value
+}
+
+/** 清空画布运行态与调试结果 */
+function clearRunState() {
+  runResult.value = null
+  highlightedNodeId.value = null
+  lastRunFailed.value = false
+  for (const n of nodes.value) {
+    n.data = { ...n.data, runStatus: undefined, runCost: undefined, runError: undefined }
+  }
+  for (const e of edges.value) {
+    e.class = ''
+    e.style = undefined
+  }
+}
+
+/** trace 状态 -> 节点着色 class */
+function nodeRunClass(data: any) {
+  const s = data?.runStatus
+  if (s === 'success') return 'run-success'
+  if (s === 'error') return 'run-error'
+  if (s === 'skipped') return 'run-skipped'
+  return ''
+}
+
+/** 将运行 trace 映射到画布节点 / 边 */
+function applyTraceToCanvas(trace: TraceItem[]) {
+  const statusMap: Record<string, string> = {}
+  const costMap: Record<string, number> = {}
+  const errMap: Record<string, string> = {}
+  for (const t of trace) {
+    statusMap[t.nodeId] = t.status
+    costMap[t.nodeId] = t.costMs
+    if (t.error) errMap[t.nodeId] = t.error
+  }
+  for (const n of nodes.value) {
+    n.data = {
+      ...n.data,
+      runStatus: statusMap[n.id] || 'idle',
+      runCost: costMap[n.id],
+      runError: errMap[n.id]
+    }
+  }
+  // 高亮执行路径上的边（trace 相邻节点间的连线）
+  const executed = new Set<string>()
+  for (let i = 0; i < trace.length - 1; i++) {
+    const src = trace[i].nodeId
+    const tgt = trace[i + 1].nodeId
+    const edge = edges.value.find((e) => e.source === src && e.target === tgt)
+    if (edge) executed.add(edge.id)
+  }
+  for (const e of edges.value) {
+    const on = executed.has(e.id)
+    e.class = on ? 'executed-edge' : ''
+    e.style = on ? { stroke: '#67c23a', strokeWidth: 2.5 } : undefined
+  }
+}
+
+// ---------- {{}} 变量自动补全 ----------
+interface VarItem {
+  text: string
+  desc: string
+}
+
+/** 递归收集某节点的全部上游节点 id（沿 edges 反向查找） */
+function upstreamNodeIds(nodeId: string): string[] {
+  const ids = new Set<string>()
+  const walk = (id: string) => {
+    for (const e of edges.value) {
+      if (e.target === id && !ids.has(e.source)) {
+        ids.add(e.source)
+        walk(e.source)
+      }
+    }
+  }
+  walk(nodeId)
+  return [...ids]
+}
+
+/** 当前节点可插入的变量项：{{input}} + 上游有输出节点的变量（code 脚本为裸变量名） */
+function varItemsFor(nodeId: string): VarItem[] {
+  const isCode = selectedData.value?.nodeType === 'code'
+  const wrap = (k: string) => (isCode ? k : `{{${k}}}`)
+  const items: VarItem[] = [{ text: wrap('input'), desc: '用户输入' }]
+  if (isCode) items.push({ text: 'outputs', desc: '全部节点输出集合' })
+  for (const id of upstreamNodeIds(nodeId)) {
+    const n = nodes.value.find((x) => x.id === id)
+    const t = n?.data?.nodeType
+    if (t !== 'llm' && t !== 'http' && t !== 'code' && t !== 'template' && t !== 'knowledge')
+      continue // start/end/condition 无输出
+    items.push({ text: wrap(id), desc: `节点「${n?.data?.label || id}」的输出` })
+  }
+  return items
+}
+
+/** 点击变量项，追加插入到配置字段末尾 */
+function insertVar(field: string, item: VarItem) {
+  if (!selectedData.value) return
+  if (!selectedData.value.config) selectedData.value.config = {}
+  const cur = selectedData.value.config[field]
+  const base = cur == null ? '' : String(cur)
+  const sep = base && !/\s$/.test(base) ? ' ' : ''
+  selectedData.value.config[field] = base + sep + item.text
+}
+
+/** 高亮并定位节点 */
+function highlightNode(nodeId: string) {
+  const node = nodes.value.find((n) => n.id === nodeId)
+  if (!node) return
+  highlightedNodeId.value = nodeId
+  setCenter(node.position.x, node.position.y, { zoom: 0.9 })
+}
+
+async function runDebug() {
+  const text = debugInput.value.trim()
+  if (!text) {
+    ElMessage.warning('请输入测试消息')
+    return
+  }
+  if (nodes.value.length === 0) {
+    ElMessage.warning('画布为空，请先拖入节点编排工作流')
+    return
+  }
+  const errors = validateWorkflow()
+  if (errors.length > 0) {
+    ElMessage.error(`存在未配置的节点，请先完善：\n${errors.map((e) => e.text).join('\n')}`)
+    highlightNode(errors[0].node.id)
+    return
+  }
+  const structure = checkStructure()
+  if (structure.length > 0) {
+    ElMessage.warning(`流程结构提示：\n${structure.join('\n')}`)
+  }
+  running.value = true
+  try {
+    await saveDraft() // 先保存草稿，确保后端运行的是当前画布内容
+    clearRunState()
+    const result = await appApi.run(appId, [{ role: 'user', content: text }])
+    runResult.value = result
+    applyTraceToCanvas(result.trace)
+    const failed = result.trace.find((t) => t.status === 'error')
+    if (failed) {
+      lastRunFailed.value = true
+      highlightNode(failed.nodeId)
+      ElMessage.error(`节点「${failed.label}」执行失败：${failed.error || '未知错误'}`)
+    } else {
+      ElMessage.success(`运行完成，共执行 ${result.trace.length} 个节点`)
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '运行失败')
+  } finally {
+    running.value = false
+  }
+}
+
+const nodeStatusColor: Record<string, 'success' | 'danger' | 'info'> = {
+  success: 'success',
+  error: 'danger',
+  skipped: 'info'
+}
+
+/** 浏览器关闭 / 刷新前提示未保存 */
+function onBeforeUnload(e: BeforeUnloadEvent) {
+  if (!dirty.value) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+onBeforeRouteLeave(() => {
+  if (dirty.value) {
+    return window.confirm('当前有未保存的修改，离开后将丢失，确定离开吗？')
+  }
+})
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('beforeunload', onBeforeUnload)
   loadApp()
   loadModels()
   loadDatasets()
@@ -265,6 +1000,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('beforeunload', onBeforeUnload)
 })
 </script>
 
@@ -282,10 +1018,78 @@ onUnmounted(() => {
         </el-tag>
       </span>
       <div class="toolbar-actions">
-        <el-button :icon="VideoPlay" type="primary" plain class="debug-btn" @click="goChat">对话调试</el-button>
+        <div class="toolbar-edit-group">
+          <el-button
+            :icon="RefreshLeft"
+            plain circle
+            title="撤销 (Ctrl+Z)"
+            :disabled="historyIndex <= 0"
+            @click="undo"
+          />
+          <el-button
+            :icon="RefreshRight"
+            plain circle
+            title="重做 (Ctrl+Shift+Z)"
+            :disabled="historyIndex >= historyStack.length - 1"
+            @click="redo"
+          />
+          <el-button :icon="CopyDocument" plain circle title="复制选中 (Ctrl+C)" @click="copySelected" />
+          <el-button :icon="Files" plain circle title="粘贴 (Ctrl+V)" @click="pasteClipboard" />
+        </div>
+        <div class="toolbar-layout-group">
+          <el-dropdown trigger="click" @command="(c: any) => alignNodes(c)">
+            <el-button
+              :icon="Aim"
+              plain circle
+              title="对齐选中节点"
+              :disabled="selectedCount < 2"
+            />
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="left">左对齐</el-dropdown-item>
+                <el-dropdown-item command="hcenter">水平居中</el-dropdown-item>
+                <el-dropdown-item command="right">右对齐</el-dropdown-item>
+                <el-dropdown-item command="top">顶对齐</el-dropdown-item>
+                <el-dropdown-item command="vcenter">垂直居中</el-dropdown-item>
+                <el-dropdown-item command="bottom">底对齐</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-dropdown trigger="click" @command="(c: any) => distributeNodes(c)">
+            <el-button
+              :icon="Rank"
+              plain circle
+              title="均匀分布选中节点"
+              :disabled="selectedCount < 3"
+            />
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="horizontal">水平等距分布</el-dropdown-item>
+                <el-dropdown-item command="vertical">垂直等距分布</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-button :icon="MagicStick" plain circle title="自动布局全部节点" @click="autoLayout" />
+        </div>
+        <el-popover placement="bottom-end" :width="280" trigger="hover" popper-class="shortcut-popover">
+          <template #reference>
+            <el-button :icon="QuestionFilled" plain circle title="快捷键" />
+          </template>
+          <div class="shortcut-list">
+            <div v-for="s in shortcuts" :key="s.keys" class="shortcut-item">
+              <span class="shortcut-keys">{{ s.keys }}</span>
+              <span class="shortcut-desc">{{ s.desc }}</span>
+            </div>
+          </div>
+        </el-popover>
+        <el-button :icon="VideoPlay" type="primary" plain class="debug-btn" @click="toggleDebug">
+          {{ debugVisible ? '收起调试' : '运行调试' }}
+        </el-button>
+        <el-button :icon="Promotion" plain @click="goChat">对话调试</el-button>
+        <el-button v-if="appType !== 'agent'" :icon="Clock" plain @click="openVersions">历史版本</el-button>
         <el-button :icon="CopyDocument" :loading="saving" @click="saveDraft">保存草稿</el-button>
         <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
-        <el-button :icon="Delete" type="danger" plain :disabled="!selectedNodeId" @click="removeSelected">
+        <el-button :icon="Delete" type="danger" plain :disabled="!hasSelection" @click="removeSelected">
           删除选中
         </el-button>
       </div>
@@ -415,12 +1219,29 @@ onUnmounted(() => {
           :default-viewport="{ zoom: 0.85 }"
           :min-zoom="0.2"
           :max-zoom="2"
+          :selection-on-drag="true"
+          :multi-selection-key-code="['Meta', 'Ctrl']"
+          :edges-updatable="false"
           class="flow"
           @node-click="onNodeClick"
           @pane-click="onPaneClick"
+          @edge-click="onEdgeClick"
+          @node-drag-stop="onNodeDragStop"
         >
-          <template #node-flow-node="{ data, selected }">
-            <div class="flow-node" :class="[data.nodeType, { selected }]">
+          <template #node-flow-node="{ data, selected, id }">
+            <div
+              class="flow-node"
+              :class="[data.nodeType, { selected }, nodeRunClass(data), { 'run-highlight': id === highlightedNodeId }]"
+            >
+              <span v-if="data.runStatus === 'success'" class="run-badge run-badge-success">✓</span>
+              <span v-else-if="data.runStatus === 'error'" class="run-badge run-badge-error">!</span>
+              <span
+                v-else-if="!data.runStatus && nodeWarnings(data).length"
+                class="node-warn-badge"
+                :class="{ warn: !hasNodeError(data) }"
+                :title="nodeWarnings(data).map((w) => w.text).join('；')"
+                >⚠</span
+              >
               <div class="node-accent" :style="{ background: metaOf(data.nodeType).color }"></div>
               <div class="node-head">
                 <div
@@ -432,10 +1253,31 @@ onUnmounted(() => {
                   </el-icon>
                 </div>
                 <span class="node-title">{{ data.label }}</span>
+                <el-tooltip v-if="data.remark" :content="data.remark" placement="top" :show-after="200">
+                  <span class="node-remark"><el-icon :size="12"><Notebook /></el-icon></span>
+                </el-tooltip>
               </div>
               <div class="node-desc">{{ metaOf(data.nodeType).desc }}</div>
+              <span v-if="data.runCost !== undefined" class="run-cost">{{ data.runCost }}ms</span>
+              <div v-if="data.runError" class="run-error-msg" :title="data.runError">{{ data.runError }}</div>
               <Handle type="target" :position="Position.Left" class="node-handle"></Handle>
-              <Handle type="source" :position="Position.Right" class="node-handle"></Handle>
+              <template v-if="data.nodeType === 'condition'">
+                <span class="branch-tag branch-tag-true">是</span>
+                <Handle
+                  type="source"
+                  :position="Position.Right"
+                  :id="'true'"
+                  class="node-handle handle-branch handle-branch-true"
+                ></Handle>
+                <span class="branch-tag branch-tag-false">否</span>
+                <Handle
+                  type="source"
+                  :position="Position.Right"
+                  :id="'false'"
+                  class="node-handle handle-branch handle-branch-false"
+                ></Handle>
+              </template>
+              <Handle v-else type="source" :position="Position.Right" class="node-handle"></Handle>
             </div>
           </template>
           <Background :gap="24" pattern-color="#e6e9f5" :line-width="1" />
@@ -470,6 +1312,17 @@ onUnmounted(() => {
                 :rows="5"
                 placeholder="设定模型角色与行为…"
               />
+              <div class="var-chips">
+                <span class="var-chips-title">可用变量</span>
+                <span
+                  v-for="v in varItemsFor(selectedNode.id)"
+                  :key="v.text"
+                  class="var-chip"
+                  :title="v.desc"
+                  @click="insertVar('systemPrompt', v)"
+                  >{{ v.text }}</span
+                >
+              </div>
             </el-form-item>
             <el-form-item v-if="selectedData.nodeType === 'llm'" label="温度">
               <el-slider v-model="selectedData.config.temperature" :min="0" :max="2" :step="0.1" />
@@ -497,6 +1350,17 @@ onUnmounted(() => {
 
             <el-form-item v-if="selectedData.nodeType === 'http'" label="请求地址">
               <el-input v-model="selectedData.config.url" :placeholder="urlPlaceholder" />
+              <div class="var-chips">
+                <span class="var-chips-title">可用变量</span>
+                <span
+                  v-for="v in varItemsFor(selectedNode.id)"
+                  :key="v.text"
+                  class="var-chip"
+                  :title="v.desc"
+                  @click="insertVar('url', v)"
+                  >{{ v.text }}</span
+                >
+              </div>
             </el-form-item>
             <el-form-item v-if="selectedData.nodeType === 'http'" label="请求方式">
               <el-select v-model="selectedData.config.method" style="width: 100%">
@@ -537,20 +1401,95 @@ onUnmounted(() => {
               <el-input-number v-model="selectedData.config.retries" :min="0" :max="5" />
             </el-form-item>
 
-            <el-form-item v-if="selectedData.nodeType === 'code'" label="代码脚本">
+            <el-form-item v-if="selectedData.nodeType === 'template'" label="模板内容">
+              <el-input
+                v-model="selectedData.config.template"
+                type="textarea"
+                :rows="6"
+                placeholder="支持 {{input}} 与 {{节点id}} 变量插值&#10;示例：&#10;用户问题：{{input}}&#10;参考知识：{{node1}}"
+              />
+              <div class="var-chips">
+                <span class="var-chips-title">可用变量</span>
+                <span
+                  v-for="v in varItemsFor(selectedNode.id)"
+                  :key="v.text"
+                  class="var-chip"
+                  :title="v.desc"
+                  @click="insertVar('template', v)"
+                  >{{ v.text }}</span
+                >
+              </div>
+            </el-form-item>
+
+            <el-divider v-if="selectedData.nodeType === 'knowledge'" content-position="left">检索配置</el-divider>
+            <el-form-item v-if="selectedData.nodeType === 'knowledge'" label="关联数据集">
+              <el-select
+                v-model="selectedData.config.datasetId"
+                placeholder="请选择数据集"
+                style="width: 100%"
+              >
+                <el-option v-for="d in datasets" :key="d.id" :label="d.name" :value="d.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="selectedData.nodeType === 'knowledge'" label="召回数量">
+              <el-input-number v-model="selectedData.config.topK" :min="1" :max="10" />
+            </el-form-item>
+            <el-form-item v-if="selectedData.nodeType === 'knowledge'" label="检索词模板">
+              <el-input
+                v-model="selectedData.config.queryTemplate"
+                placeholder="默认 {{input}}，可引用上游节点输出"
+              />
+              <div class="var-chips">
+                <span class="var-chips-title">可用变量</span>
+                <span
+                  v-for="v in varItemsFor(selectedNode.id)"
+                  :key="v.text"
+                  class="var-chip"
+                  :title="v.desc"
+                  @click="insertVar('queryTemplate', v)"
+                  >{{ v.text }}</span
+                >
+              </div>
+            </el-form-item>
+
+            <el-form-item v-if="selectedData.nodeType === 'code'" label="表达式脚本">
               <el-input
                 v-model="selectedData.config.code"
                 type="textarea"
                 :rows="10"
-                placeholder="MVEL 表达式脚本，可用 input 与各节点输出，最后 return 结果&#10;示例：&#10;return input.trim().toUpperCase()&#10;示例：&#10;return input.length() > 10 ? '长文本' : '短文本'"
+                placeholder="MVEL 表达式，可用 input 与各节点输出变量，最后 return 结果&#10;示例：&#10;return input.trim().toUpperCase()&#10;示例：&#10;return input.length() > 10 ? '长文本' : '短文本'"
               />
+              <div class="var-chips">
+                <span class="var-chips-title">可用变量</span>
+                <span
+                  v-for="v in varItemsFor(selectedNode.id)"
+                  :key="v.text"
+                  class="var-chip"
+                  :title="v.desc"
+                  @click="insertVar('code', v)"
+                  >{{ v.text }}</span
+                >
+              </div>
             </el-form-item>
 
             <el-form-item v-if="selectedData.nodeType === 'condition'" label="判断条件">
               <el-input
                 v-model="selectedData.config.expression"
-                :placeholder="codePlaceholder"
+                type="textarea"
+                :rows="2"
+                :placeholder="conditionPlaceholder"
               />
+              <div class="var-chips">
+                <span class="var-chips-title">可用变量</span>
+                <span
+                  v-for="v in varItemsFor(selectedNode.id)"
+                  :key="v.text"
+                  class="var-chip"
+                  :title="v.desc"
+                  @click="insertVar('expression', v)"
+                  >{{ v.text }}</span
+                >
+              </div>
             </el-form-item>
 
             <el-form-item v-if="isStartNode" label="开场白">
@@ -561,13 +1500,156 @@ onUnmounted(() => {
                 placeholder="对话开始时的欢迎语"
               />
             </el-form-item>
+            <el-form-item label="节点备注">
+              <el-input
+                v-model="selectedData.remark"
+                type="textarea"
+                :rows="2"
+                placeholder="记录该节点的用途、注意事项（仅编辑端展示，不影响执行）"
+              />
+            </el-form-item>
           </el-form>
+        </template>
+        <template v-else-if="selectedEdgeEnds">
+          <h4>连线信息</h4>
+          <div class="edge-info">
+            <div class="edge-route">
+              <div class="edge-end">
+                <div
+                  class="node-icon"
+                  :style="{ background: tintOf(selectedEdgeEnds.srcType), color: metaOf(selectedEdgeEnds.srcType).color }"
+                >
+                  <el-icon :size="15">
+                    <component :is="iconOf(metaOf(selectedEdgeEnds.srcType).icon)" />
+                  </el-icon>
+                </div>
+                <span class="edge-end-label">{{ selectedEdgeEnds.srcLabel }}</span>
+              </div>
+              <span class="edge-arrow">→</span>
+              <div class="edge-end">
+                <div
+                  class="node-icon"
+                  :style="{ background: tintOf(selectedEdgeEnds.tgtType), color: metaOf(selectedEdgeEnds.tgtType).color }"
+                >
+                  <el-icon :size="15">
+                    <component :is="iconOf(metaOf(selectedEdgeEnds.tgtType).icon)" />
+                  </el-icon>
+                </div>
+                <span class="edge-end-label">{{ selectedEdgeEnds.tgtLabel }}</span>
+              </div>
+            </div>
+            <div v-if="selectedEdgeEnds.branch" class="edge-branch">
+              <el-tag :type="selectedEdgeEnds.branch === '是' ? 'success' : 'danger'" size="small" effect="light">
+                条件分支：{{ selectedEdgeEnds.branch }}
+              </el-tag>
+              <span class="edge-branch-tip">表达式为真走「是」，为假走「否」</span>
+            </div>
+            <el-form label-position="top" size="small" class="edge-label-form">
+              <el-form-item label="连线标签">
+                <el-input
+                  v-model="selectedEdge.label"
+                  placeholder="留空显示默认（条件分支显示 是/否）"
+                  clearable
+                />
+              </el-form-item>
+            </el-form>
+            <p class="edge-tip">数据沿此连线流转，上一节点的输出会作为下一节点的输入。</p>
+            <el-button type="danger" plain :icon="Delete" @click="removeSelected">删除该连线</el-button>
+          </div>
         </template>
         <template v-else>
           <el-empty description="选中节点后在此配置" :image-size="80" />
         </template>
       </aside>
     </div>
+
+    <!-- 运行调试面板 -->
+    <div v-if="debugVisible" class="debug-panel">
+      <div class="debug-head">
+        <div class="debug-title">
+          <el-icon><VideoPlay /></el-icon>
+          运行调试
+        </div>
+        <div class="debug-head-actions">
+          <el-button size="small" type="primary" :icon="VideoPlay" :loading="running" @click="runDebug">
+            运行
+          </el-button>
+          <el-button size="small" text :icon="Close" @click="debugVisible = false">收起</el-button>
+        </div>
+      </div>
+      <div class="debug-body">
+        <div class="debug-input-area">
+          <el-input
+            v-model="debugInput"
+            type="textarea"
+            :rows="2"
+            resize="none"
+            placeholder="输入测试消息后点击「运行」，将按当前画布执行并实时标注节点状态"
+            @keydown.enter.exact.prevent="runDebug"
+          />
+        </div>
+        <div class="debug-result-area">
+          <template v-if="runResult">
+            <div class="debug-answer">
+              <span class="debug-answer-label">最终回答</span>
+              <div class="debug-answer-text">{{ runResult.answer }}</div>
+            </div>
+            <div class="debug-trace-head">
+              <span>执行轨迹（点击定位节点）</span>
+              <el-tag v-if="lastRunFailed" size="small" type="danger" effect="light">运行失败</el-tag>
+              <el-tag v-else size="small" type="success" effect="light">运行成功</el-tag>
+            </div>
+            <div class="debug-trace-list">
+              <div
+                v-for="(t, i) in runResult.trace"
+                :key="i"
+                class="debug-trace-item"
+                :class="{ active: t.nodeId === highlightedNodeId }"
+                @click="highlightNode(t.nodeId)"
+              >
+                <span class="dt-index">{{ i + 1 }}</span>
+                <el-tag size="small" :type="nodeStatusColor[t.status] || 'info'" effect="light">
+                  {{ t.status }}
+                </el-tag>
+                <span class="dt-label" :title="t.label">{{ t.label }}</span>
+                <span class="dt-cost">{{ t.costMs }}ms</span>
+                <span v-if="t.error" class="dt-error" :title="t.error">⚠ {{ t.error }}</span>
+              </div>
+            </div>
+          </template>
+          <el-empty v-else description="输入测试消息后点击「运行」，结果将在此展示" :image-size="52" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 版本历史弹窗 -->
+    <el-dialog v-model="versionsVisible" title="历史版本" width="560px">
+      <div v-loading="loadingVersions" min-height="120">
+        <el-empty
+          v-if="!loadingVersions && versions.length === 0"
+          description="暂无发布版本，点击「发布」生成版本快照"
+          :image-size="70"
+        />
+        <div v-else class="version-list">
+          <div v-for="v in versions" :key="v.id" class="version-item">
+            <div class="version-info">
+              <div class="version-head">
+                <span class="version-no">v{{ v.version }}</span>
+                <el-tag v-if="v.isPublished === 1" size="small" type="success" effect="light">当前线上</el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">历史</el-tag>
+              </div>
+              <div class="version-time">{{ formatTime(v.createTime) }} · {{ v.createdBy || '未知' }}</div>
+            </div>
+            <el-button size="small" :disabled="rollingBack" @click="rollbackTo(v)">
+              回滚到该版本
+            </el-button>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="versionsVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
     </template>
   </div>
 </template>
@@ -745,6 +1827,46 @@ onUnmounted(() => {
 .flow-node:hover .node-handle {
   transform: scale(1.3);
 }
+.flow-node.condition .handle-branch {
+  width: 9px !important;
+  height: 9px !important;
+  min-width: 9px;
+  min-height: 9px;
+  border-width: 1.5px;
+}
+.flow-node.condition .handle-branch-true {
+  top: 26% !important;
+  border-color: #67c23a !important;
+  background: #67c23a !important;
+}
+.flow-node.condition .handle-branch-false {
+  top: 74% !important;
+  border-color: #f56c6c !important;
+  background: #f56c6c !important;
+}
+.branch-tag {
+  position: absolute;
+  right: -22px;
+  z-index: 1;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.branch-tag-true {
+  top: 20%;
+  color: #67c23a;
+  background: rgba(103, 194, 58, 0.12);
+  border: 1px solid rgba(103, 194, 58, 0.4);
+}
+.branch-tag-false {
+  top: 68%;
+  color: #f56c6c;
+  background: rgba(245, 108, 108, 0.12);
+  border: 1px solid rgba(245, 108, 108, 0.4);
+}
 .flow-controls {
   --vue-flow-controls-border-radius: 10px;
 }
@@ -855,5 +1977,385 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ---------- 节点运行状态 ---------- */
+.flow-node.run-success {
+  border-color: #67c23a;
+  box-shadow: 0 0 0 3px rgba(103, 194, 58, 0.16), var(--shadow-card);
+}
+.flow-node.run-error {
+  border-color: #f56c6c;
+  box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.16), var(--shadow-card);
+  animation: node-error-pulse 1.2s ease-in-out infinite;
+}
+.flow-node.run-skipped {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+.flow-node.run-highlight {
+  animation: node-highlight-pulse 0.9s ease-in-out infinite;
+}
+@keyframes node-error-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.18), var(--shadow-card); }
+  50% { box-shadow: 0 0 0 7px rgba(245, 108, 108, 0.3), var(--shadow-card); }
+}
+@keyframes node-highlight-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(91, 108, 255, 0.22), var(--shadow-card-hover); }
+  50% { box-shadow: 0 0 0 9px rgba(91, 108, 255, 0.34), var(--shadow-card-hover); }
+}
+.run-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+}
+.run-badge-success {
+  background: #67c23a;
+}
+.run-badge-error {
+  background: #f56c6c;
+}
+.node-warn-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f56c6c;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+  cursor: help;
+}
+.node-warn-badge.warn {
+  background: #e6a23c;
+}
+.node-remark {
+  display: inline-flex;
+  align-items: center;
+  color: #e6a23c;
+  cursor: help;
+  flex: none;
+}
+.edge-branch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.edge-branch-tip {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.edge-label-form {
+  margin-bottom: 4px;
+}
+.var-chips {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.var-chips-title {
+  font-size: 11px;
+  color: var(--text-tertiary, #8f9bb3);
+}
+.var-chip {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  color: #5b6cff;
+  background: #f1f2ff;
+  border: 1px dashed #b9c1ff;
+  border-radius: 5px;
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.var-chip:hover {
+  background: #5b6cff;
+  color: #fff;
+  border-color: #5b6cff;
+}
+.toolbar-edit-group {
+  display: flex;
+  gap: 4px;
+  padding-right: 8px;
+  margin-right: 4px;
+  border-right: 1px solid var(--el-border-color-lighter);
+}
+.toolbar-layout-group {
+  display: flex;
+  gap: 4px;
+  padding-right: 8px;
+  margin-right: 4px;
+  border-right: 1px solid var(--el-border-color-lighter);
+}
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.shortcut-keys {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  color: #5b6cff;
+  background: #f1f2ff;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.shortcut-desc {
+  color: var(--text-secondary, #6b7280);
+}
+.edge-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.edge-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f7f8fc;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  padding: 12px;
+}
+.edge-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.edge-end .node-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.edge-end-label {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.edge-arrow {
+  font-size: 16px;
+  color: #c0c4cc;
+  flex-shrink: 0;
+}
+.edge-tip {
+  font-size: 12px;
+  color: var(--text-tertiary, #8f9bb3);
+  line-height: 1.6;
+  margin: 0;
+}
+.run-cost {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.run-error-msg {
+  margin-top: 6px;
+  margin-left: 34px;
+  font-size: 10.5px;
+  color: #f56c6c;
+  background: #fef0f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 运行调试面板 ---------- */
+.debug-panel {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+  z-index: 5;
+}
+.debug-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+.debug-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-1);
+}
+.debug-head-actions {
+  display: flex;
+  gap: 6px;
+}
+.debug-body {
+  display: flex;
+  gap: 16px;
+  padding: 12px 14px;
+  min-height: 118px;
+  max-height: 240px;
+}
+.debug-input-area {
+  width: 300px;
+  flex-shrink: 0;
+}
+.debug-result-area {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+.debug-answer {
+  background: var(--brand-gradient-soft);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.debug-answer-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-1);
+}
+.debug-answer-text {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.debug-trace-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.debug-trace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.debug-trace-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 12px;
+}
+.debug-trace-item:hover {
+  border-color: var(--brand-3);
+  background: #fafbfe;
+}
+.debug-trace-item.active {
+  border-color: var(--brand-1);
+  background: var(--el-color-primary-light-9);
+  box-shadow: 0 0 0 2px rgba(91, 108, 255, 0.15);
+}
+.dt-index {
+  width: 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.dt-label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dt-cost {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.dt-error {
+  color: #f56c6c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 版本历史 ---------- */
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.version-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+.version-item:hover {
+  border-color: var(--brand-3);
+  background: #fafbfe;
+}
+.version-info {
+  min-width: 0;
+}
+.version-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.version-no {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--brand-1);
+}
+.version-time {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 </style>

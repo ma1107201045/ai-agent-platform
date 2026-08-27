@@ -94,7 +94,15 @@ export interface AgentResult {
 }
 
 /** 编排节点类型 */
-export type WorkflowNodeType = 'start' | 'end' | 'llm' | 'condition' | 'code' | 'http'
+export type WorkflowNodeType =
+  | 'start'
+  | 'end'
+  | 'llm'
+  | 'condition'
+  | 'code'
+  | 'http'
+  | 'template'
+  | 'knowledge'
 
 /** DSL 节点定义 */
 export interface WorkflowNode {
@@ -112,6 +120,8 @@ export interface WorkflowEdge {
   target: string
   sourceHandle?: string
   targetHandle?: string
+  /** 连线文字标注 */
+  label?: string
 }
 
 /** 工作流 DSL */
@@ -197,6 +207,7 @@ export interface AgentAppVersion {
   workflowJson?: string
   promptConfig?: string
   isPublished: number
+  createdBy?: number
   createTime?: string
 }
 

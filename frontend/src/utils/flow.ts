@@ -9,8 +9,10 @@ export const NODE_TYPE_META: Record<
   end: { label: '结束', icon: 'CircleCheck', color: '#f56c6c', desc: '流程出口' },
   llm: { label: 'LLM', icon: 'Cpu', color: '#409eff', desc: '大模型对话' },
   condition: { label: '条件分支', icon: 'Share', color: '#e6a23c', desc: 'IF / ELSE 判断' },
-  code: { label: '代码', icon: 'Document', color: '#909399', desc: 'Python / JS 片段' },
-  http: { label: 'HTTP 请求', icon: 'Link', color: '#8e44ad', desc: '调用外部 API' }
+  code: { label: '表达式计算', icon: 'Document', color: '#909399', desc: 'MVEL 表达式求值' },
+  http: { label: 'HTTP 请求', icon: 'Link', color: '#8e44ad', desc: '调用外部 API' },
+  template: { label: '模板', icon: 'Tickets', color: '#00b8a2', desc: '变量插值渲染' },
+  knowledge: { label: '知识库检索', icon: 'Collection', color: '#7c3aed', desc: 'RAG 语义检索' }
 }
 
 export const NODE_TYPE_LIST = Object.keys(NODE_TYPE_META) as WorkflowNodeType[]
@@ -20,6 +22,8 @@ export interface FlowNodeData {
   label: string
   nodeType: WorkflowNodeType
   config: Record<string, unknown>
+  /** 节点备注（持久化到 config.remark） */
+  remark?: string
 }
 
 let seed = 0
@@ -43,6 +47,7 @@ export function dslToFlow(dsl?: string | null) {
     target: string
     sourceHandle?: string
     targetHandle?: string
+    label?: string
   }> = []
   if (!dsl) return { nodes, edges }
   try {
@@ -55,7 +60,8 @@ export function dslToFlow(dsl?: string | null) {
         data: {
           label: n.label || NODE_TYPE_META[n.type]?.label || n.type,
           nodeType: n.type,
-          config: n.config ?? {}
+          config: n.config ?? {},
+          remark: n.config?.remark as string | undefined
         }
       })
     }
@@ -65,7 +71,8 @@ export function dslToFlow(dsl?: string | null) {
         source: e.source,
         target: e.target,
         sourceHandle: e.sourceHandle,
-        targetHandle: e.targetHandle
+        targetHandle: e.targetHandle,
+        label: e.label
       })
     }
   } catch {
@@ -83,6 +90,7 @@ export function flowToDsl(
     target: string
     sourceHandle?: string
     targetHandle?: string
+    label?: string
   }>
 ): string {
   const workflow: AppWorkflow = {
@@ -92,7 +100,7 @@ export function flowToDsl(
         type: n.data.nodeType,
         label: n.data.label,
         position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
-        config: n.data.config ?? {}
+        config: { ...(n.data.config ?? {}), remark: n.data.remark || undefined }
       })
     ),
     edges: edges.map(
@@ -101,7 +109,8 @@ export function flowToDsl(
         source: e.source,
         target: e.target,
         sourceHandle: e.sourceHandle,
-        targetHandle: e.targetHandle
+        targetHandle: e.targetHandle,
+        label: e.label || undefined
       })
     )
   }

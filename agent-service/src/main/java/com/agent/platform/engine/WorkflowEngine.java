@@ -95,11 +95,17 @@ public class WorkflowEngine {
             }
             long cost = System.currentTimeMillis() - start;
 
-            if ("llm".equals(node.getType()) || "http".equals(node.getType()) || "code".equals(node.getType())) {
+            if ("template".equals(node.getType())) {
+                Object tpl = node.getConfig() == null ? null : node.getConfig().get("template");
+                input = render(tpl == null ? "" : String.valueOf(tpl), userInput, outputs).trim();
+            } else if ("knowledge".equals(node.getType())) {
+                Object q = node.getConfig() == null ? null : node.getConfig().get("queryTemplate");
+                input = render(q == null ? "{{input}}" : String.valueOf(q), userInput, outputs).trim();
+            } else if ("llm".equals(node.getType()) || "http".equals(node.getType()) || "code".equals(node.getType())) {
                 input = render(System.lineSeparator() + node.getLabel(), userInput, outputs).trim();
-                if (output != null && output.length() > 300) {
-                    output = output.substring(0, 300) + "...";
-                }
+            }
+            if (output != null && output.length() > 300) {
+                output = output.substring(0, 300) + "...";
             }
             trace.add(RunResult.TraceItem.builder()
                     .nodeId(node.getId())
@@ -145,6 +151,10 @@ public class WorkflowEngine {
                 return null;
             case "code":
                 return executeCode(node, userInput, outputs);
+            case "template":
+                return executeTemplate(node, userInput, outputs);
+            case "knowledge":
+                return executeKnowledge(node, userInput, outputs);
             default:
                 return null;
         }
@@ -308,6 +318,54 @@ public class WorkflowEngine {
         }
     }
 
+    /**
+     * 模板节点：对模板内容做 {{input}} / {{节点id}} 变量插值后输出。
+     * 常用于拼装 prompt、格式化文本，输出可被下游节点引用。
+     */
+    private String executeTemplate(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
+        Map<String, Object> cfg = node.getConfig();
+        String template = cfg == null ? null : String.valueOf(cfg.getOrDefault("template", ""));
+        if (template == null || template.isBlank() || "null".equals(template)) {
+            throw new BizException("模板节点「" + node.getLabel() + "」未配置模板内容");
+        }
+        String text = render(template, userInput, outputs);
+        outputs.put(node.getId(), text);
+        return text;
+    }
+
+    /**
+     * 知识库检索节点：按检索词模板渲染查询，调用知识库语义检索，
+     * 输出拼接的命中片段文本，供下游 LLM / 模板节点使用。
+     */
+    private String executeKnowledge(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
+        Map<String, Object> cfg = node.getConfig();
+        Object dsIdObj = cfg == null ? null : cfg.get("datasetId");
+        if (dsIdObj == null) {
+            throw new BizException("知识库检索节点「" + node.getLabel() + "」未选择数据集");
+        }
+        Long datasetId = Long.valueOf(String.valueOf(dsIdObj));
+        String queryTemplate = cfg.get("queryTemplate") == null
+                ? "{{input}}"
+                : String.valueOf(cfg.get("queryTemplate"));
+        String query = render(queryTemplate, userInput, outputs);
+        int topK = cfg.get("topK") == null ? 3 : Integer.parseInt(String.valueOf(cfg.get("topK")));
+        Long rerankModelId = cfg.get("rerankModelId") == null
+                ? null
+                : Long.valueOf(String.valueOf(cfg.get("rerankModelId")));
+        List<KnowledgeService.SearchHit> hits = knowledgeService.search(datasetId, query, topK, rerankModelId);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < hits.size(); i++) {
+            KnowledgeService.SearchHit h = hits.get(i);
+            if (i > 0) {
+                sb.append("\n\n");
+            }
+            sb.append("【片段 ").append(i + 1).append("】").append(h.getContent());
+        }
+        String text = sb.toString();
+        outputs.put(node.getId(), text);
+        return text;
+    }
+
     /** 计算下一节点：条件节点按表达式选边（true→第一条 true 边，false→第一条 false 边） */
     private String nextNodeId(WorkflowGraph graph, WorkflowGraph.WorkflowNode node, Map<String, String> outputs) {
         List<WorkflowGraph.WorkflowEdge> outs = graph.getEdges() == null ? List.of()
@@ -331,7 +389,13 @@ public class WorkflowEngine {
         return outs.get(0).getTarget();
     }
 
-    /** 条件表达式简化求值：true/false 字面量、{{变量}} 非空判断、其余按布尔字符串解析 */
+    /**
+     * 条件表达式求值（升级版）：
+     * 1. true/false 字面量直接判定；
+     * 2. 其余交给 MVEL 求值，支持 ==、!=、&gt;、&lt;、&gt;=、&lt;=、contains、&amp;&amp;、||、! 与括号
+     *    （{{变量}} 渲染为实际值；字符串比较需加引号，如 '{{node1}}' == '成功'）；
+     * 3. MVEL 求值失败时回退为「非空即真」。
+     */
     private boolean evalCondition(WorkflowGraph.WorkflowNode node, Map<String, String> outputs) {
         Object exprObj = node.getConfig() == null ? null : node.getConfig().get("expression");
         String expr = exprObj == null ? null : String.valueOf(exprObj);
@@ -345,7 +409,18 @@ public class WorkflowEngine {
         if ("false".equalsIgnoreCase(rendered)) {
             return false;
         }
-        return !rendered.isEmpty();
+        try {
+            Map<String, Object> vars = new HashMap<>(outputs);
+            vars.put("input", outputs.getOrDefault("input", ""));
+            Object result = MVEL.eval(rendered, vars);
+            if (result instanceof Boolean) {
+                return (Boolean) result;
+            }
+            return result != null && !String.valueOf(result).isBlank();
+        } catch (Exception e) {
+            // 表达式语法不支持或变量未渲染为可比较值：按非空即真处理
+            return !rendered.isEmpty();
+        }
     }
 
     /** 模板变量替换：{{input}} 用户输入；{{节点id}} 节点输出 */

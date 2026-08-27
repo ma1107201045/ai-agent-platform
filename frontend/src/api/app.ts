@@ -23,6 +23,14 @@ export const appApi = {
   published(id: number) {
     return request.get<never, AgentAppVersion>(`/apps/${id}/published`)
   },
+  /** 版本列表（按版本号倒序） */
+  versions(id: number) {
+    return request.get<never, AgentAppVersion[]>(`/apps/${id}/versions`)
+  },
+  /** 回滚到指定版本（恢复草稿，不自动发布） */
+  rollback(id: number, versionId: number) {
+    return request.post<never, AgentAppVersion>(`/apps/${id}/versions/${versionId}/rollback`)
+  },
   /** 批量获取发布版本，返回 Map<appId, version> */
   publishedBatch(ids: number[]) {
     return request.get<never, Record<number, AgentAppVersion>>('/apps/published/batch', {

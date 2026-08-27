@@ -156,6 +156,31 @@ public class AppService {
         return version;
     }
 
+    /** 版本列表（按版本号倒序） */
+    public List<AgentAppVersion> listVersions(Long appId) {
+        getById(appId);
+        return versionMapper.selectList(new LambdaQueryWrapper<AgentAppVersion>()
+                .eq(AgentAppVersion::getAppId, appId)
+                .orderByDesc(AgentAppVersion::getVersion));
+    }
+
+    /**
+     * 回滚到指定版本：将版本快照恢复到应用草稿（不自动发布，用户确认后再发布）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public AgentAppVersion rollback(Long appId, Long versionId) {
+        getById(appId);
+        AgentAppVersion version = versionMapper.selectById(versionId);
+        if (version == null || !appId.equals(version.getAppId())) {
+            throw new BizException("版本不存在: " + versionId);
+        }
+        appMapper.update(null, new LambdaUpdateWrapper<AgentApp>()
+                .eq(AgentApp::getId, appId)
+                .set(AgentApp::getWorkflowJson, version.getWorkflowJson())
+                .set(AgentApp::getUpdateTime, LocalDateTime.now()));
+        return version;
+    }
+
     /**
      * 获取已发布版本的工作流 DSL（公开访问只用线上版本，不用草稿）
      */

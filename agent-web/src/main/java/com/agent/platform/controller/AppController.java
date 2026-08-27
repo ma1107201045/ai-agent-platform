@@ -77,6 +77,18 @@ public class AppController {
         return Result.ok(appService.getPublishedVersion(id));
     }
 
+    /** 版本列表（按版本号倒序） */
+    @GetMapping("/{id}/versions")
+    public Result<List<AgentAppVersion>> versions(@PathVariable Long id) {
+        return Result.ok(appService.listVersions(id));
+    }
+
+    /** 回滚到指定版本（恢复草稿，不自动发布） */
+    @PostMapping("/{id}/versions/{versionId}/rollback")
+    public Result<AgentAppVersion> rollback(@PathVariable Long id, @PathVariable Long versionId) {
+        return Result.ok(appService.rollback(id, versionId));
+    }
+
     /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
     @GetMapping("/stats/batch")
     public Result<Map<Long, ConversationService.AppStats>> batchStats(@RequestParam String ids) {

@@ -30,5 +30,7 @@ public class WorkflowGraph {
         private String target;
         private String sourceHandle;
         private String targetHandle;
+        /** 连线文字标注（可选，引擎不参与执行，仅展示与持久化） */
+        private String label;
     }
 }
