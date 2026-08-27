@@ -4,8 +4,8 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Aim, ArrowLeft, CircleCheck, Clock, Close, CopyDocument, Cpu, Delete, Document,
-  Files, Link as LinkIcon, MagicStick, Notebook, Promotion, QuestionFilled, Rank,
-  RefreshLeft, RefreshRight, Share, VideoPlay
+  Expand, Files, Fold, Link as LinkIcon, MagicStick, Notebook, Promotion, QuestionFilled,
+  Rank, RefreshLeft, RefreshRight, Share, VideoPlay
 } from '@element-plus/icons-vue'
 import { VueFlow, useVueFlow, Handle, Position } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
@@ -19,7 +19,7 @@ import { llmApi } from '@/api/llm'
 import { toolApi } from '@/api/tool'
 import type { AgentAppVersion, AgentTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
 import {
-  NODE_TYPE_LIST, NODE_TYPE_META, dslToFlow, flowToDsl, genNodeId
+  NODE_TYPE_META, dslToFlow, flowToDsl, genNodeId
 } from '@/utils/flow'
 
 const route = useRoute()
@@ -29,7 +29,7 @@ const appId = Number(route.params.id)
 // ---------- 画布 ----------
 const nodes = ref<Array<any>>([])
 const edges = ref<Array<any>>([])
-const { screenToFlowCoordinate, addNodes, removeNodes, onConnect, setCenter } = useVueFlow()
+const { addNodes, removeNodes, onConnect, setCenter, fitView } = useVueFlow()
 
 // ---------- 历史（撤销/重做） ----------
 const MAX_HISTORY = 50
@@ -157,7 +157,121 @@ const defaultConfigs: Partial<Record<WorkflowNodeType, Record<string, unknown>>>
   knowledge: { topK: 3, queryTemplate: '{{input}}' }
 }
 const publishing = ref(false)
-const dragType = ref<WorkflowNodeType | null>(null)
+
+// ---------- 面板折叠 ----------
+const configCollapsed = ref(false)
+
+/** 左侧节点面板分组（按功能归类，不影响拖拽与数据模型） */
+const paletteGroups: Array<{ title: string; types: WorkflowNodeType[] }> = [
+  { title: '流程控制', types: ['start', 'end', 'condition'] },
+  { title: '处理节点', types: ['llm', 'template', 'code'] },
+  { title: '外部数据', types: ['http', 'knowledge'] }
+]
+
+/** 确保画布存在开始/结束节点（空画布进入 / 被删光后恢复） */
+function ensureStartEnd() {
+  const hasStart = nodes.value.some((n) => n.data.nodeType === 'start')
+  const hasEnd = nodes.value.some((n) => n.data.nodeType === 'end')
+  if (hasStart && hasEnd) return
+  const add = (type: 'start' | 'end', x: number, y: number) => {
+    const id = genNodeId()
+    nodes.value.push({
+      id,
+      type: 'flow-node',
+      position: { x, y },
+      data: { label: NODE_TYPE_META[type].label, nodeType: type, config: {} }
+    })
+    return id
+  }
+  const bothEmpty = !hasStart && !hasEnd
+  const startId = hasStart
+    ? nodes.value.find((n) => n.data.nodeType === 'start')!.id
+    : add('start', 120, 260)
+  const endId = hasEnd
+    ? nodes.value.find((n) => n.data.nodeType === 'end')!.id
+    : add('end', 460, 260)
+  if (bothEmpty) {
+    edges.value.push({ id: genNodeId('edge'), source: startId, target: endId })
+  }
+  snapshot()
+}
+
+/** 点击节点右侧「+」：弹出节点选择浮层（Dify 式） */
+const addMenuFor = ref<{ x: number; y: number; sourceId: string; handle: string | null } | null>(null)
+
+function openAddMenu(e: MouseEvent, sourceId: string, handle: string | null) {
+  e.stopPropagation()
+  e.preventDefault()
+  // 菜单 240x330 左右，靠近视口边缘时回弹，避免溢出
+  let x = e.clientX
+  let y = e.clientY
+  if (x > window.innerWidth - 250) x = window.innerWidth - 250
+  if (y > window.innerHeight - 340) y = Math.max(8, window.innerHeight - 340)
+  addMenuFor.value = { x, y, sourceId, handle }
+}
+
+function closeAddMenu() {
+  addMenuFor.value = null
+}
+
+function onAddNodeClick(type: WorkflowNodeType) {
+  if (!addMenuFor.value) return
+  addNodeFromSource(addMenuFor.value.sourceId, addMenuFor.value.handle, type)
+  addMenuFor.value = null
+}
+
+/** 从指定节点出点新增节点并自动连线（Dify 式插入） */
+function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: WorkflowNodeType) {
+  if (type === 'start') return
+  const src = nodes.value.find((n) => n.id === sourceId)
+  if (!src) return
+  const newId = genNodeId()
+  const NODE_W = 210
+  const GAP_X = 130
+  const x = Math.round(src.position.x + NODE_W + GAP_X)
+  let y = Math.round(src.position.y)
+  if (sourceHandle === 'true') y -= 60
+  else if (sourceHandle === 'false') y += 60
+  nodes.value.push({
+    id: newId,
+    type: 'flow-node',
+    position: { x, y },
+    data: {
+      label: NODE_TYPE_META[type].label,
+      nodeType: type,
+      config: { ...(defaultConfigs[type] ?? {}) }
+    }
+  })
+  const endNode = nodes.value.find((n) => n.data.nodeType === 'end')
+  const srcOuts = edges.value.filter((e) => e.source === sourceId)
+  const directEnd = srcOuts.filter((e) => e.target === endNode?.id)
+  // source 唯一出边直连 end → 替换为 source→new→end；否则新节点平连 end
+  if (srcOuts.length === 1 && directEnd.length === 1 && endNode) {
+    edges.value = edges.value.filter((e) => e.id !== directEnd[0].id)
+    edges.value.push({ id: genNodeId('edge'), source: newId, target: endNode.id })
+  } else if (endNode) {
+    edges.value.push({ id: genNodeId('edge'), source: newId, target: endNode.id })
+  }
+  const isBranch = sourceHandle === 'true' || sourceHandle === 'false'
+  edges.value.push({
+    id: genNodeId('edge'),
+    source: sourceId,
+    target: newId,
+    sourceHandle: sourceHandle ?? undefined,
+    label: isBranch ? (sourceHandle === 'true' ? '是' : '否') : undefined,
+    ...(isBranch ? branchLabelStyle(sourceHandle as 'true' | 'false') : {})
+  })
+  snapshot()
+  // 选中新节点并定位
+  selectedNodeId.value = newId
+  const newNode = nodes.value.find((n) => n.id === newId)
+  if (newNode) {
+    editBaseline = JSON.stringify(newNode.data)
+    nextTick(() => {
+      setCenter(newNode.position.x + NODE_W / 2, newNode.position.y + 40, { zoom: 0.9 })
+    })
+  }
+}
 
 const selectedNode = computed(() =>
   nodes.value.find((n) => n.id === selectedNodeId.value) ?? null
@@ -188,7 +302,7 @@ const shortcuts = [
   { keys: 'Ctrl + C', desc: '复制选中节点' },
   { keys: 'Ctrl + V', desc: '粘贴节点' },
   { keys: 'Delete', desc: '删除选中节点 / 连线' },
-  { keys: '拖拽空白区域', desc: '框选多个节点' },
+  { keys: '拖拽画布空白', desc: '框选多个节点' },
   { keys: 'Ctrl / Cmd + 点击', desc: '追加多选' },
   { keys: '对齐 / 分布', desc: '工具栏对齐、等距分布选中节点' },
   { keys: '自动布局', desc: '一键按流程层级重排全部节点' }
@@ -248,9 +362,10 @@ function metaOf(type: WorkflowNodeType) {
   return NODE_TYPE_META[type]
 }
 
-/** 节点类型色 + 透明度后缀（用于浅色底） */
-function tintOf(type: WorkflowNodeType) {
-  return metaOf(type).color + '1a'
+/** MiniMap 节点颜色：按节点类型取主题色 */
+function miniMapNodeColor(node: any) {
+  const type = node?.data?.nodeType as WorkflowNodeType | undefined
+  return type && NODE_TYPE_META[type] ? NODE_TYPE_META[type].color : '#d1d5db'
 }
 
 // ---------- 加载 ----------
@@ -285,9 +400,32 @@ async function loadApp() {
   nodes.value = ns
   edges.value = es
   syncBranchEdges()
+  if (ns.length === 0) {
+    // Dify 式：空画布预置 开始/结束 节点并直连
+    const startId = genNodeId()
+    const endId = genNodeId()
+    nodes.value.push({
+      id: startId,
+      type: 'flow-node',
+      position: { x: 120, y: 260 },
+      data: { label: '开始', nodeType: 'start', config: {} }
+    })
+    nodes.value.push({
+      id: endId,
+      type: 'flow-node',
+      position: { x: 460, y: 260 },
+      data: { label: '结束', nodeType: 'end', config: {} }
+    })
+    edges.value.push({ id: genNodeId('edge'), source: startId, target: endId })
+  }
   nextTick(() => {
     hydrated.value = true
     dirty.value = false
+    if (ns.length === 0) {
+      setCenter(290, 300, { zoom: 0.85 })
+    } else {
+      fitView({ padding: 0.2, duration: 300 })
+    }
   })
 }
 
@@ -312,30 +450,6 @@ async function loadDatasets() {
 }
 
 // ---------- 节点操作 ----------
-function onDragStart(type: WorkflowNodeType) {
-  dragType.value = type
-}
-
-function onDrop(e: DragEvent) {
-  if (!dragType.value) return
-  const pos = screenToFlowCoordinate({ x: e.clientX, y: e.clientY })
-  const type = dragType.value
-  addNodes([
-    {
-      id: genNodeId(),
-      type: 'flow-node',
-      position: pos,
-      data: {
-        label: NODE_TYPE_META[type].label,
-        nodeType: type,
-        config: { ...(defaultConfigs[type] ?? {}) }
-      }
-    }
-  ])
-  dragType.value = null
-  snapshot()
-}
-
 function onNodeClick({ node }: any) {
   selectedNodeId.value = node.id
   selectedEdgeId.value = null
@@ -584,7 +698,7 @@ function selectedBoxes() {
       n,
       x: n.position.x,
       y: n.position.y,
-      w: n.dimensions?.width || 170,
+      w: n.dimensions?.width || 210,
       h: n.dimensions?.height || 64
     }))
 }
@@ -681,9 +795,9 @@ function autoLayout() {
   }
   const layers: Record<number, string[]> = {}
   for (const [id, d] of Object.entries(depthMap)) (layers[d] ??= []).push(id)
-  const W = 180
+  const W = 210
   const H = 70
-  const GAP_X = 100
+  const GAP_X = 120
   const GAP_Y = 40
   const MARGIN = 40
   for (const d of Object.keys(layers).map(Number).sort((a, b) => a - b)) {
@@ -992,6 +1106,7 @@ onBeforeRouteLeave(() => {
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('beforeunload', onBeforeUnload)
+  document.addEventListener('click', closeAddMenu)
   loadApp()
   loadModels()
   loadDatasets()
@@ -1001,6 +1116,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('beforeunload', onBeforeUnload)
+  document.removeEventListener('click', closeAddMenu)
 })
 </script>
 
@@ -1013,6 +1129,7 @@ onUnmounted(() => {
       </el-button>
       <span class="app-name">
         {{ appName }}
+        <span v-if="dirty" class="dirty-dot" title="有未保存的修改" />
         <el-tag size="small" :type="appType === 'agent' ? 'success' : 'info'">
           {{ appType === 'agent' ? '智能体' : '编排' }}
         </el-tag>
@@ -1089,9 +1206,15 @@ onUnmounted(() => {
         <el-button v-if="appType !== 'agent'" :icon="Clock" plain @click="openVersions">历史版本</el-button>
         <el-button :icon="CopyDocument" :loading="saving" @click="saveDraft">保存草稿</el-button>
         <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
-        <el-button :icon="Delete" type="danger" plain :disabled="!hasSelection" @click="removeSelected">
-          删除选中
-        </el-button>
+        <el-button
+          :icon="Delete"
+          type="danger"
+          plain
+          circle
+          title="删除选中 (Delete)"
+          :disabled="!hasSelection"
+          @click="removeSelected"
+        />
       </div>
     </div>
 
@@ -1189,30 +1312,22 @@ onUnmounted(() => {
 
     <template v-else>
     <div class="editor-body">
-      <!-- 左侧节点面板 -->
-      <aside class="node-palette">
-        <h4>节点</h4>
-        <div
-          v-for="type in NODE_TYPE_LIST"
-          :key="type"
-          class="palette-item"
-          draggable="true"
-          @dragstart="onDragStart(type)"
-          @dragend="dragType = null"
-        >
-          <el-icon :size="16" :style="{ color: metaOf(type).color }">
-            <component :is="iconOf(metaOf(type).icon)" />
-          </el-icon>
-          <div>
-            <div class="item-label">{{ metaOf(type).label }}</div>
-            <div class="item-desc">{{ metaOf(type).desc }}</div>
+      <!-- 中间画布 -->
+      <div class="canvas-wrap">
+        <div v-if="hydrated && nodes.length === 0" class="canvas-empty">
+          <el-empty description="画布是空的，点击开始节点「+」添加流程节点" :image-size="88">
+            <div class="canvas-empty-actions">
+              <el-button type="primary" plain size="small" @click="ensureStartEnd">
+                恢复 开始/结束 节点
+              </el-button>
+            </div>
+          </el-empty>
+          <div class="canvas-empty-tips">
+            <span>· 开始/结束定义流程边界</span>
+            <span>· 点击节点右侧「+」快速插入并连线</span>
+            <span>· 条件分支 + 并行出边实现复杂流程</span>
           </div>
         </div>
-        <p class="palette-tip">拖拽节点到画布创建</p>
-      </aside>
-
-      <!-- 中间画布 -->
-      <div class="canvas-wrap" @drop="onDrop" @dragover.prevent>
         <VueFlow
           v-model:nodes="nodes"
           v-model:edges="edges"
@@ -1242,22 +1357,20 @@ onUnmounted(() => {
                 :title="nodeWarnings(data).map((w) => w.text).join('；')"
                 >⚠</span
               >
-              <div class="node-accent" :style="{ background: metaOf(data.nodeType).color }"></div>
               <div class="node-head">
-                <div
-                  class="node-icon"
-                  :style="{ background: tintOf(data.nodeType), color: metaOf(data.nodeType).color }"
-                >
-                  <el-icon :size="15">
+                <div class="node-icon" :style="{ background: metaOf(data.nodeType).gradient }">
+                  <el-icon :size="16" color="#fff">
                     <component :is="iconOf(metaOf(data.nodeType).icon)" />
                   </el-icon>
                 </div>
-                <span class="node-title">{{ data.label }}</span>
+                <div class="node-head-text">
+                  <span class="node-title">{{ data.label }}</span>
+                  <span class="node-desc">{{ metaOf(data.nodeType).desc }}</span>
+                </div>
                 <el-tooltip v-if="data.remark" :content="data.remark" placement="top" :show-after="200">
                   <span class="node-remark"><el-icon :size="12"><Notebook /></el-icon></span>
                 </el-tooltip>
               </div>
-              <div class="node-desc">{{ metaOf(data.nodeType).desc }}</div>
               <span v-if="data.runCost !== undefined" class="run-cost">{{ data.runCost }}ms</span>
               <div v-if="data.runError" class="run-error-msg" :title="data.runError">{{ data.runError }}</div>
               <Handle type="target" :position="Position.Left" class="node-handle"></Handle>
@@ -1269,6 +1382,12 @@ onUnmounted(() => {
                   :id="'true'"
                   class="node-handle handle-branch handle-branch-true"
                 ></Handle>
+                <span
+                  class="node-add-btn add-btn-branch add-btn-true"
+                  title="添加节点"
+                  @click.stop="openAddMenu($event, id, 'true')"
+                  @mousedown.stop
+                >+</span>
                 <span class="branch-tag branch-tag-false">否</span>
                 <Handle
                   type="source"
@@ -1276,20 +1395,98 @@ onUnmounted(() => {
                   :id="'false'"
                   class="node-handle handle-branch handle-branch-false"
                 ></Handle>
+                <span
+                  class="node-add-btn add-btn-branch add-btn-false"
+                  title="添加节点"
+                  @click.stop="openAddMenu($event, id, 'false')"
+                  @mousedown.stop
+                >+</span>
               </template>
-              <Handle v-else type="source" :position="Position.Right" class="node-handle"></Handle>
+              <template v-else>
+                <Handle type="source" :position="Position.Right" class="node-handle"></Handle>
+                <span
+                  v-if="data.nodeType !== 'end'"
+                  class="node-add-btn"
+                  title="添加节点"
+                  @click.stop="openAddMenu($event, id, null)"
+                  @mousedown.stop
+                >+</span>
+              </template>
             </div>
           </template>
-          <Background :gap="24" pattern-color="#e6e9f5" :line-width="1" />
+          <Background :gap="24" pattern-color="#d5dbe3" :line-width="1" />
           <Controls position="bottom-left" class="flow-controls" />
-          <MiniMap pannable zoomable class="minimap" />
+          <MiniMap
+            pannable
+            zoomable
+            position="bottom-right"
+            class="minimap"
+            :node-color="miniMapNodeColor"
+            mask-color="rgba(250, 251, 252, 0.75)"
+          />
         </VueFlow>
+
+        <!-- 节点右侧「+」弹出的节点选择浮层（Dify 式） -->
+        <div
+          v-if="addMenuFor"
+          class="add-node-menu"
+          :style="{ left: addMenuFor.x + 'px', top: addMenuFor.y + 'px' }"
+          @click.stop
+        >
+          <div class="add-node-menu-title">添加节点</div>
+          <div v-for="g in paletteGroups" :key="g.title" class="add-node-group">
+            <div class="add-node-group-title">{{ g.title }}</div>
+            <div
+              v-for="t in g.types"
+              :key="t"
+              class="add-node-item"
+              :class="{ disabled: t === 'start' }"
+              @click="t !== 'start' && onAddNodeClick(t)"
+            >
+              <div class="add-node-item-icon" :style="{ background: metaOf(t).gradient }">
+                <el-icon :size="12" color="#fff">
+                  <component :is="iconOf(metaOf(t).icon)" />
+                </el-icon>
+              </div>
+              <div class="add-node-item-text">
+                <div class="add-node-item-label">{{ metaOf(t).label }}</div>
+                <div class="add-node-item-desc">{{ metaOf(t).desc }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 右侧配置面板 -->
-      <aside class="config-panel">
+      <aside class="config-panel" :class="{ collapsed: configCollapsed }">
+        <div class="panel-head config-panel-head">
+          <h4>{{ selectedData ? '节点配置' : selectedEdgeEnds ? '连线信息' : '配置' }}</h4>
+          <el-button
+            text
+            circle
+            size="small"
+            class="panel-fold-btn"
+            :icon="configCollapsed ? Expand : Fold"
+            :title="configCollapsed ? '展开配置面板' : '折叠配置面板'"
+            @click="configCollapsed = !configCollapsed"
+          />
+        </div>
+        <template v-if="!configCollapsed">
         <template v-if="selectedData">
-          <h4>节点配置</h4>
+          <div class="config-node-head">
+            <div
+              class="node-icon"
+              :style="{ background: metaOf(selectedData.nodeType).gradient }"
+            >
+              <el-icon :size="16" color="#fff">
+                <component :is="iconOf(metaOf(selectedData.nodeType).icon)" />
+              </el-icon>
+            </div>
+            <div class="config-node-head-text">
+              <div class="config-node-type">{{ metaOf(selectedData.nodeType).label }}</div>
+              <div class="config-node-name">{{ selectedData.label }}</div>
+            </div>
+          </div>
           <el-form label-position="top" size="small">
             <el-form-item label="节点名称">
               <el-input v-model="selectedData.label" />
@@ -1517,9 +1714,9 @@ onUnmounted(() => {
               <div class="edge-end">
                 <div
                   class="node-icon"
-                  :style="{ background: tintOf(selectedEdgeEnds.srcType), color: metaOf(selectedEdgeEnds.srcType).color }"
+                  :style="{ background: metaOf(selectedEdgeEnds.srcType).gradient }"
                 >
-                  <el-icon :size="15">
+                  <el-icon :size="14" color="#fff">
                     <component :is="iconOf(metaOf(selectedEdgeEnds.srcType).icon)" />
                   </el-icon>
                 </div>
@@ -1529,9 +1726,9 @@ onUnmounted(() => {
               <div class="edge-end">
                 <div
                   class="node-icon"
-                  :style="{ background: tintOf(selectedEdgeEnds.tgtType), color: metaOf(selectedEdgeEnds.tgtType).color }"
+                  :style="{ background: metaOf(selectedEdgeEnds.tgtType).gradient }"
                 >
-                  <el-icon :size="15">
+                  <el-icon :size="14" color="#fff">
                     <component :is="iconOf(metaOf(selectedEdgeEnds.tgtType).icon)" />
                   </el-icon>
                 </div>
@@ -1560,6 +1757,8 @@ onUnmounted(() => {
         <template v-else>
           <el-empty description="选中节点后在此配置" :image-size="80" />
         </template>
+        </template>
+        <div v-else class="config-collapsed-tip" title="展开配置面板">配置</div>
       </aside>
     </div>
 
@@ -1679,6 +1878,14 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
 }
+.dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f56c6c;
+  box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.18);
+  flex-shrink: 0;
+}
 .toolbar-actions {
   margin-left: auto;
   display: flex;
@@ -1693,139 +1900,203 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-/* 节点面板 */
-.node-palette {
-  width: 210px;
-  background: #fff;
-  border-right: 1px solid var(--border-color);
-  padding: 14px 12px;
-  overflow-y: auto;
-}
-.node-palette h4,
 .config-panel h4 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 13px;
   color: var(--text-secondary);
   font-weight: 600;
 }
-.palette-item {
+.panel-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  cursor: grab;
-  background: #fff;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-card);
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
-.palette-item:hover {
-  border-color: var(--brand-1);
-  background: var(--el-color-primary-light-9);
-  transform: translateX(2px);
-}
-.palette-item:active {
-  cursor: grabbing;
-}
-.item-label {
-  font-size: 13px;
-  font-weight: 600;
-}
-.item-desc {
-  margin-top: 1px;
-  font-size: 11px;
+.panel-fold-btn {
   color: var(--text-tertiary);
 }
-.palette-tip {
-  margin-top: 12px;
-  font-size: 11px;
+.panel-fold-btn:hover {
+  color: var(--brand-1);
+}
+.config-panel.collapsed .panel-head {
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.config-panel.collapsed .panel-head h4 {
+  display: none;
+}
+.config-collapsed-tip {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12px;
   color: var(--text-tertiary);
-  text-align: center;
-  padding: 8px;
+  margin: 0 auto;
+  padding: 10px 4px;
   border: 1px dashed var(--border-color);
   border-radius: 8px;
+  user-select: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.config-collapsed-tip:hover {
+  color: var(--brand-1);
+  border-color: var(--brand-1);
 }
 
-/* 画布 */
+/* 画布（Dify 式：浅灰底 + 灰色点阵） */
 .canvas-wrap {
   flex: 1;
   min-width: 0;
   position: relative;
-  background-image: radial-gradient(rgba(91, 108, 255, 0.06) 1px, transparent 1px);
+  background-color: #fafbfc;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.4) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 .flow {
   width: 100%;
   height: 100%;
 }
+.flow :deep(.vue-flow__edge-path) {
+  stroke: #c2c8d1;
+  stroke-width: 1.5;
+}
+.flow :deep(.vue-flow__edge.selected .vue-flow__edge-path),
+.flow :deep(.vue-flow__edge:hover .vue-flow__edge-path) {
+  stroke: #2970ff;
+  stroke-width: 2;
+}
+.flow :deep(.vue-flow__edge.animated .vue-flow__edge-path) {
+  stroke-dasharray: 6 4;
+  animation: vue-flow-dashdraw 0.6s linear infinite;
+}
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.canvas-empty :deep(.el-empty) {
+  pointer-events: auto;
+}
+.canvas-empty-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  line-height: 1.7;
+}
 
-/* 节点卡片 */
+/* 节点卡片（Dify 式：渐变圆形图标 + 标题/描述，选中蓝框） */
 .flow-node {
   position: relative;
-  min-width: 170px;
-  padding: 12px 14px 10px 16px;
+  width: 210px;
+  padding: 12px 14px;
   background: #fff;
-  border: 1.5px solid var(--border-color);
+  border: 1px solid #e2e5ea;
   border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  transition: all 0.22s ease;
-}
-.node-accent {
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3.5px;
-  border-radius: 3px;
-  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.06);
+  transition: all 0.2s ease;
 }
 .flow-node:hover {
-  border-color: var(--brand-3);
-  box-shadow: var(--shadow-card-hover);
+  border-color: #2970ff;
+  box-shadow: 0 4px 14px rgba(41, 112, 255, 0.16);
 }
 .flow-node.selected {
-  border-color: var(--brand-1);
-  box-shadow: 0 0 0 3px rgba(91, 108, 255, 0.18), var(--shadow-card-hover);
-  transform: translateY(-1px);
+  border-color: #2970ff;
+  box-shadow: 0 0 0 2px rgba(41, 112, 255, 0.32), 0 4px 14px rgba(41, 112, 255, 0.18);
 }
 .node-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .node-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: #fff;
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.node-head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .node-title {
   font-size: 13px;
   font-weight: 600;
+  color: #1f2329;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .node-desc {
-  margin-top: 6px;
+  margin-top: 1px;
   font-size: 11px;
-  color: var(--text-tertiary);
-  padding-left: 34px;
+  color: #98a2b3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .node-handle {
   width: 10px !important;
   height: 10px !important;
-  background: #fff !important;
-  border: 2px solid var(--brand-1) !important;
+  background: #2970ff !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 0 1px rgba(41, 112, 255, 0.45);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .flow-node:hover .node-handle {
   transform: scale(1.3);
+  box-shadow: 0 0 0 2px rgba(41, 112, 255, 0.5);
+}
+.node-add-btn {
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid var(--brand-1);
+  color: var(--brand-1);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 19px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 6;
+  user-select: none;
+}
+.flow-node:hover .node-add-btn {
+  opacity: 1;
+}
+.node-add-btn:hover {
+  background: var(--brand-1);
+  color: #fff;
+  transform: translateY(-50%) scale(1.15);
+}
+.add-btn-branch {
+  top: 26%;
+}
+.add-btn-false {
+  top: 74%;
 }
 .flow-node.condition .handle-branch {
   width: 9px !important;
@@ -1872,9 +2143,88 @@ onUnmounted(() => {
 }
 .minimap {
   right: 12px;
+  bottom: 12px;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: var(--shadow-card);
+  border: 1px solid #e2e5ea;
+}
+.minimap :deep(.vue-flow__minimap-mask) {
+  fill: rgba(250, 251, 252, 0.75);
+  stroke: #d5dbe3;
+  stroke-width: 1;
+}
+.minimap :deep(.vue-flow__minimap-node) {
+  rx: 4px;
+  ry: 4px;
+}
+.add-node-menu {
+  position: fixed;
+  z-index: 3000;
+  width: 240px;
+  max-height: 330px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  padding: 8px;
+}
+.add-node-menu-title {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  padding: 2px 6px 8px;
+}
+.add-node-group {
+  margin-bottom: 6px;
+}
+.add-node-group-title {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 2px 6px 4px;
+}
+.add-node-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.add-node-item:hover {
+  background: var(--el-color-primary-light-9);
+}
+.add-node-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.add-node-item-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+.add-node-item-text {
+  min-width: 0;
+}
+.add-node-item-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.add-node-item-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 配置面板 */
@@ -1884,6 +2234,37 @@ onUnmounted(() => {
   border-left: 1px solid var(--border-color);
   padding: 16px 14px;
   overflow-y: auto;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+.config-panel.collapsed {
+  width: 42px;
+  padding: 16px 5px;
+  overflow: visible;
+}
+.config-node-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+.config-node-head-text {
+  min-width: 0;
+}
+.config-node-type {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.config-node-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .config-panel :deep(.el-form-item) {
   margin-bottom: 14px;
@@ -2153,8 +2534,10 @@ onUnmounted(() => {
 .edge-end .node-icon {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: 50%;
   display: flex;
+  color: #fff;
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.12);
   align-items: center;
   justify-content: center;
 }
@@ -2188,8 +2571,7 @@ onUnmounted(() => {
   border-radius: 8px;
 }
 .run-error-msg {
-  margin-top: 6px;
-  margin-left: 34px;
+  margin-top: 8px;
   font-size: 10.5px;
   color: #f56c6c;
   background: #fef0f0;
