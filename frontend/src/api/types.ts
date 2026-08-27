@@ -104,6 +104,24 @@ export interface ChatChunk {
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
 }
 
+/** 工作流节点执行轨迹 */
+export interface TraceItem {
+  nodeId: string
+  nodeType: string
+  label: string
+  status: 'success' | 'skipped' | 'error'
+  input?: string
+  output?: string
+  costMs: number
+  error?: string
+}
+
+/** 工作流运行结果 */
+export interface RunResult {
+  answer: string
+  trace: TraceItem[]
+}
+
 export interface AgentAppVersion {
   id: number
   appId: number

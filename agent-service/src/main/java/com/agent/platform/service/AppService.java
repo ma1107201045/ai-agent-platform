@@ -113,4 +113,21 @@ public class AppService {
         }
         return version;
     }
+
+    /**
+     * 获取运行用 DSL：草稿优先，否则取已发布版本
+     */
+    public String getRunWorkflow(Long appId) {
+        AgentApp app = getById(appId);
+        if (app.getWorkflowJson() != null && !app.getWorkflowJson().isBlank()) {
+            return app.getWorkflowJson();
+        }
+        if (app.getPublishedVersionId() != null) {
+            AgentAppVersion version = versionMapper.selectById(app.getPublishedVersionId());
+            if (version != null && version.getWorkflowJson() != null && !version.getWorkflowJson().isBlank()) {
+                return version.getWorkflowJson();
+            }
+        }
+        return null;
+    }
 }

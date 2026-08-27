@@ -1,13 +1,21 @@
 package com.agent.platform.controller;
 
+import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.AgentApp;
 import com.agent.platform.dao.entity.AgentAppVersion;
+import com.agent.platform.engine.RunResult;
+import com.agent.platform.engine.WorkflowEngine;
+import com.agent.platform.engine.WorkflowGraph;
+import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.service.AppService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 应用管理
@@ -18,6 +26,8 @@ import org.springframework.web.bind.annotation.*;
 public class AppController {
 
     private final AppService appService;
+    private final WorkflowEngine workflowEngine;
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public Result<Page<AgentApp>> page(@RequestParam(defaultValue = "1") long page,
@@ -58,6 +68,40 @@ public class AppController {
     @GetMapping("/{id}/published")
     public Result<AgentAppVersion> published(@PathVariable Long id) {
         return Result.ok(appService.getPublishedVersion(id));
+    }
+
+    /** 运行应用工作流（按画布 DSL 执行） */
+    @PostMapping("/{id}/run")
+    public Result<RunResult> run(@PathVariable Long id, @RequestBody RunRequest request) {
+        String dsl = appService.getRunWorkflow(id);
+        if (dsl == null || dsl.isBlank()) {
+            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
+        }
+        try {
+            WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
+            String userInput = extractUserInput(request);
+            return Result.ok(workflowEngine.run(graph, userInput));
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BizException("工作流 DSL 解析失败: " + e.getMessage());
+        }
+    }
+
+    private String extractUserInput(RunRequest request) {
+        if (request == null || request.getMessages() == null || request.getMessages().isEmpty()) {
+            throw new BizException("请输入消息");
+        }
+        return request.getMessages().stream()
+                .filter(m -> "user".equals(m.role()))
+                .reduce((first, second) -> second)
+                .map(ChatMessage::content)
+                .orElseThrow(() -> new BizException("请输入消息"));
+    }
+
+    @Data
+    public static class RunRequest {
+        private List<ChatMessage> messages;
     }
 
     @Data

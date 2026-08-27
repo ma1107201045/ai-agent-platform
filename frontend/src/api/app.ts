@@ -1,5 +1,5 @@
 import request from './request'
-import type { AgentApp, AgentAppVersion, PageResult } from './types'
+import type { AgentApp, AgentAppVersion, ChatMessage, PageResult, RunResult } from './types'
 
 export const appApi = {
   page(params: { page?: number; size?: number }) {
@@ -22,5 +22,8 @@ export const appApi = {
   },
   published(id: number) {
     return request.get<never, AgentAppVersion>(`/apps/${id}/published`)
+  },
+  run(id: number, messages: ChatMessage[]) {
+    return request.post<never, RunResult>(`/apps/${id}/run`, { messages })
   }
 }
