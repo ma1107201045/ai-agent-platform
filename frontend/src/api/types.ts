@@ -17,6 +17,27 @@ export interface SysUser {
   createTime?: string
 }
 
+/** 当前登录用户信息（不含密码） */
+export interface UserProfile {
+  id: number
+  tenantId: number
+  username: string
+  nickname?: string
+  email?: string
+  avatar?: string
+  status: number
+}
+
+export interface LoginParams {
+  username: string
+  password: string
+}
+
+export interface LoginResult {
+  token: string
+  user: UserProfile
+}
+
 export type AppType = 'chatflow' | 'workflow' | 'agent'
 
 export interface AgentApp {

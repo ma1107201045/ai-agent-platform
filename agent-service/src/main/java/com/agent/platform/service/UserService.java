@@ -6,6 +6,7 @@ import com.agent.platform.dao.mapper.SysUserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 public class UserService {
 
     private final SysUserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public Page<SysUser> page(long page, long size) {
         return userMapper.selectPage(new Page<>(page, size),
@@ -48,12 +50,20 @@ public class UserService {
         if (user.getTenantId() == null) {
             user.setTenantId(1L); // 默认租户
         }
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         userMapper.insert(user);
         return user;
     }
 
     public void update(SysUser user) {
         getById(user.getId());
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        } else {
+            user.setPassword(null); // 不修改密码时置空，避免覆盖
+        }
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
     }

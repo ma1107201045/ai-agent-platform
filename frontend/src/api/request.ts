@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { clearToken, getToken } from '@/utils/token'
 
 export interface ApiResult<T = unknown> {
   code: number
@@ -12,8 +13,12 @@ const request = axios.create({
   timeout: 30000
 })
 
-// 请求拦截器：后续在此注入 token
+// 请求拦截器：注入 Token
 request.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
   return config
 })
 
@@ -28,6 +33,15 @@ request.interceptors.response.use(
     return res.data as never
   },
   (error) => {
+    // 401：登录失效，跳转登录页
+    if (error.response?.status === 401) {
+      clearToken()
+      if (!location.pathname.startsWith('/login')) {
+        ElMessage.error(error.response.data?.message || '登录已过期，请重新登录')
+        location.href = '/login'
+      }
+      return Promise.reject(error)
+    }
     const message =
       error.response?.data?.message || error.message || '网络异常，请稍后重试'
     ElMessage.error(message)

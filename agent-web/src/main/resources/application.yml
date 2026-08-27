@@ -21,6 +21,11 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+jwt:
+  # HS256 密钥，生产环境务必替换为随机长字符串（>=32字节）
+  secret: agent-platform-jwt-secret-change-me-in-production-2026
+  expire-hours: 24
+
 logging:
   level:
     com.agent.platform: info

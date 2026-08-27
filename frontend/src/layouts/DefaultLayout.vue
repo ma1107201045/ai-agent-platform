@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Cpu, Connection, DataAnalysis, User } from '@element-plus/icons-vue'
+import { computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ArrowDown, Cpu, Connection, DataAnalysis, SwitchButton, User } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
 const menus = [
   { path: '/dashboard', title: '工作台', icon: DataAnalysis },
@@ -13,6 +16,22 @@ const menus = [
 ]
 
 const activeMenu = computed(() => route.path)
+const displayName = computed(
+  () => userStore.profile?.nickname || userStore.profile?.username || '用户'
+)
+
+function onCommand(command: string | number | object) {
+  if (command === 'logout') {
+    userStore.logout()
+    router.replace('/login')
+  }
+}
+
+onMounted(() => {
+  if (userStore.token && !userStore.profile) {
+    userStore.fetchMe().catch(() => {})
+  }
+})
 </script>
 
 <template>
@@ -33,6 +52,22 @@ const activeMenu = computed(() => route.path)
     <el-container>
       <el-header class="header">
         <span class="page-title">{{ route.meta.title }}</span>
+        <el-dropdown class="user-dropdown" @command="onCommand">
+          <span class="user-trigger">
+            <el-avatar :size="28" class="avatar">
+              {{ displayName.charAt(0).toUpperCase() }}
+            </el-avatar>
+            <span class="user-name">{{ displayName }}</span>
+            <el-icon><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="logout">
+                <el-icon><SwitchButton /></el-icon>退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </el-header>
       <el-main class="main">
         <router-view />
@@ -73,10 +108,29 @@ const activeMenu = computed(() => route.path)
   border-bottom: 1px solid #e4e7ed;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 .page-title {
   font-size: 16px;
   font-weight: 600;
+}
+.user-dropdown {
+  cursor: pointer;
+}
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #303133;
+  outline: none;
+}
+.avatar {
+  background: #2d5da8;
+  color: #fff;
+  font-size: 13px;
+}
+.user-name {
+  font-size: 14px;
 }
 .main {
   overflow-y: auto;

@@ -115,6 +115,9 @@ INSERT INTO sys_tenant (id, name, code, plan, status) VALUES (1, '默认租户',
 
 INSERT INTO sys_user (id, tenant_id, username, password, nickname, status)
 VALUES (1, 1, 'admin', 'admin', '管理员', 1);
+-- 说明：此处为明文种子密码。系统支持明文兼容：首次登录成功后会自动升级为 BCrypt 密文。
+-- 正式环境请勿使用明文，可通过用户管理接口或直接执行下方 SQL 更新为 BCrypt 密文：
+-- UPDATE sys_user SET password = '<bcrypt-hash>' WHERE username = 'admin';
 
 -- 示例：DeepSeek 供应商（请替换为自己的 API Key）
 INSERT INTO model_provider (id, tenant_id, name, type, base_url, api_key, status)
