@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, markRaw, nextTick, onMounted, ref } from 'vue'
+import { computed, markRaw, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -231,6 +231,10 @@ async function saveDraft() {
 }
 
 async function publish() {
+  if (appType.value !== 'agent' && nodes.value.length === 0) {
+    ElMessage.warning('画布为空，请先拖入节点编排工作流再发布')
+    return
+  }
   await ElMessageBox.confirm('发布后将生成新版本快照并设为线上版本，确定发布？', '发布确认', {
     confirmButtonText: '发布',
     cancelButtonText: '取消',
@@ -257,6 +261,10 @@ onMounted(() => {
   loadModels()
   loadDatasets()
   loadTools()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 

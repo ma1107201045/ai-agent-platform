@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, Delete, Edit, EditPen, Files, MagicStick, Plus, Promotion } from '@element-plus/icons-vue'
+import { ChatDotRound, Delete, Edit, EditPen, Files, MagicStick, Plus, Promotion, Search } from '@element-plus/icons-vue'
 import { appApi } from '@/api/app'
 import type { AgentApp, AppType } from '@/api/types'
 
@@ -10,6 +10,10 @@ const router = useRouter()
 const loading = ref(false)
 const list = ref<AgentApp[]>([])
 const total = ref(0)
+const page = ref(1)
+const size = ref(12)
+const keyword = ref('')
+const typeFilter = ref('')
 
 const dialogVisible = ref(false)
 const creating = ref(false)
@@ -112,12 +116,36 @@ const dialogWidth = computed(() => (step.value === 'template' ? '760px' : step.v
 async function load() {
   loading.value = true
   try {
-    const data = await appApi.page({ page: 1, size: 100 })
+    const data = await appApi.page({
+      page: page.value,
+      size: size.value,
+      keyword: keyword.value || undefined,
+      type: typeFilter.value || undefined
+    })
     list.value = data.records
     total.value = data.total
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  load()
+}
+
+function onPageChange(p: number) {
+  page.value = p
+  load()
+}
+
+/** 格式化时间：ISO 字符串 → YYYY-MM-DD HH:mm */
+function formatTime(s?: string) {
+  if (!s) return '-'
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return s
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function openCreate() {
@@ -179,6 +207,17 @@ function chat(row: AgentApp) {
 }
 
 function publish(row: AgentApp) {
+  // chatflow / workflow 需要有已保存的草稿工作流才能发布；agent 直接发布空 DSL 由运行时按配置执行
+  if (row.type !== 'agent' && !row.workflowJson) {
+    ElMessageBox.confirm('该应用还没有可发布的工作流，请先到编辑器编排并保存草稿。', '暂无可发布内容', {
+      confirmButtonText: '去编排',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+      .then(() => edit(row))
+      .catch(() => {})
+    return
+  }
   ElMessageBox.confirm(`发布「${row.name}」为新的线上版本？`, '发布确认', {
     confirmButtonText: '发布',
     cancelButtonText: '取消',
@@ -186,7 +225,7 @@ function publish(row: AgentApp) {
   })
     .then(async () => {
       await appApi.publish(row.id, {
-        workflowJson: JSON.stringify({ nodes: [], edges: [] }),
+        workflowJson: row.workflowJson ?? JSON.stringify({ nodes: [], edges: [] }),
         promptConfig: ''
       })
       ElMessage.success('发布成功')
@@ -229,6 +268,23 @@ onMounted(load)
       </el-button>
     </div>
 
+    <!-- 筛选工具栏 -->
+    <div class="apps-toolbar">
+      <el-input
+        v-model="keyword"
+        placeholder="搜索应用名称"
+        clearable
+        class="toolbar-search"
+        @keyup.enter="search"
+        @clear="search"
+      >
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
+      <el-select v-model="typeFilter" placeholder="全部类型" clearable class="toolbar-type" @change="search">
+        <el-option v-for="(meta, key) in typeMeta" :key="key" :label="meta.label" :value="key" />
+      </el-select>
+    </div>
+
     <!-- 卡片网格 -->
     <div v-loading="loading" class="app-grid">
       <div v-for="row in list" :key="row.id" class="app-card hover-card">
@@ -246,7 +302,7 @@ onMounted(load)
           </div>
           <p class="app-desc">{{ row.description || '暂无描述' }}</p>
           <div class="app-foot">
-            <span class="app-time">{{ row.updateTime }}</span>
+            <span class="app-time">{{ formatTime(row.updateTime) }}</span>
           </div>
         </div>
 
@@ -279,9 +335,21 @@ onMounted(load)
         <div class="empty-icon">
           <el-icon :size="40"><MagicStick /></el-icon>
         </div>
-        <p>还没有应用，创建你的第一个智能体吧</p>
+        <p>{{ keyword || typeFilter ? '没有匹配的应用，换个条件试试' : '还没有应用，创建你的第一个智能体吧' }}</p>
         <el-button type="primary" class="btn-gradient" @click="openCreate">立即创建</el-button>
       </div>
+    </div>
+
+    <!-- 分页 -->
+    <div v-if="total > size" class="apps-pagination">
+      <el-pagination
+        background
+        layout="prev, pager, next, total"
+        :total="total"
+        :page-size="size"
+        :current-page="page"
+        @current-change="onPageChange"
+      />
     </div>
 
     <!-- 创建向导对话框 -->
@@ -409,6 +477,26 @@ onMounted(load)
 }
 .create-btn {
   height: 38px;
+}
+
+/* ---------- 筛选工具栏 ---------- */
+.apps-toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.toolbar-search {
+  width: 260px;
+}
+.toolbar-type {
+  width: 160px;
+}
+
+/* ---------- 分页 ---------- */
+.apps-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
 }
 
 /* ---------- 卡片网格 ---------- */

@@ -25,7 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -113,6 +115,7 @@ public class ConversationService {
     public AppStats stats(Long appId) {
         appService.getById(appId);
         List<Long> convIds = conversationMapper.selectList(new LambdaQueryWrapper<ChatConversation>()
+                        .select(ChatConversation::getId)
                         .eq(ChatConversation::getAppId, appId)
                         .eq(ChatConversation::getStatus, 1))
                 .stream()
@@ -126,6 +129,47 @@ public class ConversationService {
                     .in(ChatMessage::getConversationId, convIds));
         }
         return new AppStats(conversationCount, messageCount);
+    }
+
+    /** 批量统计多个应用的会话/消息数，避免逐个查询造成 N+1 */
+    public Map<Long, AppStats> statsBatch(List<Long> appIds) {
+        Map<Long, AppStats> result = new HashMap<>();
+        if (appIds == null || appIds.isEmpty()) {
+            return result;
+        }
+        List<ChatConversation> convs = conversationMapper.selectList(new LambdaQueryWrapper<ChatConversation>()
+                .select(ChatConversation::getId, ChatConversation::getAppId)
+                .in(ChatConversation::getAppId, appIds)
+                .eq(ChatConversation::getStatus, 1));
+        Map<Long, Long> convCount = new HashMap<>();
+        List<Long> convIds = new ArrayList<>();
+        for (ChatConversation c : convs) {
+            convCount.merge(c.getAppId(), 1L, Long::sum);
+            convIds.add(c.getId());
+        }
+        Map<Long, Long> msgCount = new HashMap<>();
+        if (!convIds.isEmpty()) {
+            List<ChatMessage> msgs = messageMapper.selectList(new LambdaQueryWrapper<ChatMessage>()
+                    .select(ChatMessage::getConversationId)
+                    .in(ChatMessage::getConversationId, convIds)
+                    .eq(ChatMessage::getStatus, 1));
+            Map<Long, Long> msgByConv = new HashMap<>();
+            for (ChatMessage m : msgs) {
+                msgByConv.merge(m.getConversationId(), 1L, Long::sum);
+            }
+            for (ChatConversation c : convs) {
+                Long cnt = msgByConv.get(c.getId());
+                if (cnt != null) {
+                    msgCount.merge(c.getAppId(), cnt, Long::sum);
+                }
+            }
+        }
+        for (Long appId : appIds) {
+            result.put(appId, new AppStats(
+                    convCount.getOrDefault(appId, 0L),
+                    msgCount.getOrDefault(appId, 0L)));
+        }
+        return result;
     }
 
     // ---------- 发送消息 ----------

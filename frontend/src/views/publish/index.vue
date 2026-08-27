@@ -40,6 +40,15 @@ async function copyUrl(row: AgentApp) {
   }
 }
 
+/** 格式化时间：ISO 字符串 → YYYY-MM-DD HH:mm */
+function formatTime(s?: string) {
+  if (!s) return '-'
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return s
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 async function load() {
   loading.value = true
   try {
@@ -48,14 +57,12 @@ async function load() {
     list.value = published
     if (published.length) {
       const ids = published.map((a) => a.id)
-      const [st, verList] = await Promise.all([
+      const [st, verMap] = await Promise.all([
         appApi.batchStats(ids),
-        Promise.all(ids.map((id) => appApi.published(id).catch(() => null)))
+        appApi.publishedBatch(ids).catch(() => ({}))
       ])
       stats.value = st
-      verList.forEach((v, i) => {
-        if (v) versions.value[ids[i]] = v
-      })
+      versions.value = verMap
     }
   } finally {
     loading.value = false
@@ -108,7 +115,7 @@ onMounted(load)
               <span class="pub-stat-label">消息</span>
             </div>
             <div class="pub-stat">
-              <span class="pub-stat-value">{{ row.updateTime }}</span>
+              <span class="pub-stat-value">{{ formatTime(row.updateTime) }}</span>
               <span class="pub-stat-label">更新时间</span>
             </div>
           </div>

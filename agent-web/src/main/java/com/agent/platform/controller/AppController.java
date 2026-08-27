@@ -16,6 +16,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +36,10 @@ public class AppController {
 
     @GetMapping
     public Result<Page<AgentApp>> page(@RequestParam(defaultValue = "1") long page,
-                                       @RequestParam(defaultValue = "20") long size) {
-        return Result.ok(appService.page(page, size));
+                                       @RequestParam(defaultValue = "20") long size,
+                                       @RequestParam(required = false) String keyword,
+                                       @RequestParam(required = false) String type) {
+        return Result.ok(appService.page(page, size, keyword, type));
     }
 
     @GetMapping("/{id}")
@@ -77,20 +80,41 @@ public class AppController {
     /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
     @GetMapping("/stats/batch")
     public Result<Map<Long, ConversationService.AppStats>> batchStats(@RequestParam String ids) {
-        Map<Long, ConversationService.AppStats> map = new HashMap<>();
+        List<Long> idList = parseIds(ids);
+        return Result.ok(conversationService.statsBatch(idList));
+    }
+
+    /** 批量获取发布版本：ids 逗号分隔，返回 Map<appId, version> */
+    @GetMapping("/published/batch")
+    public Result<Map<Long, AgentAppVersion>> publishedBatch(@RequestParam String ids) {
+        Map<Long, AgentAppVersion> map = new HashMap<>();
+        for (Long id : parseIds(ids)) {
+            try {
+                map.put(id, appService.getPublishedVersion(id));
+            } catch (Exception ignored) {
+                // 未发布的应用跳过
+            }
+        }
+        return Result.ok(map);
+    }
+
+    private List<Long> parseIds(String ids) {
+        List<Long> list = new ArrayList<>();
+        if (ids == null) {
+            return list;
+        }
         for (String s : ids.split(",")) {
             String t = s.trim();
             if (t.isEmpty()) {
                 continue;
             }
             try {
-                Long id = Long.valueOf(t);
-                map.put(id, conversationService.stats(id));
-            } catch (Exception ignored) {
-                // 单个应用统计失败不影响整体
+                list.add(Long.valueOf(t));
+            } catch (NumberFormatException ignored) {
+                // 忽略非法 id
             }
         }
-        return Result.ok(map);
+        return list;
     }
 
     /** 运行应用工作流（按画布 DSL 执行） */

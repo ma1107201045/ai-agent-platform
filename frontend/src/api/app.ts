@@ -2,7 +2,7 @@ import request from './request'
 import type { AgentApp, AgentAppVersion, AppStats, ChatMessage, PageResult, RunResult } from './types'
 
 export const appApi = {
-  page(params: { page?: number; size?: number }) {
+  page(params: { page?: number; size?: number; keyword?: string; type?: string }) {
     return request.get<never, PageResult<AgentApp>>('/apps', { params })
   },
   get(id: number) {
@@ -22,6 +22,12 @@ export const appApi = {
   },
   published(id: number) {
     return request.get<never, AgentAppVersion>(`/apps/${id}/published`)
+  },
+  /** 批量获取发布版本，返回 Map<appId, version> */
+  publishedBatch(ids: number[]) {
+    return request.get<never, Record<number, AgentAppVersion>>('/apps/published/batch', {
+      params: { ids: ids.join(',') }
+    })
   },
   run(id: number, messages: ChatMessage[]) {
     return request.post<never, RunResult>(`/apps/${id}/run`, { messages })

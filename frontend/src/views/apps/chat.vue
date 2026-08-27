@@ -42,6 +42,9 @@ const conversationId = ref<number | null>(null)
 const conversationTitle = ref('')
 const conversations = ref<ChatConversation[]>([])
 const loadingConvs = ref(false)
+const convPage = ref(1)
+const convTotal = ref(0)
+const convSize = 20
 
 let abortCtrl: AbortController | null = null
 
@@ -84,11 +87,37 @@ async function load() {
   }
 }
 
-/** 加载会话列表（当前应用） */
+/** 格式化时间：ISO 字符串 → YYYY-MM-DD HH:mm */
+function formatTime(s?: string) {
+  if (!s) return '-'
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return s
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** 加载会话列表（当前应用，分页） */
 async function loadConversations() {
   loadingConvs.value = true
   try {
-    conversations.value = (await conversationApi.page({ appId, size: 100 })).records
+    const data = await conversationApi.page({ appId, page: 1, size: convSize })
+    conversations.value = data.records
+    convTotal.value = data.total
+    convPage.value = 1
+  } finally {
+    loadingConvs.value = false
+  }
+}
+
+/** 加载更多历史会话 */
+async function loadMoreConversations() {
+  if (loadingConvs.value) return
+  loadingConvs.value = true
+  try {
+    const data = await conversationApi.page({ appId, page: convPage.value + 1, size: convSize })
+    conversations.value = conversations.value.concat(data.records)
+    convTotal.value = data.total
+    convPage.value += 1
   } finally {
     loadingConvs.value = false
   }
@@ -363,7 +392,7 @@ onMounted(async () => {
               >
                 {{ c.mode === 'workflow' ? '工作流' : c.mode === 'agent' ? '智能体' : '直连' }}
               </el-tag>
-              <span class="conv-time">{{ c.updateTime }}</span>
+              <span class="conv-time">{{ formatTime(c.updateTime) }}</span>
               <span class="conv-ops">
                 <el-icon class="conv-del conv-edit" @click.stop="renameConversation(c)"><EditPen /></el-icon>
                 <el-icon class="conv-del" @click.stop="removeConversation(c)"><Delete /></el-icon>
@@ -375,6 +404,11 @@ onMounted(async () => {
             description="暂无会话"
             :image-size="60"
           />
+          <div v-if="conversations.length < convTotal" class="conv-more">
+            <el-button link type="primary" :loading="loadingConvs" @click="loadMoreConversations">
+              加载更多
+            </el-button>
+          </div>
         </el-scrollbar>
       </aside>
 
@@ -585,6 +619,12 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
 }
+.conv-more {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 12px;
+}
+
 .conv-item {
   margin: 4px 10px;
   padding: 10px 12px;

@@ -3,8 +3,12 @@ package com.agent.platform.service;
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.dao.entity.AgentApp;
 import com.agent.platform.dao.entity.AgentAppVersion;
+import com.agent.platform.dao.entity.ChatConversation;
+import com.agent.platform.dao.entity.ChatMessage;
 import com.agent.platform.dao.mapper.AgentAppMapper;
 import com.agent.platform.dao.mapper.AgentAppVersionMapper;
+import com.agent.platform.dao.mapper.ChatConversationMapper;
+import com.agent.platform.dao.mapper.ChatMessageMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 应用服务
@@ -23,10 +28,20 @@ public class AppService {
 
     private final AgentAppMapper appMapper;
     private final AgentAppVersionMapper versionMapper;
+    private final ChatConversationMapper conversationMapper;
+    private final ChatMessageMapper messageMapper;
 
-    public Page<AgentApp> page(long page, long size) {
-        return appMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<AgentApp>().orderByDesc(AgentApp::getId));
+    /** 分页查询应用，支持名称模糊搜索与类型过滤 */
+    public Page<AgentApp> page(long page, long size, String keyword, String type) {
+        LambdaQueryWrapper<AgentApp> qw = new LambdaQueryWrapper<AgentApp>()
+                .orderByDesc(AgentApp::getId);
+        if (keyword != null && !keyword.isBlank()) {
+            qw.like(AgentApp::getName, keyword.trim());
+        }
+        if (type != null && !type.isBlank()) {
+            qw.eq(AgentApp::getType, type);
+        }
+        return appMapper.selectPage(new Page<>(page, size), qw);
     }
 
     public AgentApp getById(Long id) {
@@ -53,14 +68,40 @@ public class AppService {
         return app;
     }
 
+    /** 更新应用：仅允许更新业务字段，防止 status / publishedVersionId 等敏感字段被覆盖 */
     public void update(AgentApp app) {
         getById(app.getId());
-        app.setUpdateTime(LocalDateTime.now());
-        appMapper.updateById(app);
+        LambdaUpdateWrapper<AgentApp> uw = new LambdaUpdateWrapper<AgentApp>()
+                .eq(AgentApp::getId, app.getId())
+                .set(AgentApp::getUpdateTime, LocalDateTime.now());
+        if (app.getName() != null) uw.set(AgentApp::getName, app.getName());
+        if (app.getDescription() != null) uw.set(AgentApp::getDescription, app.getDescription());
+        if (app.getType() != null) uw.set(AgentApp::getType, app.getType());
+        if (app.getIcon() != null) uw.set(AgentApp::getIcon, app.getIcon());
+        if (app.getWelcomeMessage() != null) uw.set(AgentApp::getWelcomeMessage, app.getWelcomeMessage());
+        if (app.getOpeningQuestions() != null) uw.set(AgentApp::getOpeningQuestions, app.getOpeningQuestions());
+        if (app.getWorkflowJson() != null) uw.set(AgentApp::getWorkflowJson, app.getWorkflowJson());
+        if (app.getToolIds() != null) uw.set(AgentApp::getToolIds, app.getToolIds());
+        if (app.getDatasetIds() != null) uw.set(AgentApp::getDatasetIds, app.getDatasetIds());
+        appMapper.update(null, uw);
     }
 
+    /** 删除应用：级联清理发布版本、会话与消息，避免脏数据残留 */
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         getById(id);
+        List<Long> convIds = conversationMapper.selectList(
+                        new LambdaQueryWrapper<ChatConversation>()
+                                .select(ChatConversation::getId)
+                                .eq(ChatConversation::getAppId, id))
+                .stream()
+                .map(ChatConversation::getId)
+                .toList();
+        if (!convIds.isEmpty()) {
+            messageMapper.delete(new LambdaQueryWrapper<ChatMessage>()
+                    .in(ChatMessage::getConversationId, convIds));
+        }
+        conversationMapper.delete(new LambdaQueryWrapper<ChatConversation>().eq(ChatConversation::getAppId, id));
         appMapper.deleteById(id);
         versionMapper.delete(new LambdaQueryWrapper<AgentAppVersion>().eq(AgentAppVersion::getAppId, id));
     }
@@ -71,12 +112,13 @@ public class AppService {
     @Transactional(rollbackFor = Exception.class)
     public AgentAppVersion publish(Long appId, String workflowJson, String promptConfig, Long operatorId) {
         AgentApp app = getById(appId);
-        Integer maxVersion = versionMapper.selectList(
-                        new LambdaQueryWrapper<AgentAppVersion>().eq(AgentAppVersion::getAppId, appId))
-                .stream()
-                .map(AgentAppVersion::getVersion)
-                .max(Integer::compareTo)
-                .orElse(0);
+        List<Object> versions = versionMapper.selectObjs(
+                new LambdaQueryWrapper<AgentAppVersion>()
+                        .select(AgentAppVersion::getVersion)
+                        .eq(AgentAppVersion::getAppId, appId)
+                        .orderByDesc(AgentAppVersion::getVersion)
+                        .last("limit 1"));
+        int maxVersion = versions.isEmpty() ? 0 : ((Number) versions.get(0)).intValue();
 
         AgentAppVersion version = new AgentAppVersion();
         version.setAppId(appId);
