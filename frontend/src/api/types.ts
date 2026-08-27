@@ -51,9 +51,46 @@ export interface AgentApp {
   openingQuestions?: string
   status: number
   workflowJson?: string
+  toolIds?: string
+  datasetIds?: string
   publishedVersionId?: number
   createTime?: string
   updateTime?: string
+}
+
+/** Agent 工具 */
+export interface AgentTool {
+  id: number
+  tenantId: number
+  name: string
+  description?: string
+  type: 'http' | 'code'
+  url?: string
+  method?: string
+  headers?: string
+  authType?: 'none' | 'bearer' | 'basic'
+  authToken?: string
+  authUsername?: string
+  authPassword?: string
+  parameters?: string
+  code?: string
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** Agent 工具调用步骤 */
+export interface AgentStep {
+  toolName: string
+  arguments: string
+  result: string
+  costMs: number
+}
+
+/** Agent 执行结果 */
+export interface AgentResult {
+  answer: string
+  steps: AgentStep[]
 }
 
 /** 编排节点类型 */
@@ -96,12 +133,37 @@ export interface ChatMessage {
   content: string
 }
 
-/** SSE 流式块 */
+/** SSE 流式块（后端 ChatChunk：delta 为内容增量） */
 export interface ChatChunk {
-  index: number
-  content?: string
+  delta?: string
   finishReason?: string
   usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
+}
+
+/** 聊天会话 */
+export interface ChatConversation {
+  id: number
+  tenantId: number
+  userId: number
+  appId: number
+  title?: string
+  mode: 'direct' | 'workflow' | 'agent'
+  modelId?: number
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 持久化聊天消息（后端实体） */
+export interface ChatMessageRecord {
+  id: number
+  conversationId: number
+  role: 'user' | 'assistant'
+  content?: string
+  traceJson?: string
+  tokens?: number
+  status: number
+  createTime?: string
 }
 
 /** 工作流节点执行轨迹 */
@@ -120,6 +182,12 @@ export interface TraceItem {
 export interface RunResult {
   answer: string
   trace: TraceItem[]
+}
+
+/** 应用会话统计 */
+export interface AppStats {
+  conversationCount: number
+  messageCount: number
 }
 
 export interface AgentAppVersion {
@@ -153,4 +221,52 @@ export interface ModelInfo {
   maxTokens?: number
   capabilities?: string
   status: number
+}
+
+/** 知识库数据集 */
+export interface KnowledgeDataset {
+  id: number
+  tenantId: number
+  name: string
+  description?: string
+  embeddingModel?: number
+  chunkSize?: number
+  chunkOverlap?: number
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 知识库文档 */
+export interface KnowledgeDocument {
+  id: number
+  datasetId: number
+  name: string
+  content?: string
+  charCount?: number
+  chunkCount?: number
+  status: 'pending' | 'indexing' | 'ready' | 'failed'
+  errorMsg?: string
+  createTime?: string
+  updateTime?: string
+}
+
+/** 知识库分块 */
+export interface KnowledgeChunk {
+  id: number
+  datasetId: number
+  documentId: number
+  chunkIndex: number
+  content: string
+  charCount?: number
+  createTime?: string
+}
+
+/** 知识库检索命中 */
+export interface SearchHit {
+  id: number
+  documentId: number
+  chunkIndex: number
+  content: string
+  score: number
 }

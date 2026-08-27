@@ -64,4 +64,16 @@ public class ModelController {
         modelService.deleteModel(id);
         return Result.ok();
     }
+
+    /** 可用向量模型列表（供知识库配置下拉） */
+    @GetMapping("/embedding-models")
+    public Result<List<ModelService.ChatModelInfo>> embeddingModels() {
+        return Result.ok(modelService.embeddingModels());
+    }
+
+    /** 可用重排序模型列表 */
+    @GetMapping("/rerank-models")
+    public Result<List<ModelService.ChatModelInfo>> rerankModels() {
+        return Result.ok(modelService.rerankModels());
+    }
 }

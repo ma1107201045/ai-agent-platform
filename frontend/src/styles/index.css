@@ -1,21 +1,68 @@
+/* ============================================================
+   全局设计令牌 & 基础样式（现代 AI 平台风格）
+   ============================================================ */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+:root {
+  /* 品牌色 */
+  --brand-1: #5b6cff;
+  --brand-2: #8b5cf6;
+  --brand-3: #4facfe;
+  --brand-gradient: linear-gradient(135deg, #5b6cff 0%, #8b5cf6 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(91, 108, 255, 0.12), rgba(139, 92, 246, 0.12));
+
+  /* 背景 & 表面 */
+  --bg-page: #f5f7fc;
+  --bg-card: #ffffff;
+  --border-color: #e8ecf4;
+
+  /* 文本 */
+  --text-primary: #1f2437;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  /* 圆角 / 阴影 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-card: 0 1px 2px rgba(31, 36, 55, 0.04), 0 4px 12px rgba(31, 36, 55, 0.06);
+  --shadow-card-hover: 0 6px 16px rgba(31, 36, 55, 0.08), 0 12px 32px rgba(91, 108, 255, 0.12);
+  --shadow-pop: 0 12px 32px rgba(31, 36, 55, 0.14);
+
+  /* Element Plus 主题覆盖 */
+  --el-color-primary: #5b6cff;
+  --el-color-primary-light-3: #7c8aff;
+  --el-color-primary-light-5: #9da8ff;
+  --el-color-primary-light-7: #bec5ff;
+  --el-color-primary-light-8: #ced3ff;
+  --el-color-primary-light-9: #eef0ff;
+  --el-color-primary-dark-2: #4a57d6;
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 20px;
+  --el-font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+  --el-box-shadow-light: var(--shadow-card);
+}
+
 html,
 body,
 #app {
   height: 100%;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', Arial, sans-serif;
+  font-family: var(--el-font-family);
   -webkit-font-smoothing: antialiased;
-  background-color: #f5f7fa;
+  background: var(--bg-page);
+  color: var(--text-primary);
 }
 
+/* 通用页面容器 */
 .page-container {
-  padding: 16px;
+  padding: 20px 24px 32px;
 }
 
 .table-toolbar {
@@ -23,4 +70,103 @@ body,
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+
+/* ---------- 卡片 hover 上浮（通用交互） ---------- */
+.hover-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(91, 108, 255, 0.35);
+}
+
+/* ---------- 渐变按钮 ---------- */
+.btn-gradient {
+  border: none !important;
+  background: var(--brand-gradient) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(91, 108, 255, 0.32);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+.btn-gradient:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(91, 108, 255, 0.42);
+  filter: brightness(1.05);
+}
+.btn-gradient:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ---------- 页面切换过渡 ---------- */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ---------- 滚动条美化 ---------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(31, 36, 55, 0.16);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(31, 36, 55, 0.3);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- Element Plus 细节统一 ---------- */
+.el-card {
+  border-radius: var(--radius-lg);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+.el-card.is-always-shadow,
+.el-card.is-hover-shadow {
+  box-shadow: var(--shadow-card);
+}
+.el-table {
+  --el-table-border-color: var(--border-color);
+  --el-table-header-bg-color: #f8f9fe;
+  --el-table-header-text-color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.el-table .el-table__row {
+  transition: background-color 0.15s ease;
+}
+.el-pagination {
+  --el-pagination-button-bg-color: transparent;
+}
+.el-dialog {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.el-message-box {
+  border-radius: var(--radius-lg);
+}
+.el-button {
+  transition: all 0.18s ease;
+}
+.el-input__wrapper,
+.el-textarea__inner {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }

@@ -20,6 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/login", // 登录接口放行
+                        "/api/public/**",  // 已发布应用对外访问（无需登录）
                         "/error"           // 错误页放行
                 );
     }

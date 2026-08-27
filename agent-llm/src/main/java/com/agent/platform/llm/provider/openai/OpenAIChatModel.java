@@ -108,6 +108,25 @@ public class OpenAIChatModel implements ChatModel {
             Map<String, Object> msg = new LinkedHashMap<>();
             msg.put("role", m.role());
             msg.put("content", m.content());
+            // assistant 消息携带工具调用
+            if (m.toolCalls() != null && !m.toolCalls().isEmpty()) {
+                List<Map<String, Object>> tcs = new ArrayList<>();
+                for (ToolCall tc : m.toolCalls()) {
+                    Map<String, Object> fn = new LinkedHashMap<>();
+                    fn.put("name", tc.name());
+                    fn.put("arguments", tc.arguments());
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", tc.id());
+                    item.put("type", "function");
+                    item.put("function", fn);
+                    tcs.add(item);
+                }
+                msg.put("tool_calls", tcs);
+            }
+            // tool 消息回填工具调用 ID
+            if (m.toolCallId() != null) {
+                msg.put("tool_call_id", m.toolCallId());
+            }
             messages.add(msg);
         }
         body.put("messages", messages);

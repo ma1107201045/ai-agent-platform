@@ -95,13 +95,16 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="table-toolbar">
-      <span style="color: #909399">共 {{ providers.length }} 个供应商</span>
-      <el-button type="primary" @click="openCreate">添加供应商</el-button>
+  <div class="page-container models-page">
+    <div class="models-head">
+      <div>
+        <h2 class="head-title">模型供应商</h2>
+        <p class="head-desc">共 {{ providers.length }} 个供应商 · 统一管理 API 地址与密钥</p>
+      </div>
+      <el-button type="primary" class="btn-gradient" @click="openCreate">添加供应商</el-button>
     </div>
 
-    <el-card shadow="never">
+    <el-card shadow="never" class="models-card">
       <el-table
         v-loading="loading"
         :data="providers"
@@ -188,8 +191,34 @@ onMounted(load)
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" @click="save">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.models-page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.models-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.head-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+.head-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.models-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+</style>

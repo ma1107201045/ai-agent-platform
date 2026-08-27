@@ -115,6 +115,17 @@ public class AppService {
     }
 
     /**
+     * 获取已发布版本的工作流 DSL（公开访问只用线上版本，不用草稿）
+     */
+    public String getPublishedWorkflow(Long appId) {
+        AgentAppVersion version = getPublishedVersion(appId);
+        if (version.getWorkflowJson() == null || version.getWorkflowJson().isBlank()) {
+            throw new BizException("应用发布版本未编排工作流");
+        }
+        return version.getWorkflowJson();
+    }
+
+    /**
      * 获取运行用 DSL：草稿优先，否则取已发布版本
      */
     public String getRunWorkflow(Long appId) {

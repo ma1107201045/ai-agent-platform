@@ -5,6 +5,7 @@ import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
+import com.agent.platform.service.KnowledgeService;
 import com.agent.platform.service.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +15,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +28,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.mvel2.MVEL;
 
 /**
  * 工作流执行引擎（v1：链式顺序执行）
@@ -39,6 +44,7 @@ public class WorkflowEngine {
     private static final Pattern VAR_PATTERN = Pattern.compile("\\{\\{\\s*([\\w.-]+)\\s*}}");
 
     private final ModelService modelService;
+    private final KnowledgeService knowledgeService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -89,7 +95,7 @@ public class WorkflowEngine {
             }
             long cost = System.currentTimeMillis() - start;
 
-            if ("llm".equals(node.getType()) || "http".equals(node.getType())) {
+            if ("llm".equals(node.getType()) || "http".equals(node.getType()) || "code".equals(node.getType())) {
                 input = render(System.lineSeparator() + node.getLabel(), userInput, outputs).trim();
                 if (output != null && output.length() > 300) {
                     output = output.substring(0, 300) + "...";
@@ -124,7 +130,7 @@ public class WorkflowEngine {
         return RunResult.builder().answer(lastAnswer).trace(trace).build();
     }
 
-    /** 执行单个节点，返回节点输出文本（LLM 回答 / HTTP 响应体） */
+    /** 执行单个节点，返回节点输出文本（LLM 回答 / HTTP 响应体 / 脚本输出） */
     private String executeNode(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
         switch (node.getType()) {
             case "start":
@@ -134,18 +140,17 @@ public class WorkflowEngine {
             case "llm":
                 return executeLlm(node, userInput, outputs);
             case "http":
-                return executeHttp(node, outputs);
+                return executeHttp(node, userInput, outputs);
             case "condition":
                 return null;
             case "code":
-                // v1 暂不支持代码节点，跳过
-                return null;
+                return executeCode(node, userInput, outputs);
             default:
                 return null;
         }
     }
 
-    /** LLM 节点：系统提示词 + 用户输入（支持 {{input}} / {{节点id}} 变量替换） */
+    /** LLM 节点：系统提示词 + 用户输入（支持 {{input}} / {{节点id}} 变量替换），可选知识库检索增强 */
     private String executeLlm(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
         Map<String, Object> cfg = node.getConfig();
         Object modelIdObj = cfg == null ? null : cfg.get("modelId");
@@ -161,10 +166,36 @@ public class WorkflowEngine {
         Object temp = cfg.get("temperature");
         Double temperature = temp instanceof Number ? ((Number) temp).doubleValue() : null;
 
+        // 知识库检索增强：配置 datasetId 时，按用户输入检索 topK 片段拼入 system 提示词
+        String knowledgeContext = "";
+        Object datasetIdObj = cfg.get("datasetId");
+        if (datasetIdObj != null && !"null".equals(String.valueOf(datasetIdObj))) {
+            Long datasetId = ((Number) datasetIdObj).longValue();
+            Object topKObj = cfg.get("topK");
+            int topK = topKObj instanceof Number ? ((Number) topKObj).intValue() : 3;
+            Object rerankObj = cfg.get("rerankModelId");
+            Long rerankModelId = rerankObj instanceof Number ? ((Number) rerankObj).longValue() : null;
+            try {
+                List<KnowledgeService.SearchHit> hits = knowledgeService.search(datasetId, userInput, topK, rerankModelId);
+                if (!hits.isEmpty()) {
+                    StringBuilder sb = new StringBuilder("\n\n以下是与用户问题相关的知识库参考资料，请据此回答：\n\n");
+                    for (int i = 0; i < hits.size(); i++) {
+                        sb.append("[").append(i + 1).append("] ")
+                                .append(hits.get(i).getContent().strip())
+                                .append("\n\n");
+                    }
+                    knowledgeContext = sb.toString();
+                }
+            } catch (Exception e) {
+                // 检索失败不中断流程，仅记录
+                knowledgeContext = "\n\n[知识库检索失败: " + e.getMessage() + "]\n";
+            }
+        }
+
         ChatModel chatModel = modelService.chatModelOf(modelId);
         ChatRequest request = ChatRequest.builder()
                 .messages(List.of(
-                        ChatMessage.system(render(systemPrompt, userInput, outputs)),
+                        ChatMessage.system(render(systemPrompt, userInput, outputs) + knowledgeContext),
                         ChatMessage.user(render(userInput, userInput, outputs))))
                 .temperature(temperature)
                 .build();
@@ -174,36 +205,106 @@ public class WorkflowEngine {
         return content;
     }
 
-    /** HTTP 节点：GET / POST 调用外部 API */
-    private String executeHttp(WorkflowGraph.WorkflowNode node, Map<String, String> outputs) {
+    /**
+     * HTTP 节点：GET / POST / PUT / DELETE 调用外部 API。
+     * 支持变量替换（{{input}} / {{节点id}}）、自定义 headers、鉴权（Bearer / Basic）、失败重试。
+     */
+    private String executeHttp(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
         Map<String, Object> cfg = node.getConfig();
         String url = cfg == null ? "" : String.valueOf(cfg.getOrDefault("url", ""));
         if (url.isBlank() || "null".equals(url)) {
             throw new BizException("HTTP 节点「" + node.getLabel() + "」未配置请求地址");
         }
+        url = render(url, userInput, outputs);
         String method = cfg.get("method") == null ? "GET" : String.valueOf(cfg.get("method")).toUpperCase();
-        try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .build();
-            HttpRequest.Builder builder = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .timeout(Duration.ofSeconds(30))
-                    .header("Content-Type", "application/json");
-            if ("POST".equals(method) || "PUT".equals(method)) {
-                String body = objectMapper.writeValueAsString(outputs);
-                builder.method(method, HttpRequest.BodyPublishers.ofString(body));
-            } else {
-                builder.method("GET", HttpRequest.BodyPublishers.noBody());
+        int retries = cfg.get("retries") instanceof Number ? ((Number) cfg.get("retries")).intValue() : 0;
+
+        Exception lastError = null;
+        for (int attempt = 0; attempt <= retries; attempt++) {
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(10))
+                        .build();
+                HttpRequest.Builder builder = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(30));
+
+                // 自定义 Headers（JSON 对象，支持变量替换）
+                Object headersObj = cfg.get("headers");
+                if (headersObj instanceof Map<?, ?>) {
+                    for (Map.Entry<?, ?> e : ((Map<?, ?>) headersObj).entrySet()) {
+                        builder.header(String.valueOf(e.getKey()),
+                                render(String.valueOf(e.getValue()), userInput, outputs));
+                    }
+                }
+                // 鉴权
+                String authType = cfg.get("authType") == null ? "none" : String.valueOf(cfg.get("authType"));
+                if ("bearer".equalsIgnoreCase(authType)) {
+                    String token = cfg.get("authToken") == null ? "" : String.valueOf(cfg.get("authToken"));
+                    builder.header("Authorization", "Bearer " + render(token, userInput, outputs));
+                } else if ("basic".equalsIgnoreCase(authType)) {
+                    String username = cfg.get("authUsername") == null ? "" : String.valueOf(cfg.get("authUsername"));
+                    String password = cfg.get("authPassword") == null ? "" : String.valueOf(cfg.get("authPassword"));
+                    String encoded = Base64.getEncoder().encodeToString(
+                            (render(username, userInput, outputs) + ":" + render(password, userInput, outputs))
+                                    .getBytes(StandardCharsets.UTF_8));
+                    builder.header("Authorization", "Basic " + encoded);
+                }
+
+                if ("POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method)) {
+                    if (!"DELETE".equals(method)) {
+                        builder.header("Content-Type", "application/json");
+                    }
+                    String body = objectMapper.writeValueAsString(outputs);
+                    builder.method(method, HttpRequest.BodyPublishers.ofString(body));
+                } else {
+                    builder.method("GET", HttpRequest.BodyPublishers.noBody());
+                }
+                HttpResponse<String> resp = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+                String body = resp.body();
+                outputs.put(node.getId(), body == null ? "" : body);
+                return body;
+            } catch (BizException e) {
+                throw e;
+            } catch (Exception e) {
+                lastError = e;
+                // 重试前短暂等待
+                if (attempt < retries) {
+                    try {
+                        Thread.sleep(300L * (attempt + 1));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
-            HttpResponse<String> resp = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
-            String body = resp.body();
-            outputs.put(node.getId(), body == null ? "" : body);
-            return body;
-        } catch (BizException e) {
-            throw e;
+        }
+        throw new BizException("HTTP 节点「" + node.getLabel() + "」请求失败: "
+                + (lastError == null ? "未知错误" : lastError.getMessage()));
+    }
+
+    /**
+     * 代码节点：执行 MVEL 表达式脚本。
+     * 脚本内可使用变量：input（用户输入）、以及 {{节点id}} 对应的各节点输出（变量名为节点 id）。
+     * 通过 return 返回结果文本。
+     */
+    private String executeCode(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
+        Map<String, Object> cfg = node.getConfig();
+        String code = cfg == null ? null : String.valueOf(cfg.getOrDefault("code", ""));
+        if (code == null || code.isBlank() || "null".equals(code)) {
+            throw new BizException("代码节点「" + node.getLabel() + "」未配置代码");
+        }
+        try {
+            Map<String, Object> vars = new HashMap<>(outputs);
+            vars.put("input", userInput == null ? "" : userInput);
+            vars.put("outputs", outputs);
+            Object result = MVEL.executeExpression(MVEL.compileExpression(code), vars);
+            String text = result == null ? "" : String.valueOf(result);
+            outputs.put(node.getId(), text);
+            return text;
         } catch (Exception e) {
-            throw new BizException("HTTP 节点「" + node.getLabel() + "」请求失败: " + e.getMessage());
+            throw new BizException("代码节点「" + node.getLabel() + "」执行失败: "
+                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
         }
     }
 

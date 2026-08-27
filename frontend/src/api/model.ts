@@ -1,5 +1,5 @@
 import request from './request'
-import type { ModelInfo, ModelProvider, PageResult } from './types'
+import type { ChatModelInfo, ModelInfo, ModelProvider, PageResult } from './types'
 
 export const modelApi = {
   providerPage(params: { page?: number; size?: number }) {
@@ -22,5 +22,14 @@ export const modelApi = {
   },
   removeModel(id: number) {
     return request.delete<never, void>(`/models/${id}`)
+  },
+  /** 可用向量模型列表 */
+  embeddingModels() {
+    return request.get<never, ChatModelInfo[]>('/embedding-models')
+  },
+  /** 可用重排序模型列表 */
+  rerankModels() {
+    return request.get<never, ChatModelInfo[]>('/rerank-models')
   }
 }
+

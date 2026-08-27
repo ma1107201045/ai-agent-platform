@@ -9,6 +9,7 @@ import com.agent.platform.llm.model.ModelConfig;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.llm.spi.EmbeddingModel;
 import com.agent.platform.llm.spi.LLMFactory;
+import com.agent.platform.llm.spi.RerankModel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
@@ -118,6 +119,14 @@ public class ModelService {
     }
 
     /**
+     * 获取默认对话模型 ID（第一个启用的 LLM），无可用模型返回 null
+     */
+    public Long defaultChatModelId() {
+        List<ChatModelInfo> list = chatModels();
+        return list.isEmpty() ? null : list.get(0).getId();
+    }
+
+    /**
      * 根据模型记录创建 ChatModel 实例
      */
     public ChatModel chatModelOf(Long modelId) {
@@ -142,6 +151,56 @@ public class ModelService {
         }
         ModelProvider provider = getProvider(info.getProviderId());
         return llmFactory.createEmbeddingModel(buildConfig(provider, info));
+    }
+
+    /**
+     * 根据模型记录创建 RerankModel 实例
+     */
+    public RerankModel rerankModelOf(Long modelId) {
+        ModelInfo info = modelInfoMapper.selectById(modelId);
+        if (info == null) {
+            throw new BizException("模型不存在: " + modelId);
+        }
+        ModelProvider provider = getProvider(info.getProviderId());
+        return llmFactory.createRerankModel(buildConfig(provider, info));
+    }
+
+    /**
+     * 可用的向量模型列表（供知识库配置下拉）
+     */
+    public List<ChatModelInfo> embeddingModels() {
+        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
+                .eq(ModelInfo::getModelType, "embedding")
+                .eq(ModelInfo::getStatus, 1)
+                .orderByAsc(ModelInfo::getId));
+        List<ChatModelInfo> result = new ArrayList<>();
+        for (ModelInfo info : infos) {
+            ModelProvider provider = providerMapper.selectById(info.getProviderId());
+            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
+                continue;
+            }
+            result.add(new ChatModelInfo(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+        }
+        return result;
+    }
+
+    /**
+     * 可用的重排序模型列表
+     */
+    public List<ChatModelInfo> rerankModels() {
+        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
+                .eq(ModelInfo::getModelType, "rerank")
+                .eq(ModelInfo::getStatus, 1)
+                .orderByAsc(ModelInfo::getId));
+        List<ChatModelInfo> result = new ArrayList<>();
+        for (ModelInfo info : infos) {
+            ModelProvider provider = providerMapper.selectById(info.getProviderId());
+            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
+                continue;
+            }
+            result.add(new ChatModelInfo(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+        }
+        return result;
     }
 
     private ModelConfig buildConfig(ModelProvider provider, ModelInfo info) {

@@ -51,20 +51,34 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page-container">
-    <div class="table-toolbar">
-      <span style="color: #909399">共 {{ total }} 个用户</span>
-      <el-button type="primary" @click="create">创建用户</el-button>
+  <div class="page-container users-page">
+    <div class="users-head">
+      <div>
+        <h2 class="head-title">用户管理</h2>
+        <p class="head-desc">共 {{ total }} 个用户 · 管理系统账号</p>
+      </div>
+      <el-button type="primary" class="btn-gradient" @click="create">创建用户</el-button>
     </div>
 
-    <el-card shadow="never">
+    <el-card shadow="never" class="users-card">
       <el-table v-loading="loading" :data="list">
-        <el-table-column prop="username" label="用户名" min-width="140" />
-        <el-table-column prop="nickname" label="昵称" min-width="140" />
+        <el-table-column label="用户" min-width="200">
+          <template #default="{ row }">
+            <div class="user-cell">
+              <div class="user-avatar-ring">
+                <el-avatar :size="30" class="user-avatar">{{ (row.nickname || row.username).charAt(0) }}</el-avatar>
+              </div>
+              <div>
+                <div class="user-name">{{ row.nickname || row.username }}</div>
+                <div class="user-username">@{{ row.username }}</div>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.status === 1 ? 'success' : 'info'">
+            <el-tag size="small" :type="row.status === 1 ? 'success' : 'info'" effect="light">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
@@ -87,3 +101,54 @@ onMounted(load)
     </el-card>
   </div>
 </template>
+
+<style scoped>
+.users-page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.users-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.head-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+.head-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.users-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.user-avatar-ring {
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+}
+.user-avatar {
+  background: #fff;
+  color: var(--brand-1);
+  font-size: 13px;
+  font-weight: 600;
+}
+.user-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.user-username {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+</style>

@@ -1,5 +1,5 @@
 import request from './request'
-import type { AgentApp, AgentAppVersion, ChatMessage, PageResult, RunResult } from './types'
+import type { AgentApp, AgentAppVersion, AppStats, ChatMessage, PageResult, RunResult } from './types'
 
 export const appApi = {
   page(params: { page?: number; size?: number }) {
@@ -25,5 +25,11 @@ export const appApi = {
   },
   run(id: number, messages: ChatMessage[]) {
     return request.post<never, RunResult>(`/apps/${id}/run`, { messages })
+  },
+  /** 批量会话统计（对外访问 / 运营数据） */
+  batchStats(ids: number[]) {
+    return request.get<never, Record<number, AppStats>>('/apps/stats/batch', {
+      params: { ids: ids.join(',') }
+    })
   }
 }

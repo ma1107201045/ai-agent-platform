@@ -9,13 +9,16 @@ import com.agent.platform.engine.WorkflowEngine;
 import com.agent.platform.engine.WorkflowGraph;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.service.AppService;
+import com.agent.platform.service.ConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 应用管理
@@ -26,6 +29,7 @@ import java.util.List;
 public class AppController {
 
     private final AppService appService;
+    private final ConversationService conversationService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
 
@@ -68,6 +72,25 @@ public class AppController {
     @GetMapping("/{id}/published")
     public Result<AgentAppVersion> published(@PathVariable Long id) {
         return Result.ok(appService.getPublishedVersion(id));
+    }
+
+    /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
+    @GetMapping("/stats/batch")
+    public Result<Map<Long, ConversationService.AppStats>> batchStats(@RequestParam String ids) {
+        Map<Long, ConversationService.AppStats> map = new HashMap<>();
+        for (String s : ids.split(",")) {
+            String t = s.trim();
+            if (t.isEmpty()) {
+                continue;
+            }
+            try {
+                Long id = Long.valueOf(t);
+                map.put(id, conversationService.stats(id));
+            } catch (Exception ignored) {
+                // 单个应用统计失败不影响整体
+            }
+        }
+        return Result.ok(map);
     }
 
     /** 运行应用工作流（按画布 DSL 执行） */

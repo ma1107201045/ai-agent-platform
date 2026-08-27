@@ -48,8 +48,8 @@ export const llmApi = {
         if (data === '[DONE]') return full
         try {
           const chunk = JSON.parse(data) as ChatChunk
-          if (chunk.content) {
-            full += chunk.content
+          if (chunk.delta) {
+            full += chunk.delta
             onChunk(chunk)
           }
         } catch {

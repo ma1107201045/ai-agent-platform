@@ -40,6 +40,12 @@ public class AgentApp {
     /** 编排草稿 DSL（JSON），发布时快照到版本表 */
     private String workflowJson;
 
+    /** 关联工具 ID 列表（JSON 数组字符串），agent 类型应用使用 */
+    private String toolIds;
+
+    /** 关联数据集 ID 列表（JSON 数组字符串），agent 类型应用使用 */
+    private String datasetIds;
+
     /** 当前发布版本 ID */
     private Long publishedVersionId;
 
