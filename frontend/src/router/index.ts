@@ -33,6 +33,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '应用编排', hidden: true }
       },
       {
+        path: 'apps/:id/chat',
+        name: 'AppChat',
+        component: () => import('@/views/apps/chat.vue'),
+        meta: { title: '对话调试', hidden: true }
+      },
+      {
         path: 'models',
         name: 'Models',
         component: () => import('@/views/models/index.vue'),

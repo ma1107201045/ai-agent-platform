@@ -55,12 +55,14 @@ CREATE TABLE IF NOT EXISTS agent_app (
     welcome_message      TEXT         DEFAULT NULL COMMENT '开场白',
     opening_questions    TEXT         DEFAULT NULL COMMENT '推荐问题(JSON数组)',
     status               TINYINT      DEFAULT 0 COMMENT '状态: 0草稿 1已发布',
+    workflow_json        LONGTEXT     DEFAULT NULL COMMENT '编排草稿DSL(JSON)，发布时快照到版本表',
     published_version_id BIGINT       DEFAULT NULL COMMENT '当前发布版本ID',
     create_time          DATETIME     DEFAULT CURRENT_TIMESTAMP,
     update_time          DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_tenant (tenant_id)
 ) ENGINE = InnoDB COMMENT '智能体应用';
+-- 已存在的库执行：ALTER TABLE agent_app ADD COLUMN workflow_json LONGTEXT DEFAULT NULL COMMENT '编排草稿DSL(JSON)' AFTER status;
 
 CREATE TABLE IF NOT EXISTS agent_app_version (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',

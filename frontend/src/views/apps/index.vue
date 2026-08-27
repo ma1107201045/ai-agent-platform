@@ -52,6 +52,10 @@ function edit(row: AgentApp) {
   router.push(`/apps/${row.id}/edit`)
 }
 
+function chat(row: AgentApp) {
+  router.push(`/apps/${row.id}/chat`)
+}
+
 function publish(row: AgentApp) {
   ElMessageBox.confirm(`发布「${row.name}」为新的线上版本？`, '发布确认', {
     confirmButtonText: '发布',
@@ -110,10 +114,11 @@ onMounted(load)
           </template>
         </el-table-column>
         <el-table-column prop="updateTime" label="更新时间" width="170" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="edit(row)">编排</el-button>
-            <el-button link type="success" @click="publish(row)">发布</el-button>
+            <el-button link type="success" @click="chat(row)">对话</el-button>
+            <el-button link type="warning" @click="publish(row)">发布</el-button>
             <el-button link type="danger" @click="remove(row)">删除</el-button>
           </template>
         </el-table-column>

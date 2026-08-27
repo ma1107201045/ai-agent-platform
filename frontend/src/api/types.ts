@@ -50,9 +50,58 @@ export interface AgentApp {
   welcomeMessage?: string
   openingQuestions?: string
   status: number
+  workflowJson?: string
   publishedVersionId?: number
   createTime?: string
   updateTime?: string
+}
+
+/** 编排节点类型 */
+export type WorkflowNodeType = 'start' | 'end' | 'llm' | 'condition' | 'code' | 'http'
+
+/** DSL 节点定义 */
+export interface WorkflowNode {
+  id: string
+  type: WorkflowNodeType
+  label?: string
+  position?: { x: number; y: number }
+  config?: Record<string, unknown>
+}
+
+/** DSL 连线定义 */
+export interface WorkflowEdge {
+  id: string
+  source: string
+  target: string
+  sourceHandle?: string
+  targetHandle?: string
+}
+
+/** 工作流 DSL */
+export interface AppWorkflow {
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
+}
+
+export interface ChatModelInfo {
+  id: number
+  providerName: string
+  modelName: string
+  contextWindow?: number
+}
+
+/** 对话消息（与后端 LLM 模型一致） */
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
+/** SSE 流式块 */
+export interface ChatChunk {
+  index: number
+  content?: string
+  finishReason?: string
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
 }
 
 export interface AgentAppVersion {
