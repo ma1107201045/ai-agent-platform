@@ -98,6 +98,7 @@ export type WorkflowNodeType =
   | 'start'
   | 'end'
   | 'llm'
+  | 'agent'
   | 'condition'
   | 'code'
   | 'http'

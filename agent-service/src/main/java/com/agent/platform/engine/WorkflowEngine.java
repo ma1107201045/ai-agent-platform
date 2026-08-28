@@ -1,10 +1,14 @@
 package com.agent.platform.engine;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.dao.entity.AgentApp;
+import com.agent.platform.dao.entity.AgentTool;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
+import com.agent.platform.service.AgentService;
+import com.agent.platform.service.AppService;
 import com.agent.platform.service.KnowledgeService;
 import com.agent.platform.service.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,7 +46,7 @@ import org.mvel2.MVEL;
 /**
  * 工作流执行引擎（v2：DAG 拓扑序 + 并行 fork/join）
  * <p>
- * 支持节点：start / end / llm / condition / code / http / template / knowledge
+ * 支持节点：start / end / llm / agent / condition / code / http / template / knowledge
  * 变量：{{input}} 用户输入；{{节点id}} 取该节点输出文本
  * <p>
  * 执行模型：
@@ -68,6 +72,8 @@ public class WorkflowEngine {
 
     private final ModelService modelService;
     private final KnowledgeService knowledgeService;
+    private final AgentService agentService;
+    private final AppService appService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 一次 run 的图索引与执行状态（线程安全） */
@@ -86,6 +92,8 @@ public class WorkflowEngine {
         final AtomicInteger pending = new AtomicInteger();
         final CompletableFuture<Void> done = new CompletableFuture<>();
         String userInput = "";
+        /** 所属应用 ID（agent 节点工具/知识库回退来源），可为 null */
+        Long appId = null;
     }
 
     /**
@@ -95,11 +103,23 @@ public class WorkflowEngine {
      * @param userInput  用户最新输入
      */
     public RunResult run(WorkflowGraph graph, String userInput) {
+        return run(graph, userInput, null);
+    }
+
+    /**
+     * 执行工作流（DAG 拓扑序 + 并行 fork/join）
+     *
+     * @param graph      DSL 图
+     * @param userInput  用户最新输入
+     * @param appId      所属应用 ID，agent 节点工具/知识库回退来源（可为 null）
+     */
+    public RunResult run(WorkflowGraph graph, String userInput, Long appId) {
         if (graph == null || graph.getNodes() == null || graph.getNodes().isEmpty()) {
             return RunResult.builder().answer("").trace(new ArrayList<>()).build();
         }
         RunState st = new RunState();
         st.userInput = userInput == null ? "" : userInput;
+        st.appId = appId;
 
         // 1) 建索引
         for (WorkflowGraph.WorkflowNode n : graph.getNodes()) {
@@ -196,7 +216,7 @@ public class WorkflowEngine {
         String output = null;
         String input = null;
         try {
-            output = executeNode(node, st.userInput, st.outputs);
+            output = executeNode(node, st.userInput, st.outputs, st.appId);
         } catch (BizException e) {
             status = "error";
             error = e.getMessage();
@@ -212,7 +232,8 @@ public class WorkflowEngine {
         } else if ("knowledge".equals(node.getType())) {
             Object q = node.getConfig() == null ? null : node.getConfig().get("queryTemplate");
             input = render(q == null ? "{{input}}" : String.valueOf(q), st.userInput, st.outputs).trim();
-        } else if ("llm".equals(node.getType()) || "http".equals(node.getType()) || "code".equals(node.getType())) {
+        } else if ("llm".equals(node.getType()) || "agent".equals(node.getType())
+                || "http".equals(node.getType()) || "code".equals(node.getType())) {
             input = render(System.lineSeparator() + node.getLabel(), st.userInput, st.outputs).trim();
         }
         if (output != null && output.length() > 300) {
@@ -365,7 +386,8 @@ public class WorkflowEngine {
         }
         for (int i = st.trace.size() - 1; i >= 0; i--) {
             RunResult.TraceItem t = st.trace.get(i);
-            if ("success".equals(t.getStatus()) && "llm".equals(t.getNodeType())
+            if ("success".equals(t.getStatus())
+                    && ("llm".equals(t.getNodeType()) || "agent".equals(t.getNodeType()))
                     && t.getOutput() != null) {
                 return t.getOutput();
             }
@@ -373,8 +395,9 @@ public class WorkflowEngine {
         return st.userInput;
     }
 
-    /** 执行单个节点，返回节点输出文本（LLM 回答 / HTTP 响应体 / 脚本输出） */
-    private String executeNode(WorkflowGraph.WorkflowNode node, String userInput, Map<String, String> outputs) {
+    /** 执行单个节点，返回节点输出文本（LLM 回答 / Agent 回答 / HTTP 响应体 / 脚本输出） */
+    private String executeNode(WorkflowGraph.WorkflowNode node, String userInput,
+                               Map<String, String> outputs, Long appId) {
         switch (node.getType()) {
             case "start":
                 return null;
@@ -382,6 +405,8 @@ public class WorkflowEngine {
                 return null;
             case "llm":
                 return executeLlm(node, userInput, outputs);
+            case "agent":
+                return executeAgent(node, userInput, outputs, appId);
             case "http":
                 return executeHttp(node, userInput, outputs);
             case "condition":
@@ -448,6 +473,59 @@ public class WorkflowEngine {
                 .build();
         ChatResponse response = chatModel.call(request);
         String content = response == null ? null : response.getContent();
+        outputs.put(node.getId(), content == null ? "" : content);
+        return content;
+    }
+
+    /**
+     * Agent 节点：在 DAG 流程内执行一次自主规划-工具调用循环（ReAct）。
+     * 工具与知识库来源解析顺序：节点级配置优先，未配置时回退到应用绑定（AgentApp.toolIds / datasetIds）。
+     * systemPrompt 支持 {{input}} / {{节点id}} 变量替换，先渲染再进入 Agent 循环。
+     */
+    private String executeAgent(WorkflowGraph.WorkflowNode node, String userInput,
+                                Map<String, String> outputs, Long appId) {
+        Map<String, Object> cfg = node.getConfig();
+        Object modelIdObj = cfg == null ? null : cfg.get("modelId");
+        if (modelIdObj == null) {
+            throw new BizException("Agent 节点「" + (node.getLabel() == null ? node.getId() : node.getLabel())
+                    + "」未配置模型");
+        }
+        Long modelId = ((Number) modelIdObj).longValue();
+
+        String systemPrompt = cfg.get("systemPrompt") == null
+                ? "你是一个智能助手。请根据对话内容判断是否需要调用工具来完成任务，如果工具结果对回答有帮助，请结合工具结果作答。"
+                : String.valueOf(cfg.get("systemPrompt"));
+        systemPrompt = render(systemPrompt, userInput, outputs);
+
+        // 工具来源：节点级 toolIds 优先，未配置回退到应用绑定
+        String toolIdsJson = cfg.get("toolIds") == null
+                ? null : String.valueOf(cfg.get("toolIds"));
+        if (toolIdsJson == null || toolIdsJson.isBlank() || "[]".equals(toolIdsJson.trim())
+                || "null".equals(toolIdsJson.trim())) {
+            if (appId != null) {
+                AgentApp app = appService.getById(appId);
+                toolIdsJson = app.getToolIds();
+            }
+        }
+        List<AgentTool> tools = agentService.loadTools(toolIdsJson);
+
+        // 知识库来源：节点级 datasetId 优先，未配置回退到应用绑定数据集
+        String datasetIdsJson = null;
+        Object datasetIdObj = cfg == null ? null : cfg.get("datasetId");
+        if (datasetIdObj != null && !"null".equals(String.valueOf(datasetIdObj))) {
+            datasetIdsJson = "[" + ((Number) datasetIdObj).longValue() + "]";
+        } else if (appId != null) {
+            AgentApp app = appService.getById(appId);
+            datasetIdsJson = app.getDatasetIds();
+        }
+
+        Object maxIterObj = cfg.get("maxIterations");
+        Integer maxIterations = maxIterObj instanceof Number ? ((Number) maxIterObj).intValue() : null;
+
+        List<ChatMessage> history = List.of(ChatMessage.user(render(userInput, userInput, outputs)));
+        AgentService.AgentResult result = agentService.chat(
+                modelId, systemPrompt, tools, datasetIdsJson, history, maxIterations);
+        String content = result.getAnswer();
         outputs.put(node.getId(), content == null ? "" : content);
         return content;
     }

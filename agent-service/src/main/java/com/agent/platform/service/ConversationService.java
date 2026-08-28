@@ -255,7 +255,7 @@ public class ConversationService {
         }
         try {
             WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
-            return workflowEngine.run(graph, content);
+            return workflowEngine.run(graph, content, conv.getAppId());
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {

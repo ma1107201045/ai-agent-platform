@@ -139,7 +139,7 @@ public class AppController {
         try {
             WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
             String userInput = extractUserInput(request);
-            return Result.ok(workflowEngine.run(graph, userInput));
+            return Result.ok(workflowEngine.run(graph, userInput, id));
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {

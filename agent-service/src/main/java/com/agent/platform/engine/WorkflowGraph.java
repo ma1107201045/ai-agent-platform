@@ -17,7 +17,7 @@ public class WorkflowGraph {
     @Data
     public static class WorkflowNode {
         private String id;
-        /** start / end / llm / condition / code / http */
+        /** start / end / llm / agent / condition / code / http / template / knowledge */
         private String type;
         private String label;
         private Map<String, Object> config;

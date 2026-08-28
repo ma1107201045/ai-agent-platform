@@ -154,7 +154,8 @@ const conditionPlaceholder =
   '支持比较表达式，字符串请加引号&#10;示例：{{input}} 非空即真&#10;示例：\'{{node1}}\' == \'成功\'&#10;示例：{{count}} >= 3&#10;示例：\'{{input}}\' contains \'关键\''
 const defaultConfigs: Partial<Record<WorkflowNodeType, Record<string, unknown>>> = {
   template: { template: '{{input}}' },
-  knowledge: { topK: 3, queryTemplate: '{{input}}' }
+  knowledge: { topK: 3, queryTemplate: '{{input}}' },
+  agent: { maxIterations: 6 }
 }
 const publishing = ref(false)
 
@@ -164,7 +165,7 @@ const configCollapsed = ref(false)
 /** 左侧节点面板分组（按功能归类，不影响拖拽与数据模型） */
 const paletteGroups: Array<{ title: string; types: WorkflowNodeType[] }> = [
   { title: '流程控制', types: ['start', 'end', 'condition'] },
-  { title: '处理节点', types: ['llm', 'template', 'code'] },
+  { title: '处理节点', types: ['llm', 'agent', 'template', 'code'] },
   { title: '外部数据', types: ['http', 'knowledge'] }
 ]
 
@@ -351,7 +352,7 @@ const iconMap: Record<string, any> = {}
 function iconOf(name: string) {
   if (!iconMap[name]) {
     const map: Record<string, any> = {
-      Promotion, CircleCheck, Cpu, Share, Document, Link: LinkIcon
+      Promotion, CircleCheck, Cpu, MagicStick, Share, Document, Link: LinkIcon
     }
     iconMap[name] = markRaw(map[name] || Cpu)
   }
@@ -603,6 +604,9 @@ function nodeWarnings(data: any): NodeWarning[] {
   const str = (v: unknown) => (v == null ? '' : String(v))
   switch (data?.nodeType) {
     case 'llm':
+      if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
+      break
+    case 'agent':
       if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
       break
     case 'http':
@@ -1017,7 +1021,7 @@ function varItemsFor(nodeId: string): VarItem[] {
   for (const id of upstreamNodeIds(nodeId)) {
     const n = nodes.value.find((x) => x.id === id)
     const t = n?.data?.nodeType
-    if (t !== 'llm' && t !== 'http' && t !== 'code' && t !== 'template' && t !== 'knowledge')
+    if (t !== 'llm' && t !== 'agent' && t !== 'http' && t !== 'code' && t !== 'template' && t !== 'knowledge')
       continue // start/end/condition 无输出
     items.push({ text: wrap(id), desc: `节点「${n?.data?.label || id}」的输出` })
   }
@@ -1544,6 +1548,75 @@ onUnmounted(() => {
             <el-form-item v-if="selectedData.nodeType === 'llm' && selectedData.config.datasetId" label="召回数量">
               <el-input-number v-model="selectedData.config.topK" :min="1" :max="10" />
             </el-form-item>
+
+            <template v-if="selectedData.nodeType === 'agent'">
+              <el-form-item label="模型">
+                <el-select v-model="selectedData.config.modelId" placeholder="选择对话模型" style="width: 100%">
+                  <el-option
+                    v-for="m in chatModels"
+                    :key="m.id"
+                    :label="`${m.providerName} / ${m.modelName}`"
+                    :value="m.id"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="系统提示词">
+                <el-input
+                  v-model="selectedData.config.systemPrompt"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="设定 Agent 角色与行为，支持变量引用…"
+                />
+                <div class="var-chips">
+                  <span class="var-chips-title">可用变量</span>
+                  <span
+                    v-for="v in varItemsFor(selectedNode.id)"
+                    :key="v.text"
+                    class="var-chip"
+                    :title="v.desc"
+                    @click="insertVar('systemPrompt', v)"
+                    >{{ v.text }}</span
+                  >
+                </div>
+              </el-form-item>
+              <el-form-item label="可用工具">
+                <el-select
+                  v-model="selectedData.config.toolIds"
+                  multiple
+                  filterable
+                  placeholder="不选则使用应用绑定工具"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="t in allTools"
+                    :key="t.id"
+                    :label="t.name"
+                    :value="t.id"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="关联数据集">
+                <el-select
+                  v-model="selectedData.config.datasetId"
+                  placeholder="不选则使用应用绑定数据集"
+                  clearable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="d in datasets"
+                    :key="d.id"
+                    :label="d.name"
+                    :value="d.id"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item v-if="selectedData.config.datasetId" label="召回数量">
+                <el-input-number v-model="selectedData.config.topK" :min="1" :max="10" />
+              </el-form-item>
+              <el-form-item label="最大循环轮数">
+                <el-input-number v-model="selectedData.config.maxIterations" :min="1" :max="20" />
+              </el-form-item>
+            </template>
 
             <el-form-item v-if="selectedData.nodeType === 'http'" label="请求地址">
               <el-input v-model="selectedData.config.url" :placeholder="urlPlaceholder" />
