@@ -1,7 +1,7 @@
 package com.agent.platform.service.graph;
 
-import com.agent.platform.graph.spi.KnowledgeHit;
-import com.agent.platform.graph.spi.KnowledgeProvider;
+import com.agent.platform.workflow.spi.KnowledgeHit;
+import com.agent.platform.workflow.spi.KnowledgeProvider;
 import com.agent.platform.service.KnowledgeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
