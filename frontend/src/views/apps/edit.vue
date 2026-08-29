@@ -18,13 +18,20 @@ import { knowledgeApi } from '@/api/knowledge'
 import { modelApi } from '@/api/model'
 import { toolApi } from '@/api/tool'
 import type { AppVersion, AppTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
+import type { VarItem } from '@/utils/flow'
 import {
-  NODE_TYPE_META, dslToFlow, flowToDsl, genNodeId
+  NODE_TYPE_META, branchHandlesOf, dslToFlow, defaultConfig, flowToDsl, genNodeId
 } from '@/utils/flow'
+import NodeConfigPanel from './components/NodeConfigPanel.vue'
+import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
 const router = useRouter()
 const appId = Number(route.params.id)
+const themeStore = useThemeStore()
+
+/** 画布网格点颜色跟随主题 */
+const gridColor = computed(() => (themeStore.isDark ? '#333a52' : '#d5dbe3'))
 
 // ---------- 画布 ----------
 const nodes = ref<Array<any>>([])
@@ -123,9 +130,7 @@ function pasteClipboard() {
         sourceHandle: e.sourceHandle,
         targetHandle: e.targetHandle,
         label: e.label,
-        ...(e.sourceHandle === 'true' || e.sourceHandle === 'false'
-          ? branchLabelStyle(e.sourceHandle)
-          : {})
+        ...(e.sourceHandle ? branchStyleOf(e.source, e.sourceHandle) : {})
       })
     }
   }
@@ -141,6 +146,7 @@ const appType = ref('chatflow')
 const selectedNodeId = ref<string | null>(null)
 const selectedEdgeId = ref<string | null>(null)
 const chatModels = ref<ChatModelInfo[]>([])
+const rerankModels = ref<ChatModelInfo[]>([])
 const datasets = ref<KnowledgeDataset[]>([])
 const allTools = ref<AppTool[]>([])
 const boundToolIds = ref<number[]>([])
@@ -148,15 +154,6 @@ const boundDatasetIds = ref<number[]>([])
 const welcomeMessage = ref('')
 const openingQuestionsText = ref('')
 const saving = ref(false)
-const urlPlaceholder = 'https://api.example.com/path（支持 {{input}} 变量）'
-const headersPlaceholder = 'JSON 格式，如 X-Api-Key: xxx，支持 {{input}} 变量'
-const conditionPlaceholder =
-  '支持比较表达式，字符串请加引号&#10;示例：{{input}} 非空即真&#10;示例：\'{{node1}}\' == \'成功\'&#10;示例：{{count}} >= 3&#10;示例：\'{{input}}\' contains \'关键\''
-const defaultConfigs: Partial<Record<WorkflowNodeType, Record<string, unknown>>> = {
-  template: { template: '{{input}}' },
-  knowledge: { topK: 3, queryTemplate: '{{input}}' },
-  agent: { maxIterations: 6 }
-}
 const publishing = ref(false)
 
 // ---------- 面板折叠 ----------
@@ -180,7 +177,7 @@ function ensureStartEnd() {
       id,
       type: 'flow-node',
       position: { x, y },
-      data: { label: NODE_TYPE_META[type].label, nodeType: type, config: {} }
+      data: { label: NODE_TYPE_META[type].label, nodeType: type, config: defaultConfig(type) }
     })
     return id
   }
@@ -231,8 +228,16 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
   const GAP_X = 130
   const x = Math.round(src.position.x + NODE_W + GAP_X)
   let y = Math.round(src.position.y)
-  if (sourceHandle === 'true') y -= 60
-  else if (sourceHandle === 'false') y += 60
+  // 沿分支 handle 的纵向位置错开，多分支时按分支序号偏移
+  if (sourceHandle) {
+    const handles = branchHandlesOf(src.data)
+    const idx = handles.findIndex((h) => h.key === sourceHandle)
+    if (idx >= 0) {
+      const ratio = (idx + 1) / (handles.length + 1) - 0.5
+      y += Math.round(ratio * (handles.length * 56))
+    } else if (sourceHandle === 'true') y -= 60
+    else y += 60
+  }
   nodes.value.push({
     id: newId,
     type: 'flow-node',
@@ -240,7 +245,7 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
     data: {
       label: NODE_TYPE_META[type].label,
       nodeType: type,
-      config: { ...(defaultConfigs[type] ?? {}) }
+      config: defaultConfig(type)
     }
   })
   const endNode = nodes.value.find((n) => n.data.nodeType === 'end')
@@ -253,14 +258,13 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
   } else if (endNode) {
     edges.value.push({ id: genNodeId('edge'), source: newId, target: endNode.id })
   }
-  const isBranch = sourceHandle === 'true' || sourceHandle === 'false'
   edges.value.push({
     id: genNodeId('edge'),
     source: sourceId,
     target: newId,
     sourceHandle: sourceHandle ?? undefined,
-    label: isBranch ? (sourceHandle === 'true' ? '是' : '否') : undefined,
-    ...(isBranch ? branchLabelStyle(sourceHandle as 'true' | 'false') : {})
+    label: branchLabelOf(sourceId, sourceHandle),
+    ...(sourceHandle ? branchStyleOf(sourceId, sourceHandle) : {})
   })
   snapshot()
   // 选中新节点并定位
@@ -278,7 +282,6 @@ const selectedNode = computed(() =>
   nodes.value.find((n) => n.id === selectedNodeId.value) ?? null
 )
 const selectedData = computed(() => selectedNode.value?.data ?? null)
-const isStartNode = computed(() => selectedData.value?.nodeType === 'start')
 const hasSelection = computed(
   () => nodes.value.some((n) => n.selected) || edges.value.some((e) => e.selected)
 )
@@ -293,21 +296,67 @@ const selectedEdgeEnds = computed(() => {
     srcLabel: s?.data?.label ?? e.source,
     tgtType: t?.data?.nodeType ?? 'end',
     tgtLabel: t?.data?.label ?? e.target,
-    branch: e.sourceHandle === 'true' ? '是' : e.sourceHandle === 'false' ? '否' : null
+    branch: branchLabelOf(e.source, e.sourceHandle)
   }
 })
 const selectedCount = computed(() => nodes.value.filter((n) => n.selected).length)
-const shortcuts = [
-  { keys: 'Ctrl + Z', desc: '撤销' },
-  { keys: 'Ctrl + Shift + Z', desc: '重做' },
-  { keys: 'Ctrl + C', desc: '复制选中节点' },
-  { keys: 'Ctrl + V', desc: '粘贴节点' },
-  { keys: 'Delete', desc: '删除选中节点 / 连线' },
-  { keys: '拖拽画布空白', desc: '框选多个节点' },
-  { keys: 'Ctrl / Cmd + 点击', desc: '追加多选' },
-  { keys: '对齐 / 分布', desc: '工具栏对齐、等距分布选中节点' },
-  { keys: '自动布局', desc: '一键按流程层级重排全部节点' }
+interface ShortcutItem {
+  keys: string
+  desc: string
+}
+interface ShortcutGroup {
+  title: string
+  items: ShortcutItem[]
+}
+const shortcutGroups: ShortcutGroup[] = [
+  {
+    title: '撤销 / 重做',
+    items: [
+      { keys: 'Ctrl + Z', desc: '撤销上一步画布操作，最多回退 50 步' },
+      { keys: 'Ctrl + Shift + Z', desc: '重做被撤销的操作' },
+      { keys: 'Ctrl + Y', desc: '重做（与 Ctrl + Shift + Z 等效）' }
+    ]
+  },
+  {
+    title: '复制 / 删除',
+    items: [
+      { keys: 'Ctrl + C', desc: '复制选中节点（含节点配置，支持框选 / Ctrl 多选）' },
+      { keys: 'Ctrl + V', desc: '粘贴到画布左上角，逐个错位 40px，并自动重建它们之间的连线' },
+      { keys: 'Delete / Backspace', desc: '删除选中节点或连线；删节点会一并移除其所有连线' }
+    ]
+  },
+  {
+    title: '选中节点',
+    items: [
+      { keys: '单击节点', desc: '选中节点，并在右侧打开该节点的配置面板' },
+      { keys: 'Ctrl / Cmd + 点击', desc: '在已选节点上追加或取消选中，实现多选' },
+      { keys: 'Shift + 拖拽空白', desc: '框选多个节点，可批量移动 / 复制 / 对齐' },
+      { keys: '单击画布空白', desc: '取消选中，收起右侧配置面板' }
+    ]
+  },
+  {
+    title: '画布与连线',
+    items: [
+      { keys: '拖拽节点', desc: '移动节点位置，松手后可用 Ctrl + Z 撤销' },
+      { keys: '拖拽画布空白', desc: '平移画布' },
+      { keys: '滚轮 / 触控板双指', desc: '缩放画布，缩放范围 20% ~ 200%' },
+      { keys: '双击画布空白', desc: '放大一级' },
+      { keys: '拖拽节点右侧圆点', desc: '从出点拉出连线，接到目标节点左侧入点' },
+      { keys: '点击节点「+」', desc: '快速插入下一个节点并自动连线（结束节点无「+」）' },
+      { keys: '单击连线', desc: '选中连线，按 Delete 删除' }
+    ]
+  },
+  {
+    title: '布局工具（左侧栏）',
+    items: [
+      { keys: '选中 ≥ 2 个节点', desc: '左 / 水平居中 / 右 / 顶 / 垂直居中 / 底对齐' },
+      { keys: '选中 ≥ 3 个节点', desc: '水平 / 垂直等距分布，保持首尾节点不动' },
+      { keys: '自动布局', desc: '一键按流程层级重排全部节点' }
+    ]
+  }
 ]
+const shortcutNote =
+  '说明：快捷键在输入框 / 文本域聚焦时不生效；撤销重做只覆盖画布结构（节点与连线的增删改移），右侧表单配置修改不会进入历史栈。'
 
 // ---------- 未保存修改追踪 ----------
 const dirty = ref(false)
@@ -325,27 +374,6 @@ watch(selectedData, (val) => {
   if (!hydrated.value) return
   if (JSON.stringify(val ?? null) !== editBaseline) dirty.value = true
 }, { deep: true })
-
-/** HTTP 节点 Headers 文本（JSON 字符串 <-> config.headers 对象） */
-const headersText = ref('')
-
-function syncHeadersText() {
-  const h = selectedData.value?.config?.headers
-  headersText.value = h && typeof h === 'object' ? JSON.stringify(h, null, 2) : ''
-}
-
-function parseHeaders() {
-  const t = headersText.value.trim()
-  if (!t) {
-    if (selectedData.value?.config) delete selectedData.value.config.headers
-    return
-  }
-  try {
-    selectedData.value.config.headers = JSON.parse(t)
-  } catch {
-    ElMessage.warning('Headers 必须是合法 JSON 对象')
-  }
-}
 
 // 动态图标组件缓存
 const iconMap: Record<string, any> = {}
@@ -431,7 +459,12 @@ async function loadApp() {
 }
 
 async function loadModels() {
-  chatModels.value = await modelApi.chatModels()
+  const [chat, rerank] = await Promise.all([
+    modelApi.chatModels(),
+    modelApi.rerankModels().catch(() => [] as ChatModelInfo[])
+  ])
+  chatModels.value = chat
+  rerankModels.value = rerank
 }
 
 async function loadTools() {
@@ -456,19 +489,16 @@ function onNodeClick({ node }: any) {
   selectedEdgeId.value = null
   // 同步更新内容基线：避免 watch(selectedData) 把"切换选中"误判为"编辑"
   editBaseline = JSON.stringify(node.data ?? null)
-  nextTick(syncHeadersText)
 }
 
 function onPaneClick() {
   selectedNodeId.value = null
   selectedEdgeId.value = null
-  headersText.value = ''
 }
 
 function onEdgeClick({ edge }: any) {
   selectedEdgeId.value = edge.id
   selectedNodeId.value = null
-  headersText.value = ''
 }
 
 /** 节点拖动结束：记录一次历史快照 */
@@ -502,29 +532,44 @@ onConnect((params: any) => {
     ElMessage.warning('已存在相同的连线')
     return
   }
-  const isBranch = params.sourceHandle === 'true' || params.sourceHandle === 'false'
   edges.value.push({
     id: genNodeId('edge'),
     source: params.source,
     target: params.target,
     sourceHandle: params.sourceHandle,
     targetHandle: params.targetHandle,
-    label: isBranch ? (params.sourceHandle === 'true' ? '是' : '否') : undefined,
-    ...(isBranch ? branchLabelStyle(params.sourceHandle) : {})
+    label: branchLabelOf(params.source, params.sourceHandle),
+    ...(params.sourceHandle ? branchStyleOf(params.source, params.sourceHandle) : {})
   })
   snapshot()
 })
 
-// ---------- 条件分支双出边 ----------
-/** condition 分支出边样式（true=绿 / false=红），Vue Flow 内置 label 渲染 */
-function branchLabelStyle(handle: string) {
-  const color = handle === 'true' ? '#67c23a' : '#f56c6c'
+// ---------- 条件分支出边 ----------
+/** 分支 handle 对应的展示名（多分支取分支名，二分支取 是/否，非分支返回 undefined） */
+function branchLabelOf(sourceId: string, handle?: string | null): string | undefined {
+  if (!handle) return undefined
+  const node = nodes.value.find((n) => n.id === sourceId)
+  if (!node) return undefined
+  const hit = branchHandlesOf(node.data).find((h) => h.key === handle)
+  return hit ? hit.label : undefined
+}
+
+/** 分支 handle 对应的主题色 */
+function branchColorOf(sourceId: string, handle: string): string {
+  const node = nodes.value.find((n) => n.id === sourceId)
+  const hit = node ? branchHandlesOf(node.data).find((h) => h.key === handle) : null
+  return hit?.color ?? '#909399'
+}
+
+/** 分支出边样式（按分支取色），Vue Flow 内置 label 渲染 */
+function branchStyleOf(sourceId: string, handle: string) {
+  const color = branchColorOf(sourceId, handle)
   return {
     labelStyle: {
       color,
       fontWeight: '600',
       fontSize: '11px',
-      background: '#ffffff',
+      background: themeStore.isDark ? '#1a1d2c' : '#ffffff',
       border: `1px solid ${color}`,
       borderRadius: '8px',
       padding: '1px 6px'
@@ -534,15 +579,23 @@ function branchLabelStyle(handle: string) {
   }
 }
 
-/** 为 condition 分支边补齐默认标签与样式（历史数据 / 回滚后无 labelStyle 时调用） */
+/** 为分支边补齐标签与样式（历史数据 / 回滚 / 分支改名后调用） */
 function syncBranchEdges() {
   for (const e of edges.value) {
-    if (e.sourceHandle === 'true' || e.sourceHandle === 'false') {
-      if (!e.label) e.label = e.sourceHandle === 'true' ? '是' : '否'
-      Object.assign(e, branchLabelStyle(e.sourceHandle))
-    }
+    if (!e.sourceHandle) continue
+    const src = nodes.value.find((n) => n.id === e.source)
+    // 仅处理排他分支节点（condition）的出边
+    if (src?.data?.nodeType !== 'condition') continue
+    e.label = e.label || branchLabelOf(e.source, e.sourceHandle)
+    Object.assign(e, branchStyleOf(e.source, e.sourceHandle))
   }
 }
+
+// 主题切换后刷新分支标签的底色
+watch(
+  () => themeStore.isDark,
+  () => syncBranchEdges()
+)
 
 function removeSelected() {
   const selNodes = nodes.value.filter((n) => n.selected).map((n) => n.id)
@@ -597,32 +650,54 @@ interface NodeWarning {
   text: string
 }
 
-/** 节点配置完整性检查：llm/http/code 缺关键配置为 error，condition 空表达式为 warn */
+/** 节点配置完整性检查：缺少关键配置为 error，可能影响效果但不阻断运行为 warn */
 function nodeWarnings(data: any): NodeWarning[] {
   const cfg = data?.config ?? {}
   const list: NodeWarning[] = []
   const str = (v: unknown) => (v == null ? '' : String(v))
+  const num = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0))
   switch (data?.nodeType) {
     case 'llm':
       if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
+      else if (!str(cfg.userPrompt).trim()) {
+        list.push({ severity: 'warn', text: '用户提示词为空，模型将收不到用户输入' })
+      }
       break
     case 'agent':
       if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
+      else if (!str(cfg.userPrompt).trim()) {
+        list.push({ severity: 'warn', text: '用户提示词为空，Agent 将收不到任务输入' })
+      }
       break
     case 'http':
       if (!str(cfg.url).trim()) list.push({ severity: 'error', text: '未配置请求地址' })
+      else if (cfg.bodyType && cfg.bodyType !== 'none' && !str(cfg.bodyTemplate).trim()) {
+        list.push({ severity: 'warn', text: `已选请求体类型 ${cfg.bodyType}，但未填写请求体模板` })
+      }
       break
     case 'code':
       if (!str(cfg.code).trim()) list.push({ severity: 'error', text: '未配置代码脚本' })
       break
-    case 'condition':
-      if (!str(cfg.expression).trim()) list.push({ severity: 'warn', text: '未配置判断条件，默认走 true 分支' })
+    case 'condition': {
+      const branches = Array.isArray(cfg.branches) ? cfg.branches : []
+      if (branches.length > 0) {
+        const empty = branches.filter((b: any) => !str(b?.expression).trim()).length
+        if (empty === branches.length) {
+          list.push({ severity: 'warn', text: '所有分支条件均为空，将命中第一条分支' })
+        }
+      } else if (!str(cfg.expression).trim()) {
+        list.push({ severity: 'warn', text: '未配置判断条件，默认走「是」分支' })
+      }
       break
+    }
     case 'template':
       if (!str(cfg.template).trim()) list.push({ severity: 'error', text: '未配置模板内容' })
       break
     case 'knowledge':
       if (!cfg.datasetId) list.push({ severity: 'error', text: '未选择数据集' })
+      else if (num(cfg.scoreThreshold) > 0.95) {
+        list.push({ severity: 'warn', text: '相似度阈值过高，可能召回不到内容' })
+      }
       break
   }
   return list
@@ -992,10 +1067,6 @@ function applyTraceToCanvas(trace: TraceItem[]) {
 }
 
 // ---------- {{}} 变量自动补全 ----------
-interface VarItem {
-  text: string
-  desc: string
-}
 
 /** 递归收集某节点的全部上游节点 id（沿 edges 反向查找） */
 function upstreamNodeIds(nodeId: string): string[] {
@@ -1012,30 +1083,38 @@ function upstreamNodeIds(nodeId: string): string[] {
   return [...ids]
 }
 
-/** 当前节点可插入的变量项：{{input}} + 上游有输出节点的变量（code 脚本为裸变量名） */
+/** 有输出的节点类型（start/end/condition 无输出，不作为变量来源） */
+const OUTPUT_NODE_TYPES = new Set(['llm', 'agent', 'http', 'code', 'template', 'knowledge'])
+
+/**
+ * 当前节点可插入的变量项：{{input}} + 开始节点定义的流程变量 + 上游节点输出
+ * （code 节点脚本内使用裸变量名，不加 {{}}）
+ */
 function varItemsFor(nodeId: string): VarItem[] {
   const isCode = selectedData.value?.nodeType === 'code'
   const wrap = (k: string) => (isCode ? k : `{{${k}}}`)
   const items: VarItem[] = [{ text: wrap('input'), desc: '用户输入' }]
   if (isCode) items.push({ text: 'outputs', desc: '全部节点输出集合' })
+  // 开始节点定义的流程变量（全局可见）
+  for (const n of nodes.value) {
+    if (n.data?.nodeType !== 'start') continue
+    const vars = n.data?.config?.variables
+    if (!Array.isArray(vars)) continue
+    for (const v of vars) {
+      if (v?.name) items.push({ text: wrap(String(v.name)), desc: '开始节点流程变量' })
+    }
+  }
   for (const id of upstreamNodeIds(nodeId)) {
     const n = nodes.value.find((x) => x.id === id)
-    const t = n?.data?.nodeType
-    if (t !== 'llm' && t !== 'agent' && t !== 'http' && t !== 'code' && t !== 'template' && t !== 'knowledge')
-      continue // start/end/condition 无输出
-    items.push({ text: wrap(id), desc: `节点「${n?.data?.label || id}」的输出` })
+    if (!OUTPUT_NODE_TYPES.has(n?.data?.nodeType)) continue
+    const alias = n?.data?.config?.outputVar
+    const label = n?.data?.label || id
+    items.push({ text: wrap(id), desc: `节点「${label}」的输出` })
+    if (alias && !isCode) {
+      items.push({ text: `{{${alias}}}`, desc: `节点「${label}」的输出变量别名` })
+    }
   }
   return items
-}
-
-/** 点击变量项，追加插入到配置字段末尾 */
-function insertVar(field: string, item: VarItem) {
-  if (!selectedData.value) return
-  if (!selectedData.value.config) selectedData.value.config = {}
-  const cur = selectedData.value.config[field]
-  const base = cur == null ? '' : String(cur)
-  const sep = base && !/\s$/.test(base) ? ' ' : ''
-  selectedData.value.config[field] = base + sep + item.text
 }
 
 /** 高亮并定位节点 */
@@ -1138,33 +1217,74 @@ onUnmounted(() => {
           {{ appType === 'agent' ? '智能体' : '编排' }}
         </el-tag>
       </span>
+
       <div class="toolbar-actions">
-        <div class="toolbar-edit-group">
-          <el-button
-            :icon="RefreshLeft"
-            plain circle
-            title="撤销 (Ctrl+Z)"
-            :disabled="historyIndex <= 0"
-            @click="undo"
-          />
-          <el-button
-            :icon="RefreshRight"
-            plain circle
-            title="重做 (Ctrl+Shift+Z)"
-            :disabled="historyIndex >= historyStack.length - 1"
-            @click="redo"
-          />
-          <el-button :icon="CopyDocument" plain circle title="复制选中 (Ctrl+C)" @click="copySelected" />
-          <el-button :icon="Files" plain circle title="粘贴 (Ctrl+V)" @click="pasteClipboard" />
+        <el-button v-if="appType !== 'agent'" :icon="VideoPlay" plain @click="toggleDebug">
+          {{ debugVisible ? '收起调试' : '运行调试' }}
+        </el-button>
+        <el-button :icon="Promotion" plain @click="goChat">对话调试</el-button>
+        <el-button v-if="appType !== 'agent'" :icon="Clock" plain @click="openVersions">历史版本</el-button>
+        <el-button :icon="CopyDocument" :loading="saving" plain @click="saveDraft">保存草稿</el-button>
+        <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
+        <el-button :icon="Delete" type="danger" plain :disabled="!hasSelection" @click="removeSelected">
+          删除
+        </el-button>
+      </div>
+    </div>
+
+    <div class="editor-main">
+      <!-- 左侧竖向操作栏 -->
+      <aside class="op-rail">
+        <!-- 编辑 -->
+        <div class="op-group">
+          <el-tooltip content="撤销 (Ctrl+Z)" placement="right">
+            <span class="op-wrap">
+              <el-button class="op-btn" text circle :disabled="historyIndex <= 0" @click="undo">
+                <el-icon :size="16"><RefreshLeft /></el-icon>
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="重做 (Ctrl+Shift+Z)" placement="right">
+            <span class="op-wrap">
+              <el-button
+                class="op-btn"
+                text
+                circle
+                :disabled="historyIndex >= historyStack.length - 1"
+                @click="redo"
+              >
+                <el-icon :size="16"><RefreshRight /></el-icon>
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="复制选中 (Ctrl+C)" placement="right">
+            <span class="op-wrap">
+              <el-button class="op-btn" text circle @click="copySelected">
+                <el-icon :size="16"><CopyDocument /></el-icon>
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="粘贴 (Ctrl+V)" placement="right">
+            <span class="op-wrap">
+              <el-button class="op-btn" text circle @click="pasteClipboard">
+                <el-icon :size="16"><Files /></el-icon>
+              </el-button>
+            </span>
+          </el-tooltip>
         </div>
-        <div class="toolbar-layout-group">
-          <el-dropdown trigger="click" @command="(c: any) => alignNodes(c)">
-            <el-button
-              :icon="Aim"
-              plain circle
-              title="对齐选中节点"
-              :disabled="selectedCount < 2"
-            />
+
+        <div class="op-divider" />
+
+        <!-- 布局 -->
+        <div class="op-group">
+          <el-dropdown trigger="click" placement="bottom-start" @command="(c: any) => alignNodes(c)">
+            <el-tooltip content="对齐选中节点" placement="right">
+              <span class="op-wrap">
+                <el-button class="op-btn" text circle :disabled="selectedCount < 2">
+                  <el-icon :size="16"><Aim /></el-icon>
+                </el-button>
+              </span>
+            </el-tooltip>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="left">左对齐</el-dropdown-item>
@@ -1176,13 +1296,14 @@ onUnmounted(() => {
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-dropdown trigger="click" @command="(c: any) => distributeNodes(c)">
-            <el-button
-              :icon="Rank"
-              plain circle
-              title="均匀分布选中节点"
-              :disabled="selectedCount < 3"
-            />
+          <el-dropdown trigger="click" placement="bottom-start" @command="(c: any) => distributeNodes(c)">
+            <el-tooltip content="均匀分布选中节点" placement="right">
+              <span class="op-wrap">
+                <el-button class="op-btn" text circle :disabled="selectedCount < 3">
+                  <el-icon :size="16"><Rank /></el-icon>
+                </el-button>
+              </span>
+            </el-tooltip>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="horizontal">水平等距分布</el-dropdown-item>
@@ -1190,37 +1311,39 @@ onUnmounted(() => {
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button :icon="MagicStick" plain circle title="自动布局全部节点" @click="autoLayout" />
+          <el-tooltip content="自动布局全部节点" placement="right">
+            <span class="op-wrap">
+              <el-button class="op-btn" text circle @click="autoLayout">
+                <el-icon :size="16"><MagicStick /></el-icon>
+              </el-button>
+            </span>
+          </el-tooltip>
         </div>
-        <el-popover placement="bottom-end" :width="280" trigger="hover" popper-class="shortcut-popover">
+
+        <div class="op-divider" />
+
+        <el-popover placement="right-end" :width="420" trigger="hover" popper-class="shortcut-popover">
           <template #reference>
-            <el-button :icon="QuestionFilled" plain circle title="快捷键" />
+            <el-tooltip content="快捷键" placement="right">
+              <span class="op-wrap">
+                <el-button class="op-btn" text circle>
+                  <el-icon :size="16"><QuestionFilled /></el-icon>
+                </el-button>
+              </span>
+            </el-tooltip>
           </template>
           <div class="shortcut-list">
-            <div v-for="s in shortcuts" :key="s.keys" class="shortcut-item">
-              <span class="shortcut-keys">{{ s.keys }}</span>
-              <span class="shortcut-desc">{{ s.desc }}</span>
+            <div v-for="g in shortcutGroups" :key="g.title" class="shortcut-group">
+              <div class="shortcut-group-title">{{ g.title }}</div>
+              <div v-for="s in g.items" :key="g.title + s.keys" class="shortcut-item">
+                <span class="shortcut-keys">{{ s.keys }}</span>
+                <span class="shortcut-desc">{{ s.desc }}</span>
+              </div>
             </div>
+            <div class="shortcut-note">{{ shortcutNote }}</div>
           </div>
         </el-popover>
-        <el-button :icon="VideoPlay" type="primary" plain class="debug-btn" @click="toggleDebug">
-          {{ debugVisible ? '收起调试' : '运行调试' }}
-        </el-button>
-        <el-button :icon="Promotion" plain @click="goChat">对话调试</el-button>
-        <el-button v-if="appType !== 'agent'" :icon="Clock" plain @click="openVersions">历史版本</el-button>
-        <el-button :icon="CopyDocument" :loading="saving" @click="saveDraft">保存草稿</el-button>
-        <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
-        <el-button
-          :icon="Delete"
-          type="danger"
-          plain
-          circle
-          title="删除选中 (Delete)"
-          :disabled="!hasSelection"
-          @click="removeSelected"
-        />
-      </div>
-    </div>
+      </aside>
 
     <!-- 智能体应用：工具/知识库绑定配置 -->
     <div v-if="appType === 'agent'" class="agent-config">
@@ -1338,7 +1461,7 @@ onUnmounted(() => {
           :default-viewport="{ zoom: 0.85 }"
           :min-zoom="0.2"
           :max-zoom="2"
-          :selection-on-drag="true"
+          :selection-key-code="'Shift'"
           :multi-selection-key-code="['Meta', 'Ctrl']"
           :edges-updatable="false"
           class="flow"
@@ -1351,6 +1474,7 @@ onUnmounted(() => {
             <div
               class="flow-node"
               :class="[data.nodeType, { selected }, nodeRunClass(data), { 'run-highlight': id === highlightedNodeId }]"
+              :style="data.nodeType === 'condition' ? { minHeight: `${52 + branchHandlesOf(data).length * 26}px` } : undefined"
             >
               <span v-if="data.runStatus === 'success'" class="run-badge run-badge-success">✓</span>
               <span v-else-if="data.runStatus === 'error'" class="run-badge run-badge-error">!</span>
@@ -1378,33 +1502,38 @@ onUnmounted(() => {
               <span v-if="data.runCost !== undefined" class="run-cost">{{ data.runCost }}ms</span>
               <div v-if="data.runError" class="run-error-msg" :title="data.runError">{{ data.runError }}</div>
               <Handle type="target" :position="Position.Left" class="node-handle"></Handle>
+              <!-- 条件分支：多分支模式下按分支配置动态渲染出点 -->
               <template v-if="data.nodeType === 'condition'">
-                <span class="branch-tag branch-tag-true">是</span>
-                <Handle
-                  type="source"
-                  :position="Position.Right"
-                  :id="'true'"
-                  class="node-handle handle-branch handle-branch-true"
-                ></Handle>
-                <span
-                  class="node-add-btn add-btn-branch add-btn-true"
-                  title="添加节点"
-                  @click.stop="openAddMenu($event, id, 'true')"
-                  @mousedown.stop
-                >+</span>
-                <span class="branch-tag branch-tag-false">否</span>
-                <Handle
-                  type="source"
-                  :position="Position.Right"
-                  :id="'false'"
-                  class="node-handle handle-branch handle-branch-false"
-                ></Handle>
-                <span
-                  class="node-add-btn add-btn-branch add-btn-false"
-                  title="添加节点"
-                  @click.stop="openAddMenu($event, id, 'false')"
-                  @mousedown.stop
-                >+</span>
+                <template v-for="(h, i) in branchHandlesOf(data)" :key="h.key">
+                  <span
+                    class="branch-tag"
+                    :style="{
+                      top: `calc(${(i + 1) / (branchHandlesOf(data).length + 1) * 100}% - 8px)`,
+                      color: h.color,
+                      borderColor: h.color,
+                      background: `${h.color}1f`
+                    }"
+                    >{{ h.label }}</span
+                  >
+                  <Handle
+                    type="source"
+                    :position="Position.Right"
+                    :id="h.key"
+                    class="node-handle handle-branch"
+                    :style="{
+                      top: `${(i + 1) / (branchHandlesOf(data).length + 1) * 100}%`,
+                      borderColor: h.color,
+                      background: h.color
+                    }"
+                  ></Handle>
+                  <span
+                    class="node-add-btn add-btn-branch"
+                    :style="{ top: `${(i + 1) / (branchHandlesOf(data).length + 1) * 100}%` }"
+                    :title="`在「${h.label}」分支后添加节点`"
+                    @click.stop="openAddMenu($event, id, h.key)"
+                    @mousedown.stop
+                  >+</span>
+                </template>
               </template>
               <template v-else>
                 <Handle type="source" :position="Position.Right" class="node-handle"></Handle>
@@ -1418,7 +1547,7 @@ onUnmounted(() => {
               </template>
             </div>
           </template>
-          <Background :gap="24" pattern-color="#d5dbe3" :line-width="1" />
+          <Background :gap="24" :pattern-color="gridColor" :line-width="1" />
           <Controls position="bottom-left" class="flow-controls" />
           <MiniMap
             pannable
@@ -1426,7 +1555,6 @@ onUnmounted(() => {
             position="bottom-right"
             class="minimap"
             :node-color="miniMapNodeColor"
-            mask-color="rgba(250, 251, 252, 0.75)"
           />
         </VueFlow>
 
@@ -1477,308 +1605,15 @@ onUnmounted(() => {
         </div>
         <template v-if="!configCollapsed">
         <template v-if="selectedData">
-          <div class="config-node-head">
-            <div
-              class="node-icon"
-              :style="{ background: metaOf(selectedData.nodeType).gradient }"
-            >
-              <el-icon :size="16" color="#fff">
-                <component :is="iconOf(metaOf(selectedData.nodeType).icon)" />
-              </el-icon>
-            </div>
-            <div class="config-node-head-text">
-              <div class="config-node-type">{{ metaOf(selectedData.nodeType).label }}</div>
-              <div class="config-node-name">{{ selectedData.label }}</div>
-            </div>
-          </div>
-          <el-form label-position="top" size="small">
-            <el-form-item label="节点名称">
-              <el-input v-model="selectedData.label" />
-            </el-form-item>
-
-            <el-form-item v-if="selectedData.nodeType === 'llm'" label="模型">
-              <el-select v-model="selectedData.config.modelId" placeholder="选择对话模型" style="width: 100%">
-                <el-option
-                  v-for="m in chatModels"
-                  :key="m.id"
-                  :label="`${m.providerName} / ${m.modelName}`"
-                  :value="m.id"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'llm'" label="系统提示词">
-              <el-input
-                v-model="selectedData.config.systemPrompt"
-                type="textarea"
-                :rows="5"
-                placeholder="设定模型角色与行为…"
-              />
-              <div class="var-chips">
-                <span class="var-chips-title">可用变量</span>
-                <span
-                  v-for="v in varItemsFor(selectedNode.id)"
-                  :key="v.text"
-                  class="var-chip"
-                  :title="v.desc"
-                  @click="insertVar('systemPrompt', v)"
-                  >{{ v.text }}</span
-                >
-              </div>
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'llm'" label="温度">
-              <el-slider v-model="selectedData.config.temperature" :min="0" :max="2" :step="0.1" />
-            </el-form-item>
-
-            <el-divider v-if="selectedData.nodeType === 'llm'" content-position="left">知识库检索</el-divider>
-            <el-form-item v-if="selectedData.nodeType === 'llm'" label="关联数据集">
-              <el-select
-                v-model="selectedData.config.datasetId"
-                placeholder="不使用知识库"
-                clearable
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="d in datasets"
-                  :key="d.id"
-                  :label="d.name"
-                  :value="d.id"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'llm' && selectedData.config.datasetId" label="召回数量">
-              <el-input-number v-model="selectedData.config.topK" :min="1" :max="10" />
-            </el-form-item>
-
-            <template v-if="selectedData.nodeType === 'agent'">
-              <el-form-item label="模型">
-                <el-select v-model="selectedData.config.modelId" placeholder="选择对话模型" style="width: 100%">
-                  <el-option
-                    v-for="m in chatModels"
-                    :key="m.id"
-                    :label="`${m.providerName} / ${m.modelName}`"
-                    :value="m.id"
-                  />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="系统提示词">
-                <el-input
-                  v-model="selectedData.config.systemPrompt"
-                  type="textarea"
-                  :rows="5"
-                  placeholder="设定 Agent 角色与行为，支持变量引用…"
-                />
-                <div class="var-chips">
-                  <span class="var-chips-title">可用变量</span>
-                  <span
-                    v-for="v in varItemsFor(selectedNode.id)"
-                    :key="v.text"
-                    class="var-chip"
-                    :title="v.desc"
-                    @click="insertVar('systemPrompt', v)"
-                    >{{ v.text }}</span
-                  >
-                </div>
-              </el-form-item>
-              <el-form-item label="可用工具">
-                <el-select
-                  v-model="selectedData.config.toolIds"
-                  multiple
-                  filterable
-                  placeholder="不选则使用应用绑定工具"
-                  style="width: 100%"
-                >
-                  <el-option
-                    v-for="t in allTools"
-                    :key="t.id"
-                    :label="t.name"
-                    :value="t.id"
-                  />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="关联数据集">
-                <el-select
-                  v-model="selectedData.config.datasetId"
-                  placeholder="不选则使用应用绑定数据集"
-                  clearable
-                  style="width: 100%"
-                >
-                  <el-option
-                    v-for="d in datasets"
-                    :key="d.id"
-                    :label="d.name"
-                    :value="d.id"
-                  />
-                </el-select>
-              </el-form-item>
-              <el-form-item v-if="selectedData.config.datasetId" label="召回数量">
-                <el-input-number v-model="selectedData.config.topK" :min="1" :max="10" />
-              </el-form-item>
-              <el-form-item label="最大循环轮数">
-                <el-input-number v-model="selectedData.config.maxIterations" :min="1" :max="20" />
-              </el-form-item>
-            </template>
-
-            <el-form-item v-if="selectedData.nodeType === 'http'" label="请求地址">
-              <el-input v-model="selectedData.config.url" :placeholder="urlPlaceholder" />
-              <div class="var-chips">
-                <span class="var-chips-title">可用变量</span>
-                <span
-                  v-for="v in varItemsFor(selectedNode.id)"
-                  :key="v.text"
-                  class="var-chip"
-                  :title="v.desc"
-                  @click="insertVar('url', v)"
-                  >{{ v.text }}</span
-                >
-              </div>
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'http'" label="请求方式">
-              <el-select v-model="selectedData.config.method" style="width: 100%">
-                <el-option v-for="m in ['GET', 'POST', 'PUT', 'DELETE']" :key="m" :label="m" :value="m" />
-              </el-select>
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'http'" label="自定义 Headers">
-              <el-input
-                v-model="headersText"
-                type="textarea"
-                :rows="3"
-                :placeholder="headersPlaceholder"
-                @blur="parseHeaders"
-              />
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'http'" label="鉴权方式">
-              <el-select v-model="selectedData.config.authType" style="width: 100%">
-                <el-option label="无" value="none" />
-                <el-option label="Bearer Token" value="bearer" />
-                <el-option label="Basic" value="basic" />
-              </el-select>
-            </el-form-item>
-            <el-form-item
-              v-if="selectedData.nodeType === 'http' && selectedData.config.authType === 'bearer'"
-              label="Token"
-            >
-              <el-input v-model="selectedData.config.authToken" placeholder="Bearer Token" />
-            </el-form-item>
-            <template v-if="selectedData.nodeType === 'http' && selectedData.config.authType === 'basic'">
-              <el-form-item label="用户名">
-                <el-input v-model="selectedData.config.authUsername" />
-              </el-form-item>
-              <el-form-item label="密码">
-                <el-input v-model="selectedData.config.authPassword" type="password" show-password />
-              </el-form-item>
-            </template>
-            <el-form-item v-if="selectedData.nodeType === 'http'" label="失败重试次数">
-              <el-input-number v-model="selectedData.config.retries" :min="0" :max="5" />
-            </el-form-item>
-
-            <el-form-item v-if="selectedData.nodeType === 'template'" label="模板内容">
-              <el-input
-                v-model="selectedData.config.template"
-                type="textarea"
-                :rows="6"
-                placeholder="支持 {{input}} 与 {{节点id}} 变量插值&#10;示例：&#10;用户问题：{{input}}&#10;参考知识：{{node1}}"
-              />
-              <div class="var-chips">
-                <span class="var-chips-title">可用变量</span>
-                <span
-                  v-for="v in varItemsFor(selectedNode.id)"
-                  :key="v.text"
-                  class="var-chip"
-                  :title="v.desc"
-                  @click="insertVar('template', v)"
-                  >{{ v.text }}</span
-                >
-              </div>
-            </el-form-item>
-
-            <el-divider v-if="selectedData.nodeType === 'knowledge'" content-position="left">检索配置</el-divider>
-            <el-form-item v-if="selectedData.nodeType === 'knowledge'" label="关联数据集">
-              <el-select
-                v-model="selectedData.config.datasetId"
-                placeholder="请选择数据集"
-                style="width: 100%"
-              >
-                <el-option v-for="d in datasets" :key="d.id" :label="d.name" :value="d.id" />
-              </el-select>
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'knowledge'" label="召回数量">
-              <el-input-number v-model="selectedData.config.topK" :min="1" :max="10" />
-            </el-form-item>
-            <el-form-item v-if="selectedData.nodeType === 'knowledge'" label="检索词模板">
-              <el-input
-                v-model="selectedData.config.queryTemplate"
-                placeholder="默认 {{input}}，可引用上游节点输出"
-              />
-              <div class="var-chips">
-                <span class="var-chips-title">可用变量</span>
-                <span
-                  v-for="v in varItemsFor(selectedNode.id)"
-                  :key="v.text"
-                  class="var-chip"
-                  :title="v.desc"
-                  @click="insertVar('queryTemplate', v)"
-                  >{{ v.text }}</span
-                >
-              </div>
-            </el-form-item>
-
-            <el-form-item v-if="selectedData.nodeType === 'code'" label="表达式脚本">
-              <el-input
-                v-model="selectedData.config.code"
-                type="textarea"
-                :rows="10"
-                placeholder="MVEL 表达式，可用 input 与各节点输出变量，最后 return 结果&#10;示例：&#10;return input.trim().toUpperCase()&#10;示例：&#10;return input.length() > 10 ? '长文本' : '短文本'"
-              />
-              <div class="var-chips">
-                <span class="var-chips-title">可用变量</span>
-                <span
-                  v-for="v in varItemsFor(selectedNode.id)"
-                  :key="v.text"
-                  class="var-chip"
-                  :title="v.desc"
-                  @click="insertVar('code', v)"
-                  >{{ v.text }}</span
-                >
-              </div>
-            </el-form-item>
-
-            <el-form-item v-if="selectedData.nodeType === 'condition'" label="判断条件">
-              <el-input
-                v-model="selectedData.config.expression"
-                type="textarea"
-                :rows="2"
-                :placeholder="conditionPlaceholder"
-              />
-              <div class="var-chips">
-                <span class="var-chips-title">可用变量</span>
-                <span
-                  v-for="v in varItemsFor(selectedNode.id)"
-                  :key="v.text"
-                  class="var-chip"
-                  :title="v.desc"
-                  @click="insertVar('expression', v)"
-                  >{{ v.text }}</span
-                >
-              </div>
-            </el-form-item>
-
-            <el-form-item v-if="isStartNode" label="开场白">
-              <el-input
-                v-model="selectedData.config.welcome"
-                type="textarea"
-                :rows="3"
-                placeholder="对话开始时的欢迎语"
-              />
-            </el-form-item>
-            <el-form-item label="节点备注">
-              <el-input
-                v-model="selectedData.remark"
-                type="textarea"
-                :rows="2"
-                placeholder="记录该节点的用途、注意事项（仅编辑端展示，不影响执行）"
-              />
-            </el-form-item>
-          </el-form>
+          <NodeConfigPanel
+            :node="selectedNode"
+            :edges="edges"
+            :chat-models="chatModels"
+            :rerank-models="rerankModels"
+            :datasets="datasets"
+            :tools="allTools"
+            :vars="varItemsFor(selectedNodeId || '')"
+          />
         </template>
         <template v-else-if="selectedEdgeEnds">
           <h4>连线信息</h4>
@@ -1834,7 +1669,10 @@ onUnmounted(() => {
         <div v-else class="config-collapsed-tip" title="展开配置面板">配置</div>
       </aside>
     </div>
+    </template>
+    </div>
 
+    <template v-if="appType !== 'agent'">
     <!-- 运行调试面板 -->
     <div v-if="debugVisible" class="debug-panel">
       <div class="debug-head">
@@ -1939,7 +1777,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 0 16px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-header);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -1962,14 +1800,87 @@ onUnmounted(() => {
 .toolbar-actions {
   margin-left: auto;
   display: flex;
+  align-items: center;
   gap: 8px;
 }
-.debug-btn {
-  --el-color-primary: var(--brand-1);
+.editor-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ---------- 左侧竖向操作栏 ---------- */
+.op-rail {
+  width: 48px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.op-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* el-tooltip / el-dropdown / el-popover 各自插入的包裹层 display 不同
+   （inline-flex / inline-block），收缩宽度与默认对齐方式不一致，
+   会把按钮挤到不同水平位置。统一撑满并居中，保证整列对齐。 */
+.op-group > *,
+.op-rail > :not(.op-group):not(.op-divider),
+.op-wrap,
+.op-group :deep(.el-dropdown) {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.op-divider {
+  width: 60%;
+  height: 1px;
+  flex-shrink: 0;
+  background: var(--el-border-color-lighter);
+}
+/* disabled 按钮不触发鼠标事件，tooltip 需外层 span 承接 hover */
+.op-wrap {
+  cursor: inherit;
+}
+/* 纯图标方形按钮，竖向排列 */
+.op-btn {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+.op-btn:hover:not(:disabled) {
+  background: var(--el-color-primary-light-9);
+  color: var(--brand-1);
+}
+.op-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.op-btn .el-icon {
+  margin: 0;
 }
 .editor-body {
   flex: 1;
   display: flex;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -2021,8 +1932,8 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   position: relative;
-  background-color: #fafbfc;
-  background-image: radial-gradient(rgba(148, 163, 184, 0.4) 1px, transparent 1px);
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 .flow {
@@ -2030,7 +1941,7 @@ onUnmounted(() => {
   height: 100%;
 }
 .flow :deep(.vue-flow__edge-path) {
-  stroke: #c2c8d1;
+  stroke: var(--flow-edge);
   stroke-width: 1.5;
 }
 .flow :deep(.vue-flow__edge.selected .vue-flow__edge-path),
@@ -2071,10 +1982,10 @@ onUnmounted(() => {
   position: relative;
   width: 210px;
   padding: 12px 14px;
-  background: #fff;
-  border: 1px solid #e2e5ea;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.06);
+  box-shadow: var(--shadow-card);
   transition: all 0.2s ease;
 }
 .flow-node:hover {
@@ -2110,7 +2021,7 @@ onUnmounted(() => {
 .node-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2118,7 +2029,7 @@ onUnmounted(() => {
 .node-desc {
   margin-top: 1px;
   font-size: 11px;
-  color: #98a2b3;
+  color: var(--text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2127,7 +2038,7 @@ onUnmounted(() => {
   width: 10px !important;
   height: 10px !important;
   background: #2970ff !important;
-  border: 2px solid #fff !important;
+  border: 2px solid var(--bg-card) !important;
   box-shadow: 0 0 0 1px rgba(41, 112, 255, 0.45);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -2143,7 +2054,7 @@ onUnmounted(() => {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-card);
   border: 1.5px solid var(--brand-1);
   color: var(--brand-1);
   font-size: 15px;
@@ -2165,28 +2076,13 @@ onUnmounted(() => {
   color: #fff;
   transform: translateY(-50%) scale(1.15);
 }
-.add-btn-branch {
-  top: 26%;
-}
-.add-btn-false {
-  top: 74%;
-}
+/* 分支手柄的纵向位置与配色由节点内联样式按分支数量动态计算 */
 .flow-node.condition .handle-branch {
   width: 9px !important;
   height: 9px !important;
   min-width: 9px;
   min-height: 9px;
   border-width: 1.5px;
-}
-.flow-node.condition .handle-branch-true {
-  top: 26% !important;
-  border-color: #67c23a !important;
-  background: #67c23a !important;
-}
-.flow-node.condition .handle-branch-false {
-  top: 74% !important;
-  border-color: #f56c6c !important;
-  background: #f56c6c !important;
 }
 .branch-tag {
   position: absolute;
@@ -2198,18 +2094,10 @@ onUnmounted(() => {
   padding: 0 5px;
   border-radius: 6px;
   pointer-events: none;
-}
-.branch-tag-true {
-  top: 20%;
-  color: #67c23a;
-  background: rgba(103, 194, 58, 0.12);
-  border: 1px solid rgba(103, 194, 58, 0.4);
-}
-.branch-tag-false {
-  top: 68%;
-  color: #f56c6c;
-  background: rgba(245, 108, 108, 0.12);
-  border: 1px solid rgba(245, 108, 108, 0.4);
+  white-space: nowrap;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .flow-controls {
   --vue-flow-controls-border-radius: 10px;
@@ -2220,11 +2108,11 @@ onUnmounted(() => {
   border-radius: 10px;
   overflow: hidden;
   box-shadow: var(--shadow-card);
-  border: 1px solid #e2e5ea;
+  border: 1px solid var(--border-color);
 }
 .minimap :deep(.vue-flow__minimap-mask) {
-  fill: rgba(250, 251, 252, 0.75);
-  stroke: #d5dbe3;
+  fill: var(--fill-lighter);
+  stroke: var(--border-color);
   stroke-width: 1;
 }
 .minimap :deep(.vue-flow__minimap-node) {
@@ -2237,10 +2125,10 @@ onUnmounted(() => {
   width: 240px;
   max-height: 330px;
   overflow-y: auto;
-  background: #fff;
+  background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--shadow-pop);
   padding: 8px;
 }
 .add-node-menu-title {
@@ -2303,7 +2191,7 @@ onUnmounted(() => {
 /* 配置面板 */
 .config-panel {
   width: 290px;
-  background: #fff;
+  background: var(--bg-card);
   border-left: 1px solid var(--border-color);
   padding: 16px 14px;
   overflow-y: auto;
@@ -2355,6 +2243,7 @@ onUnmounted(() => {
 /* ---------- 智能体工具绑定 ---------- */
 .agent-config {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   padding: 28px;
@@ -2400,7 +2289,7 @@ onUnmounted(() => {
 }
 .tool-check:hover {
   border-color: var(--brand-3);
-  background: #fafbfe;
+  background: var(--fill-lighter);
 }
 .tool-check-body {
   display: flex;
@@ -2416,8 +2305,8 @@ onUnmounted(() => {
 .tool-code {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 12.5px;
-  color: #409eff;
-  background: #f5f7fa;
+  color: var(--brand-1);
+  background: var(--fill-light);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -2546,29 +2435,29 @@ onUnmounted(() => {
   color: #fff;
   border-color: #5b6cff;
 }
-.toolbar-edit-group {
-  display: flex;
-  gap: 4px;
-  padding-right: 8px;
-  margin-right: 4px;
-  border-right: 1px solid var(--el-border-color-lighter);
-}
-.toolbar-layout-group {
-  display: flex;
-  gap: 4px;
-  padding-right: 8px;
-  margin-right: 4px;
-  border-right: 1px solid var(--el-border-color-lighter);
-}
 .shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.shortcut-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+.shortcut-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
 .shortcut-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
   font-size: 12px;
 }
 .shortcut-keys {
@@ -2578,9 +2467,20 @@ onUnmounted(() => {
   background: #f1f2ff;
   border-radius: 4px;
   padding: 1px 6px;
+  flex: none;
+  max-width: 45%;
+  white-space: nowrap;
 }
 .shortcut-desc {
   color: var(--text-secondary, #6b7280);
+  line-height: 1.5;
+}
+.shortcut-note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-tertiary, #909399);
+  padding-top: 6px;
+  border-top: 1px dashed var(--el-border-color-lighter);
 }
 .edge-info {
   display: flex;
@@ -2624,7 +2524,7 @@ onUnmounted(() => {
 }
 .edge-arrow {
   font-size: 16px;
-  color: #c0c4cc;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 .edge-tip {
@@ -2639,15 +2539,15 @@ onUnmounted(() => {
   bottom: 6px;
   font-size: 10px;
   color: var(--text-tertiary);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-card);
   padding: 1px 6px;
   border-radius: 8px;
 }
 .run-error-msg {
   margin-top: 8px;
   font-size: 10.5px;
-  color: #f56c6c;
-  background: #fef0f0;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
   border-radius: 6px;
   padding: 3px 8px;
   overflow: hidden;
@@ -2659,7 +2559,7 @@ onUnmounted(() => {
 .debug-panel {
   flex-shrink: 0;
   border-top: 1px solid var(--border-color);
-  background: #fff;
+  background: var(--bg-card);
   display: flex;
   flex-direction: column;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
@@ -2744,7 +2644,7 @@ onUnmounted(() => {
 }
 .debug-trace-item:hover {
   border-color: var(--brand-3);
-  background: #fafbfe;
+  background: var(--fill-lighter);
 }
 .debug-trace-item.active {
   border-color: var(--brand-1);
@@ -2793,7 +2693,7 @@ onUnmounted(() => {
 }
 .version-item:hover {
   border-color: var(--brand-3);
-  background: #fafbfe;
+  background: var(--fill-lighter);
 }
 .version-info {
   min-width: 0;

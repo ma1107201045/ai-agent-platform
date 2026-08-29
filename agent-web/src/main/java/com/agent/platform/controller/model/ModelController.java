@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
  * 模型管理 + 模型调用（供应商/模型 CRUD、可用模型列表、对话、流式对话、向量化）
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/model")
 @RequiredArgsConstructor
 public class ModelController {
 

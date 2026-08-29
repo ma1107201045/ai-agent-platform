@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, Monitor, User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import ThemeSwitch from '@/components/ThemeSwitch.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -43,6 +44,10 @@ async function handleLogin() {
 
 <template>
   <div class="login-page">
+    <div class="theme-corner">
+      <ThemeSwitch />
+    </div>
+
     <!-- 左侧品牌区 -->
     <div class="brand-panel">
       <div class="orb orb-1"></div>
@@ -125,9 +130,16 @@ async function handleLogin() {
 
 <style scoped>
 .login-page {
+  position: relative;
   height: 100%;
   display: flex;
-  background: #fff;
+  background: var(--bg-card);
+}
+.theme-corner {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 10;
 }
 
 /* ---------- 左侧品牌区 ---------- */
@@ -293,7 +305,7 @@ async function handleLogin() {
 .login-card {
   width: 400px;
   padding: 44px 40px 32px;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-pop);
   animation: rise 0.7s ease 0.15s both;

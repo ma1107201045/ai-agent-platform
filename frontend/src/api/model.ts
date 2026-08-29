@@ -12,38 +12,38 @@ import type {
 
 export const modelApi = {
   providerPage(params: { page?: number; size?: number }) {
-    return request.get<never, PageResult<ModelProvider>>('/providers', { params })
+    return request.get<never, PageResult<ModelProvider>>('/model/providers', { params })
   },
   createProvider(data: Partial<ModelProvider>) {
-    return request.post<never, ModelProvider>('/providers', data)
+    return request.post<never, ModelProvider>('/model/providers', data)
   },
   updateProvider(id: number, data: Partial<ModelProvider>) {
-    return request.put<never, void>(`/providers/${id}`, data)
+    return request.put<never, void>(`/model/providers/${id}`, data)
   },
   removeProvider(id: number) {
-    return request.delete<never, void>(`/providers/${id}`)
+    return request.delete<never, void>(`/model/providers/${id}`)
   },
   modelsOf(providerId: number) {
-    return request.get<never, ModelInfo[]>(`/providers/${providerId}/models`)
+    return request.get<never, ModelInfo[]>(`/model/providers/${providerId}/models`)
   },
   createModel(providerId: number, data: Partial<ModelInfo>) {
-    return request.post<never, ModelInfo>(`/providers/${providerId}/models`, data)
+    return request.post<never, ModelInfo>(`/model/providers/${providerId}/models`, data)
   },
   removeModel(id: number) {
-    return request.delete<never, void>(`/models/${id}`)
+    return request.delete<never, void>(`/model/models/${id}`)
   },
   // ---------- 可用模型列表 ----------
   /** 可用对话模型列表 */
   chatModels() {
-    return request.get<never, ChatModelInfo[]>('/models/chat-models')
+    return request.get<never, ChatModelInfo[]>('/model/models/chat-models')
   },
   /** 可用向量模型列表 */
   embeddingModels() {
-    return request.get<never, ChatModelInfo[]>('/models/embedding-models')
+    return request.get<never, ChatModelInfo[]>('/model/models/embedding-models')
   },
   /** 可用重排序模型列表 */
   rerankModels() {
-    return request.get<never, ChatModelInfo[]>('/models/rerank-models')
+    return request.get<never, ChatModelInfo[]>('/model/models/rerank-models')
   },
 
   // ---------- 模型调用 ----------
@@ -57,11 +57,11 @@ export const modelApi = {
     temperature?: number
     maxTokens?: number
   }) {
-    return request.post<never, ChatResponse>('/models/chat', data)
+    return request.post<never, ChatResponse>('/model/models/chat', data)
   },
   /** 向量化 */
   embed(data: { modelId: number; texts: string[] }) {
-    return request.post<never, EmbeddingResult>('/models/embed', data)
+    return request.post<never, EmbeddingResult>('/model/models/embed', data)
   },
 
   /**
@@ -74,7 +74,7 @@ export const modelApi = {
     signal?: AbortSignal
   ): Promise<string> {
     const token = localStorage.getItem('agent_platform_token') || ''
-    const resp = await fetch('/api/models/chat-stream', {
+    const resp = await fetch('/api/model/models/chat-stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

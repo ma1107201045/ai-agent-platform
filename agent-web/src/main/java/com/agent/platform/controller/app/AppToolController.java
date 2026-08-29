@@ -14,7 +14,7 @@ import java.util.List;
  * Agent 工具管理接口
  */
 @RestController
-@RequestMapping("/api/tools")
+@RequestMapping("/api/app/tools")
 @RequiredArgsConstructor
 public class AppToolController {
 

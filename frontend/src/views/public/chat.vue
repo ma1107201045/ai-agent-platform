@@ -207,7 +207,7 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 0 24px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 }
 .pub-logo {
@@ -288,7 +288,7 @@ onMounted(async () => {
 .pub-chip {
   padding: 8px 16px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   font-size: 13px;
   color: var(--text-secondary);
@@ -344,14 +344,14 @@ onMounted(async () => {
   border-top-right-radius: 4px;
 }
 .ai-bubble {
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-top-left-radius: 4px;
 }
 .ai-bubble.error {
-  color: #ef4444;
-  background: #fef2f2;
-  border-color: #fecaca;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  border-color: var(--el-color-danger-light-8);
 }
 .typing {
   display: inline-flex;
@@ -386,7 +386,7 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 8px 10px;
   margin-bottom: 8px;
-  background: #fafbfe;
+  background: var(--fill-lighter);
 }
 .trace-head {
   display: flex;
@@ -405,7 +405,7 @@ onMounted(async () => {
 .trace-error {
   margin-top: 6px;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--el-color-danger);
 }
 .trace-text {
   margin-top: 6px;
@@ -427,13 +427,13 @@ onMounted(async () => {
 .pub-input-bar {
   flex-shrink: 0;
   padding: 14px 20px 18px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-header);
   border-top: 1px solid var(--border-color);
 }
 .pub-input-shell {
   max-width: 860px;
   margin: 0 auto;
-  background: #fff;
+  background: var(--bg-card);
   border: 1.5px solid var(--border-color);
   border-radius: 14px;
   padding: 10px 12px 10px 16px;

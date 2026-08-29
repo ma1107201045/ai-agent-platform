@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
  * 聊天会话接口：会话 CRUD + 消息持久化 + 发送消息（非流式 / SSE 流式）
  */
 @RestController
-@RequestMapping("/api/conversations")
+@RequestMapping("/api/chat/conversations")
 @RequiredArgsConstructor
 public class ChatConversationController {
 

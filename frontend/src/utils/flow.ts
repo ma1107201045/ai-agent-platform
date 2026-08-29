@@ -18,6 +18,156 @@ export const NODE_TYPE_META: Record<
 
 export const NODE_TYPE_LIST = Object.keys(NODE_TYPE_META) as WorkflowNodeType[]
 
+/** 变量项（配置面板中可点击插入的 {{}} 变量） */
+export interface VarItem {
+  text: string
+  desc: string
+}
+
+/** 条件分支项（多分支模式） */
+export interface BranchItem {
+  /** 出边 handle，与 edge.sourceHandle 对应 */
+  key: string
+  /** 分支展示名 */
+  label: string
+  /** 分支条件表达式 */
+  expression: string
+}
+
+/** 默认分支（所有条件都不成立时）的 handle */
+export const ELSE_BRANCH_KEY = 'else'
+
+/** 分支配色（多分支时按序循环） */
+export const BRANCH_COLORS = ['#67c23a', '#f56c6c', '#409eff', '#e6a23c', '#8b5cf6', '#2ea9b0']
+
+/**
+ * 各节点类型的默认配置。
+ * 新建节点时以此为初始值，未配置的字段由后端按缺省值处理。
+ */
+export function defaultConfig(type: WorkflowNodeType): Record<string, unknown> {
+  switch (type) {
+    case 'start':
+      return { variables: [], welcome: '' }
+    case 'end':
+      return { answerTemplate: '' }
+    case 'llm':
+      return {
+        modelId: undefined,
+        systemPrompt: '',
+        userPrompt: '{{input}}',
+        temperature: 0.7,
+        topP: undefined,
+        maxTokens: 0,
+        outputFormat: 'text',
+        datasetId: undefined,
+        topK: 3,
+        rerankModelId: undefined,
+        scoreThreshold: 0,
+        queryTemplate: '{{input}}',
+        knowledgeTemplate: ''
+      }
+    case 'agent':
+      return {
+        modelId: undefined,
+        systemPrompt: '',
+        userPrompt: '{{input}}',
+        toolIds: [],
+        datasetIds: [],
+        maxIterations: 6,
+        includeSteps: false
+      }
+    case 'condition':
+      return { expression: '' }
+    case 'code':
+      return { code: '' }
+    case 'http':
+      return {
+        url: '',
+        method: 'GET',
+        authType: 'none',
+        bodyType: 'none',
+        bodyTemplate: '',
+        responseType: 'text',
+        jsonPath: '',
+        ignoreStatus: false,
+        timeoutSeconds: 30
+      }
+    case 'template':
+      return { template: '{{input}}' }
+    case 'knowledge':
+      return {
+        datasetId: undefined,
+        topK: 3,
+        rerankModelId: undefined,
+        scoreThreshold: 0,
+        queryTemplate: '{{input}}',
+        outputFormat: 'text',
+        itemTemplate: '【片段 {{index}}】{{content}}',
+        separator: '\n\n'
+      }
+    default:
+      return {}
+  }
+}
+
+/** 通用执行策略默认值（重试 / 超时 / 错误处理 / 输出变量） */
+export const DEFAULT_ADVANCED = {
+  retries: 0,
+  timeoutSeconds: 0,
+  onError: 'fail',
+  errorFallback: '',
+  outputVar: ''
+}
+
+/** 读取条件节点的分支列表（多分支模式），无则为空数组 */
+export function branchesOf(data: any): BranchItem[] {
+  const list = data?.config?.branches
+  if (!Array.isArray(list)) return []
+  return list.map((b: any) => ({
+    key: String(b?.key ?? ''),
+    label: String(b?.label ?? b?.key ?? ''),
+    expression: String(b?.expression ?? '')
+  }))
+}
+
+/** 是否为多分支模式 */
+export function isMultiBranch(data: any): boolean {
+  return branchesOf(data).length > 0
+}
+
+/** 生成下一个分支 key，避免与现有重复 */
+export function nextBranchKey(data: any): string {
+  const used = new Set(branchesOf(data).map((b) => b.key))
+  let i = used.size + 1
+  while (used.has(`branch${i}`)) i += 1
+  return `branch${i}`
+}
+
+/** 生成默认分支列表（切换到多分支时使用：两条分支 + 默认分支不入库） */
+export function initialBranches(): BranchItem[] {
+  return [
+    { key: 'branch1', label: '分支1', expression: '' },
+    { key: 'branch2', label: '分支2', expression: '' }
+  ]
+}
+
+/** 节点在画布上渲染的分支 handle 列表（含默认分支） */
+export function branchHandlesOf(data: any): Array<{ key: string; label: string; color: string }> {
+  if (isMultiBranch(data)) {
+    const list = branchesOf(data).map((b, i) => ({
+      key: b.key,
+      label: b.label || b.key,
+      color: BRANCH_COLORS[i % BRANCH_COLORS.length]
+    }))
+    list.push({ key: ELSE_BRANCH_KEY, label: '默认', color: '#909399' })
+    return list
+  }
+  return [
+    { key: 'true', label: '是', color: '#67c23a' },
+    { key: 'false', label: '否', color: '#f56c6c' }
+  ]
+}
+
 /** 画布节点（Vue Flow 形态） */
 export interface FlowNodeData {
   label: string

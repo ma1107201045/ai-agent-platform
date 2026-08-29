@@ -123,7 +123,7 @@ onMounted(load)
 <template>
   <div class="page-container">
     <div class="table-toolbar">
-      <span style="color: #909399">共 {{ total }} 个工具</span>
+      <span style="color: var(--text-tertiary)">共 {{ total }} 个工具</span>
       <el-button type="primary" :icon="Plus" @click="openCreate">新建工具</el-button>
     </div>
 
@@ -276,9 +276,9 @@ onMounted(load)
 .tool-name {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 12px;
-  background: #f5f7fa;
+  background: var(--fill-light);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #409eff;
+  color: var(--brand-1);
 }
 </style>

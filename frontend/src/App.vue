@@ -1,3 +1,20 @@
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
+
+const themeStore = useThemeStore()
+
+let stopWatchSystem: (() => void) | undefined
+
+onMounted(() => {
+  // 立即生效一次，保证与 index.html 中的预加载脚本结果一致
+  themeStore.apply()
+  stopWatchSystem = themeStore.watchSystem()
+})
+
+onBeforeUnmount(() => stopWatchSystem?.())
+</script>
+
 <template>
   <router-view v-slot="{ Component }">
     <transition name="fade" mode="out-in">

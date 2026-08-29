@@ -135,7 +135,7 @@ const routes: RouteRecordRaw[] = [
         path: 'apps/:id/edit',
         name: 'AppEdit',
         component: () => import('@/views/apps/edit.vue'),
-        meta: { title: '应用编排', hidden: true }
+        meta: { title: '智能体编排', hidden: true }
       },
       {
         path: 'apps/:id/chat',

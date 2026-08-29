@@ -5,6 +5,23 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>智能体平台</title>
+    <script>
+      // 首屏前同步应用主题，避免暗色模式白屏闪烁（需与 stores/theme.ts 保持一致）
+      ;(function () {
+        try {
+          var key = 'agentforge-theme-mode'
+          var mode = localStorage.getItem(key)
+          if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') mode = 'auto'
+          var dark =
+            mode === 'dark' ||
+            (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var root = document.documentElement
+          root.classList.toggle('dark', dark)
+          root.dataset.themeMode = mode
+          root.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

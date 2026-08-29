@@ -18,7 +18,18 @@
   /* 背景 & 表面 */
   --bg-page: #f5f7fc;
   --bg-card: #ffffff;
+  --bg-elevated: #ffffff; /* 弹层 / 下拉 / 抽屉 */
+  --bg-header: rgba(255, 255, 255, 0.85);
+  --bg-aside: rgba(255, 255, 255, 0.9);
+  --fill-light: #f5f7fa; /* 次级填充 */
+  --fill-lighter: #fafbfe; /* 更浅的填充 */
   --border-color: #e8ecf4;
+  --hover-bg: rgba(31, 36, 55, 0.06);
+
+  /* 流程画布（Vue Flow） */
+  --canvas-bg: #fafbfc;
+  --canvas-dot: rgba(148, 163, 184, 0.4);
+  --flow-edge: #c2c8d1;
 
   /* 文本 */
   --text-primary: #1f2437;
@@ -48,6 +59,109 @@
   --el-font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', Arial, sans-serif;
   --el-box-shadow-light: var(--shadow-card);
+}
+
+/* ============================================================
+   暗色主题（html.dark 由 theme store 切换）
+   ============================================================ */
+html.dark {
+  --brand-1: #7d8bff;
+  --brand-2: #a78bfa;
+  --brand-3: #38bdf8;
+  --brand-gradient: linear-gradient(135deg, #6b78ff 0%, #9b6bfa 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(109, 120, 255, 0.2), rgba(155, 107, 250, 0.2));
+
+  --bg-page: #0f1220;
+  --bg-card: #171a2b;
+  --bg-elevated: #1c2033;
+  --bg-header: rgba(21, 24, 40, 0.82);
+  --bg-aside: rgba(21, 24, 40, 0.88);
+  --fill-light: #1e2233;
+  --fill-lighter: #1a1d2c;
+  --border-color: #2a2f47;
+  --hover-bg: rgba(255, 255, 255, 0.08);
+
+  --canvas-bg: #12151f;
+  --canvas-dot: rgba(120, 132, 165, 0.45);
+  --flow-edge: #3f4763;
+
+  --text-primary: #e6e8f0;
+  --text-secondary: #a3a9c2;
+  --text-tertiary: #737a94;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.32);
+  --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(91, 108, 255, 0.16);
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  /* Element Plus 暗色主色同步 */
+  --el-color-primary: #6b78ff;
+  --el-color-primary-light-3: #808cff;
+  --el-color-primary-light-5: #99a3ff;
+  --el-color-primary-light-7: #b7bfff;
+  --el-color-primary-light-8: #c7ccff;
+  --el-color-primary-light-9: #1e2338;
+  --el-color-primary-dark-2: #5560d6;
+  --el-bg-color: var(--bg-card);
+  --el-bg-color-page: var(--bg-page);
+  --el-bg-color-overlay: var(--bg-elevated);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-color);
+  --el-border-color-lighter: var(--border-color);
+  --el-border-color-extra-light: var(--border-color);
+  --el-fill-color: #232840;
+  --el-fill-color-light: var(--fill-light);
+  --el-fill-color-lighter: var(--fill-lighter);
+  --el-fill-color-blank: var(--bg-card);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-secondary);
+  --el-text-color-placeholder: var(--text-tertiary);
+  --el-box-shadow-light: var(--shadow-card);
+}
+
+/* ---------- Vue Flow 暗色适配 ---------- */
+html.dark .vue-flow {
+  --vf-node-bg: var(--bg-card);
+  --vf-node-text: var(--text-primary);
+  --vf-connection-path: var(--flow-edge);
+  --vf-handle: #8b93ad;
+}
+html.dark .vue-flow__edge-textbg {
+  fill: var(--bg-card);
+}
+html.dark .vue-flow__edge-text {
+  fill: var(--text-secondary);
+}
+html.dark .vue-flow__handle {
+  border-color: var(--bg-card);
+}
+html.dark .vue-flow__minimap {
+  background: var(--bg-card);
+}
+html.dark .vue-flow__controls {
+  --vf-controls-bg: var(--bg-elevated);
+  --vf-arrow-color: var(--text-secondary);
+}
+html.dark .vue-flow__controls-button {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+  fill: var(--text-secondary);
+}
+html.dark .vue-flow__controls-button:hover {
+  background: var(--fill-light);
+}
+html.dark .vue-flow__controls-button svg {
+  fill: var(--text-secondary);
+}
+
+/* 主题切换瞬间的平滑过渡（仅切换后 300ms 内生效，避免长期覆盖组件自带 transition） */
+html.theme-transition * {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease,
+    fill 0.25s ease !important;
 }
 
 html,
@@ -132,6 +246,12 @@ body,
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
 
 /* ---------- Element Plus 细节统一 ---------- */
 .el-card {
@@ -145,8 +265,11 @@ body,
 }
 .el-table {
   --el-table-border-color: var(--border-color);
-  --el-table-header-bg-color: #f8f9fe;
+  --el-table-header-bg-color: var(--fill-light);
   --el-table-header-text-color: var(--text-secondary);
+  --el-table-bg-color: var(--bg-card);
+  --el-table-tr-bg-color: var(--bg-card);
+  --el-table-text-color: var(--text-primary);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -155,6 +278,12 @@ body,
 }
 .el-pagination {
   --el-pagination-button-bg-color: transparent;
+  --el-pagination-text-color: var(--text-primary);
+}
+/* 表格 hover / 斑马纹在暗色下跟随表面色 */
+html.dark .el-table {
+  --el-table-row-hover-bg-color: var(--fill-light);
+  --el-table-current-row-bg-color: var(--fill-light);
 }
 .el-dialog {
   border-radius: var(--radius-lg);

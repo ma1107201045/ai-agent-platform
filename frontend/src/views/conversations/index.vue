@@ -444,7 +444,7 @@ onMounted(() => {
 }
 .trace-error {
   margin-top: 6px;
-  color: #ef4444;
+  color: var(--el-color-danger);
   font-size: 12px;
 }
 .trace-text {

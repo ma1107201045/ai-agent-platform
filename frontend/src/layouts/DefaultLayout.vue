@@ -12,6 +12,7 @@ import {
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { DEFAULT_HOME, menuGroups, menuItems } from '@/config/menu'
+import ThemeSwitch from '@/components/ThemeSwitch.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,6 +138,7 @@ if (import.meta.env.DEV) {
               <el-icon :size="17"><Bell /></el-icon>
             </button>
           </el-tooltip>
+          <ThemeSwitch />
           <el-dropdown class="user-dropdown" @command="onCommand">
             <span class="user-trigger">
               <div class="avatar-ring">
@@ -182,7 +184,7 @@ if (import.meta.env.DEV) {
 
 /* ---------- 侧边栏 ---------- */
 .aside {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-aside);
   backdrop-filter: blur(12px);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -361,7 +363,7 @@ if (import.meta.env.DEV) {
 /* ---------- 顶栏 ---------- */
 .header {
   height: 64px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-header);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -379,7 +381,7 @@ if (import.meta.env.DEV) {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
 }
 
 .search-box {
@@ -397,7 +399,7 @@ if (import.meta.env.DEV) {
 .search-box:focus-within {
   border-color: var(--brand-1);
   box-shadow: 0 0 0 3px rgba(91, 108, 255, 0.12);
-  background: #fff;
+  background: var(--bg-card);
 }
 .search-icon {
   color: var(--text-tertiary);
@@ -418,7 +420,7 @@ if (import.meta.env.DEV) {
   padding: 2px 6px;
   border: 1px solid var(--border-color);
   border-radius: 5px;
-  background: #fff;
+  background: var(--bg-elevated);
   color: var(--text-tertiary);
 }
 
@@ -463,7 +465,7 @@ if (import.meta.env.DEV) {
   background: var(--brand-gradient);
 }
 .avatar {
-  background: #fff;
+  background: var(--bg-card);
   color: var(--brand-1);
   font-size: 13px;
   font-weight: 600;

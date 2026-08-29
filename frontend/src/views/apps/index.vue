@@ -606,7 +606,7 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.98) 30%);
+  background: linear-gradient(180deg, transparent, var(--bg-card) 30%);
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.22s ease, transform 0.22s ease;

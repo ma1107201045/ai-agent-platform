@@ -330,7 +330,7 @@ async function copyCode(code: string, lang: string) {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 0.9em;
   background: var(--el-fill-color-light, #f5f7fa);
-  color: #c7254e;
+  color: var(--el-color-danger, #c7254e);
   padding: 1px 5px;
   border-radius: 4px;
 }

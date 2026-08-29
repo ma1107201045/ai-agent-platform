@@ -547,7 +547,7 @@ onMounted(async () => {
 /* ---------- 头部 ---------- */
 .chat-header {
   height: 56px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-header);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -599,7 +599,7 @@ onMounted(async () => {
 .sidebar {
   width: 250px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-aside);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -677,7 +677,7 @@ onMounted(async () => {
   gap: 4px;
 }
 .conv-del:hover {
-  color: #ef4444;
+  color: var(--el-color-danger);
 }
 .conv-edit:hover {
   color: var(--brand-1, #5b6cff);
@@ -777,7 +777,7 @@ onMounted(async () => {
   gap: 8px;
   padding: 9px 16px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   font-size: 13px;
   color: var(--text-secondary);
@@ -858,7 +858,7 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(91, 108, 255, 0.3);
 }
 .ai-bubble {
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-top-left-radius: 4px;
   box-shadow: var(--shadow-card);
@@ -867,9 +867,9 @@ onMounted(async () => {
   white-space: normal;
 }
 .ai-bubble.error {
-  color: #ef4444;
-  background: #fef2f2;
-  border-color: #fecaca;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  border-color: var(--el-color-danger-light-8);
 }
 .typing {
   display: inline-flex;
@@ -916,7 +916,7 @@ onMounted(async () => {
 
 /* ---------- 输入区 ---------- */
 .input-bar {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-header);
   border-top: 1px solid var(--border-color);
   padding: 14px 20px 16px;
   flex-shrink: 0;
@@ -924,7 +924,7 @@ onMounted(async () => {
 .input-shell {
   max-width: 860px;
   margin: 0 auto;
-  background: #fff;
+  background: var(--bg-card);
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 10px 12px 10px 16px;
@@ -953,18 +953,18 @@ onMounted(async () => {
   min-width: 84px;
 }
 .send-btn:disabled {
-  background: #c8cdf5 !important;
+  background: var(--el-color-primary-light-7) !important;
   box-shadow: none;
   transform: none;
 }
 .stop-btn {
   border-radius: 10px;
   height: 34px;
-  color: #ef4444;
-  border-color: #fecaca;
+  color: var(--el-color-danger);
+  border-color: var(--el-color-danger-light-8);
 }
 .stop-btn:hover {
-  background: #fef2f2;
+  background: var(--el-color-danger-light-9);
 }
 .stop-square {
   width: 9px;
@@ -986,7 +986,7 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 8px 10px;
   margin-bottom: 8px;
-  background: #fafbfe;
+  background: var(--fill-lighter);
 }
 .trace-head {
   display: flex;
@@ -1005,7 +1005,7 @@ onMounted(async () => {
 .trace-error {
   margin-top: 6px;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--el-color-danger);
 }
 .trace-text {
   margin-top: 6px;

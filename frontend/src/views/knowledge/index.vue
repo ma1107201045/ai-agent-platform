@@ -557,7 +557,7 @@ onMounted(async () => {
 .ds-panel {
   width: 280px;
   flex-shrink: 0;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -647,7 +647,7 @@ onMounted(async () => {
 .detail-panel {
   flex: 1;
   min-width: 0;
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -658,7 +658,7 @@ onMounted(async () => {
 .detail-head {
   padding: 16px 18px 0;
   border-bottom: 1px solid var(--border-color);
-  background: #fff;
+  background: var(--bg-card);
 }
 .detail-title {
   font-size: 16px;
@@ -711,7 +711,7 @@ onMounted(async () => {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 12px 14px;
-  background: #fff;
+  background: var(--bg-card);
   box-shadow: var(--shadow-card);
   transition: all 0.2s ease;
 }
@@ -756,7 +756,7 @@ onMounted(async () => {
   border-radius: var(--radius-md);
   padding: 12px 14px;
   margin-bottom: 10px;
-  background: #fff;
+  background: var(--bg-card);
   box-shadow: var(--shadow-card);
   transition: all 0.2s ease;
 }

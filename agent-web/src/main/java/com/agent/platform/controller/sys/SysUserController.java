@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
  * 用户管理
  */
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/sys/users")
 @RequiredArgsConstructor
 public class SysUserController {
 

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 认证接口：登录 / 当前用户
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/sys/auth")
 @RequiredArgsConstructor
 public class SysAuthController {
 

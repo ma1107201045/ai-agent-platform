@@ -137,7 +137,7 @@ onMounted(load)
   background: var(--brand-gradient);
 }
 .user-avatar {
-  background: #fff;
+  background: var(--bg-card);
   color: var(--brand-1);
   font-size: 13px;
   font-weight: 600;

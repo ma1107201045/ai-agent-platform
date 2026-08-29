@@ -5,28 +5,28 @@ import type { ChatChunk, ChatConversation, ChatMessageRecord, PageResult } from 
 export const conversationApi = {
   /** 当前用户的会话列表 */
   page(params: { appId?: number; page?: number; size?: number }) {
-    return request.get<never, PageResult<ChatConversation>>('/conversations', { params })
+    return request.get<never, PageResult<ChatConversation>>('/chat/conversations', { params })
   },
   /** 创建会话 */
   create(data: { appId: number; title?: string; mode?: string; modelId?: number | null }) {
-    return request.post<never, ChatConversation>('/conversations', data)
+    return request.post<never, ChatConversation>('/chat/conversations', data)
   },
   get(id: number) {
-    return request.get<never, ChatConversation>(`/conversations/${id}`)
+    return request.get<never, ChatConversation>(`/chat/conversations/${id}`)
   },
   rename(id: number, title: string) {
-    return request.put<never, void>(`/conversations/${id}`, { title })
+    return request.put<never, void>(`/chat/conversations/${id}`, { title })
   },
   remove(id: number) {
-    return request.delete<never, void>(`/conversations/${id}`)
+    return request.delete<never, void>(`/chat/conversations/${id}`)
   },
   /** 会话消息列表 */
   messages(id: number) {
-    return request.get<never, ChatMessageRecord[]>(`/conversations/${id}/messages`)
+    return request.get<never, ChatMessageRecord[]>(`/chat/conversations/${id}/messages`)
   },
   /** 发送消息（非流式；直连模型 / 工作流通用） */
   send(id: number, data: { content: string; modelId?: number | null }) {
-    return request.post<never, ChatMessageRecord>(`/conversations/${id}/messages`, data)
+    return request.post<never, ChatMessageRecord>(`/chat/conversations/${id}/messages`, data)
   },
   /**
    * 发送消息（SSE 流式，仅直连模型）
@@ -39,7 +39,7 @@ export const conversationApi = {
     signal?: AbortSignal
   ): Promise<string> {
     const token = localStorage.getItem('agent_platform_token') || ''
-    const resp = await fetch(`/api/conversations/${id}/messages/stream`, {
+    const resp = await fetch(`/api/chat/conversations/${id}/messages/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -4,8 +4,9 @@ import com.agent.platform.workflow.NodeType;
 import org.springframework.stereotype.Component;
 
 /**
- * 结束节点：流程出口，无实际执行逻辑。
- * 最终回答由引擎从 end 节点的上游输出中选取。
+ * 结束节点：流程出口，可选配置回答模板。
+ * <p>
+ * 未配置 {@code answerTemplate} 时由引擎从上一个节点的输出中选取最终回答。
  */
 @Component
 public class EndNodeHandler implements NodeHandler {
@@ -17,6 +18,12 @@ public class EndNodeHandler implements NodeHandler {
 
     @Override
     public NodeResult execute(NodeContext ctx) {
-        return NodeResult.empty();
+        String template = ctx.cfgStr("answerTemplate");
+        if (template == null || template.isBlank()) {
+            return NodeResult.empty();
+        }
+        String text = ctx.render(template);
+        ctx.emit(text);
+        return NodeResult.of(text);
     }
 }

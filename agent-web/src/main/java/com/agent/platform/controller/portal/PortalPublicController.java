@@ -26,7 +26,7 @@ import java.util.List;
  * 已发布应用对外分享 / 嵌入访问，支持 workflow / agent / chatflow 三种类型
  */
 @RestController
-@RequestMapping("/api/public")
+@RequestMapping("/api/portal/public")
 @RequiredArgsConstructor
 public class PortalPublicController {
 
@@ -75,7 +75,7 @@ public class PortalPublicController {
             try {
                 String dsl = appService.getPublishedWorkflow(id);
                 WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
-                RunResult result = workflowEngine.run(graph, last.content());
+                RunResult result = workflowEngine.run(graph, last.content(), id);
                 answer = result.getAnswer();
                 detail = result.getTrace();
             } catch (BizException e) {
