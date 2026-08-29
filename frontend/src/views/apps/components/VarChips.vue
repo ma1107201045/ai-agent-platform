@@ -47,17 +47,17 @@ function insert(item: VarItem) {
 .var-chip {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 11px;
-  color: #5b6cff;
-  background: #f1f2ff;
-  border: 1px dashed #b9c1ff;
+  color: var(--brand-1, #5b6cff);
+  background: var(--brand-gradient-soft, #f1f2ff);
+  border: 1px dashed var(--border-color, #b9c1ff);
   border-radius: 5px;
   padding: 1px 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .var-chip:hover {
-  background: #5b6cff;
+  background: var(--brand-1, #5b6cff);
   color: #fff;
-  border-color: #5b6cff;
+  border-color: var(--brand-1, #5b6cff);
 }
 </style>

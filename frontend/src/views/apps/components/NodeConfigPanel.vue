@@ -29,35 +29,8 @@ const meta = computed(() => NODE_TYPE_META[type.value])
 // ---------- 配置对象（与 node.data.config 双向绑定） ----------
 const cfg = ref<Record<string, any>>({})
 
-watch(
-  () => props.node?.id,
-  () => {
-    const data = props.node?.data
-    if (!data) return
-    if (!data.config || typeof data.config !== 'object') data.config = {}
-    cfg.value = data.config
-    // 补齐执行策略默认值（起止节点无执行策略）
-    if (data.nodeType !== 'start' && data.nodeType !== 'end') {
-      for (const [k, v] of Object.entries(DEFAULT_ADVANCED)) {
-        if (cfg.value[k] === undefined || cfg.value[k] === null || cfg.value[k] === '') {
-          cfg.value[k] = v
-        }
-      }
-    }
-    syncHeadersText()
-  },
-  { immediate: true }
-)
-
-watch(
-  cfg,
-  (v) => {
-    if (props.node?.data) props.node.data.config = v
-  },
-  { deep: true, immediate: true }
-)
-
 // ---------- HTTP Headers（JSON 文本 <-> 对象） ----------
+// 必须先于下方 immediate watch 声明：watch 在 setup 期间同步执行回调并调用 syncHeadersText
 const headersText = ref('')
 
 function syncHeadersText() {
@@ -82,6 +55,33 @@ function parseHeaders() {
     ElMessage.warning('Headers 必须是合法 JSON 对象')
   }
 }
+
+watch(
+  () => props.node?.data,
+  (data) => {
+    if (!data) return
+    if (!data.config || typeof data.config !== 'object') data.config = {}
+    cfg.value = data.config
+    // 补齐执行策略默认值（起止节点无执行策略）
+    if (data.nodeType !== 'start' && data.nodeType !== 'end') {
+      for (const [k, v] of Object.entries(DEFAULT_ADVANCED)) {
+        if (cfg.value[k] === undefined || cfg.value[k] === null || cfg.value[k] === '') {
+          cfg.value[k] = v
+        }
+      }
+    }
+    syncHeadersText()
+  },
+  { immediate: true }
+)
+
+watch(
+  cfg,
+  (v) => {
+    if (props.node?.data) props.node.data.config = v
+  },
+  { deep: true, immediate: true }
+)
 
 // ---------- 开始节点：流程变量 ----------
 const variables = computed<Array<{ name: string; value: string }>>(() => {

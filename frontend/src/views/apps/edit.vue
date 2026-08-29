@@ -36,7 +36,7 @@ const gridColor = computed(() => (themeStore.isDark ? '#333a52' : '#d5dbe3'))
 // ---------- 画布 ----------
 const nodes = ref<Array<any>>([])
 const edges = ref<Array<any>>([])
-const { addNodes, removeNodes, onConnect, setCenter, fitView } = useVueFlow()
+const { addNodes, removeNodes, onConnect, setCenter, fitView, getNodes, setNodes, getEdges } = useVueFlow()
 
 // ---------- 历史（撤销/重做） ----------
 const MAX_HISTORY = 50
@@ -83,7 +83,7 @@ const clipboard = ref<Array<{ id: string; data: any }> | null>(null)
 
 /** 复制当前选中的节点（含节点间内部连线关系） */
 function copySelected() {
-  const sel = nodes.value.filter((n) => n.selected)
+  const sel = getNodes.value.filter((n) => n.selected)
   if (sel.length === 0) {
     ElMessage.warning('请先选中要复制的节点（支持框选 / Ctrl 多选）')
     return
@@ -282,8 +282,17 @@ const selectedNode = computed(() =>
   nodes.value.find((n) => n.id === selectedNodeId.value) ?? null
 )
 const selectedData = computed(() => selectedNode.value?.data ?? null)
+/**
+ * 配置面板重建版本：选中节点 data 对象引用变化时自增。
+ * 撤销/重做、加载 DSL、回滚等路径会用新对象整体替换 node.data，
+ * 此时强制 <NodeConfigPanel> 重建，避免面板内部持有陈旧的 config 引用。
+ */
+const panelVersion = ref(0)
+watch(selectedData, (d, old) => {
+  if (d !== old) panelVersion.value++
+})
 const hasSelection = computed(
-  () => nodes.value.some((n) => n.selected) || edges.value.some((e) => e.selected)
+  () => getNodes.value.some((n) => n.selected) || getEdges.value.some((e) => e.selected)
 )
 const selectedEdge = computed(() => edges.value.find((e) => e.id === selectedEdgeId.value) ?? null)
 const selectedEdgeEnds = computed(() => {
@@ -299,7 +308,7 @@ const selectedEdgeEnds = computed(() => {
     branch: branchLabelOf(e.source, e.sourceHandle)
   }
 })
-const selectedCount = computed(() => nodes.value.filter((n) => n.selected).length)
+const selectedCount = computed(() => getNodes.value.filter((n) => n.selected).length)
 interface ShortcutItem {
   keys: string
   desc: string
@@ -330,7 +339,7 @@ const shortcutGroups: ShortcutGroup[] = [
     items: [
       { keys: '单击节点', desc: '选中节点，并在右侧打开该节点的配置面板' },
       { keys: 'Ctrl / Cmd + 点击', desc: '在已选节点上追加或取消选中，实现多选' },
-      { keys: 'Shift + 拖拽空白', desc: '框选多个节点，可批量移动 / 复制 / 对齐' },
+      { keys: 'Shift + 拖拽空白', desc: '框选多个节点，可批量移动 / 复制 / 删除' },
       { keys: '单击画布空白', desc: '取消选中，收起右侧配置面板' }
     ]
   },
@@ -338,7 +347,7 @@ const shortcutGroups: ShortcutGroup[] = [
     title: '画布与连线',
     items: [
       { keys: '拖拽节点', desc: '移动节点位置，松手后可用 Ctrl + Z 撤销' },
-      { keys: '拖拽画布空白', desc: '平移画布' },
+      { keys: '拖拽画布空白', desc: '平移画布；按住 Shift 拖拽则框选多节点' },
       { keys: '滚轮 / 触控板双指', desc: '缩放画布，缩放范围 20% ~ 200%' },
       { keys: '双击画布空白', desc: '放大一级' },
       { keys: '拖拽节点右侧圆点', desc: '从出点拉出连线，接到目标节点左侧入点' },
@@ -598,8 +607,8 @@ watch(
 )
 
 function removeSelected() {
-  const selNodes = nodes.value.filter((n) => n.selected).map((n) => n.id)
-  const selEdges = edges.value.filter((e) => e.selected).map((e) => e.id)
+  const selNodes = getNodes.value.filter((n) => n.selected).map((n) => n.id)
+  const selEdges = getEdges.value.filter((e) => e.selected).map((e) => e.id)
   if (selNodes.length === 0 && selEdges.length === 0) return
   if (selNodes.length > 0) {
     removeNodes(selNodes)
@@ -769,9 +778,13 @@ function checkStructure(): string[] {
 type AlignMode = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
 type DistributeMode = 'horizontal' | 'vertical'
 
-/** 读取选中节点包围盒（尺寸未就绪时使用默认值） */
+/**
+ * 读取 vue-flow 内部 store 的选中节点（包围盒，尺寸未就绪时用默认值）。
+ * 注意：不读 v-model 父数组的 n.selected——vue-flow 框选后 selected 回写不可靠，
+ * getNodes（ComputedRef）返回内部真实渲染节点（选中态/尺寸始终准确）。
+ */
 function selectedBoxes() {
-  return nodes.value
+  return getNodes.value
     .filter((n) => n.selected)
     .map((n) => ({
       n,
@@ -780,6 +793,22 @@ function selectedBoxes() {
       w: n.dimensions?.width || 210,
       h: n.dimensions?.height || 64
     }))
+}
+
+/**
+ * 批量应用节点新位置：直接 setNodes 写入 vue-flow 内部 store，保证画布立即重排；
+ * 再同步父数组（作为保存/撤销快照基准）并记录历史。
+ */
+function applyNodePositions(next: Record<string, Partial<{ x: number; y: number }>>, msg: string) {
+  setNodes(
+    getNodes.value.map((n) => {
+      const p = next[n.id]
+      return p ? { ...n, position: { ...n.position, ...p } } : n
+    })
+  )
+  nodes.value = getNodes.value
+  snapshot()
+  ElMessage.success(msg)
 }
 
 /** 对齐选中节点：以包围盒为基准，left/hcenter/right 对齐 X 轴，top/vcenter/bottom 对齐 Y 轴 */
@@ -795,18 +824,19 @@ function alignNodes(mode: AlignMode) {
   const maxY = Math.max(...boxes.map((b) => b.y + b.h))
   const avgCX = boxes.reduce((s, b) => s + b.x + b.w / 2, 0) / boxes.length
   const avgCY = boxes.reduce((s, b) => s + b.y + b.h / 2, 0) / boxes.length
+  // 先计算目标位置
+  const next: Record<string, Partial<{ x: number; y: number }>> = {}
   for (const b of boxes) {
     switch (mode) {
-      case 'left': b.n.position.x = minX; break
-      case 'hcenter': b.n.position.x = avgCX - b.w / 2; break
-      case 'right': b.n.position.x = maxX - b.w; break
-      case 'top': b.n.position.y = minY; break
-      case 'vcenter': b.n.position.y = avgCY - b.h / 2; break
-      case 'bottom': b.n.position.y = maxY - b.h; break
+      case 'left': next[b.n.id] = { x: minX }; break
+      case 'hcenter': next[b.n.id] = { x: avgCX - b.w / 2 }; break
+      case 'right': next[b.n.id] = { x: maxX - b.w }; break
+      case 'top': next[b.n.id] = { y: minY }; break
+      case 'vcenter': next[b.n.id] = { y: avgCY - b.h / 2 }; break
+      case 'bottom': next[b.n.id] = { y: maxY - b.h }; break
     }
   }
-  snapshot()
-  ElMessage.success('对齐完成')
+  applyNodePositions(next, '对齐完成')
 }
 
 /** 均匀分布选中节点：沿 X 轴（horizontal）或 Y 轴（vertical）保持首尾不动、间隙相等 */
@@ -816,6 +846,7 @@ function distributeNodes(mode: DistributeMode) {
     ElMessage.warning('请至少选中 3 个节点再分布')
     return
   }
+  const next: Record<string, Partial<{ x: number; y: number }>> = {}
   if (mode === 'horizontal') {
     const sorted = [...boxes].sort((a, b) => a.x - b.x)
     const totalW = sorted.reduce((s, b) => s + b.w, 0)
@@ -823,7 +854,7 @@ function distributeNodes(mode: DistributeMode) {
     const gap = (span - totalW) / (sorted.length - 1)
     let x = sorted[0].x
     for (const b of sorted) {
-      b.n.position.x = x
+      next[b.n.id] = { x }
       x += b.w + gap
     }
   } else {
@@ -833,12 +864,11 @@ function distributeNodes(mode: DistributeMode) {
     const gap = (span - totalH) / (sorted.length - 1)
     let y = sorted[0].y
     for (const b of sorted) {
-      b.n.position.y = y
+      next[b.n.id] = { y }
       y += b.h + gap
     }
   }
-  snapshot()
-  ElMessage.success('分布完成')
+  applyNodePositions(next, '分布完成')
 }
 
 /** 自动布局：从「开始」（无则首个节点）BFS 分层，按层逐列排列、层内纵向错开 */
@@ -879,19 +909,15 @@ function autoLayout() {
   const GAP_X = 120
   const GAP_Y = 40
   const MARGIN = 40
+  const next: Record<string, { x: number; y: number }> = {}
   for (const d of Object.keys(layers).map(Number).sort((a, b) => a - b)) {
     const ids = layers[d]
     const x = MARGIN + d * (W + GAP_X)
     ids.forEach((id, i) => {
-      const n = nodes.value.find((x) => x.id === id)
-      if (n) {
-        n.position.x = Math.round(x)
-        n.position.y = Math.round(MARGIN + i * (H + GAP_Y))
-      }
+      next[id] = { x: Math.round(x), y: Math.round(MARGIN + i * (H + GAP_Y)) }
     })
   }
-  snapshot()
-  ElMessage.success('已按流程层级完成自动布局')
+  applyNodePositions(next, '已按流程层级完成自动布局')
 }
 
 // ---------- 保存 / 发布 ----------
@@ -1015,8 +1041,14 @@ function clearRunState() {
   runResult.value = null
   highlightedNodeId.value = null
   lastRunFailed.value = false
+  // 直接删除运行态属性而非整体替换 data：
+  // 整体替换 node.data 会让 vue-flow 的 Handle 组件在更新期访问到失效实例（emitsOptions/subTree 空指针），
+  // 且会使右侧配置面板持有的 config 引用失效。
   for (const n of nodes.value) {
-    n.data = { ...n.data, runStatus: undefined, runCost: undefined, runError: undefined }
+    if (!n.data) continue
+    delete n.data.runStatus
+    delete n.data.runCost
+    delete n.data.runError
   }
   for (const e of edges.value) {
     e.class = ''
@@ -1044,12 +1076,11 @@ function applyTraceToCanvas(trace: TraceItem[]) {
     if (t.error) errMap[t.nodeId] = t.error
   }
   for (const n of nodes.value) {
-    n.data = {
-      ...n.data,
-      runStatus: statusMap[n.id] || 'idle',
-      runCost: costMap[n.id],
-      runError: errMap[n.id]
-    }
+    if (!n.data) continue
+    // 保持 node.data 对象引用不变，仅更新运行态属性（避免 vue-flow 更新期崩溃与面板配置引用失效）
+    n.data.runStatus = statusMap[n.id] || 'idle'
+    n.data.runCost = costMap[n.id]
+    n.data.runError = errMap[n.id]
   }
   // 高亮执行路径上的边（trace 相邻节点间的连线）
   const executed = new Set<string>()
@@ -1453,6 +1484,7 @@ onUnmounted(() => {
             <span>· 开始/结束定义流程边界</span>
             <span>· 点击节点右侧「+」快速插入并连线</span>
             <span>· 条件分支 + 并行出边实现复杂流程</span>
+            <span>· 拖拽空白平移画布，按住 Shift 拖拽可框选多节点</span>
           </div>
         </div>
         <VueFlow
@@ -1606,6 +1638,7 @@ onUnmounted(() => {
         <template v-if="!configCollapsed">
         <template v-if="selectedData">
           <NodeConfigPanel
+            :key="selectedNodeId + ':' + panelVersion"
             :node="selectedNode"
             :edges="edges"
             :chat-models="chatModels"
@@ -1803,6 +1836,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
 }
+
 .editor-main {
   flex: 1;
   display: flex;
@@ -2491,7 +2525,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f7f8fc;
+  background: var(--fill-light, #f7f8fc);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   padding: 12px;
