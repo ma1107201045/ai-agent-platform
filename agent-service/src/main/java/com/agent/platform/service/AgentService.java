@@ -34,7 +34,7 @@ public class AgentService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 执行 Agent 循环
+     * 执行 Agent 循环（应用级入口：工具与知识库来源为应用绑定配置）
      *
      * @param appId        智能体应用 ID
      * @param modelId      对话模型 ID
@@ -45,17 +45,38 @@ public class AgentService {
     public AgentResult chat(Long appId, Long modelId, String systemPrompt,
                             List<ChatMessage> history, Integer maxIterations) {
         AgentApp app = appService.getById(appId);
+        return doChat(modelId, systemPrompt, loadTools(app.getToolIds()),
+                app.getDatasetIds(), history, maxIterations);
+    }
+
+    /**
+     * 执行 Agent 循环（工作流 agent 节点入口：工具与知识库显式指定，
+     * 未配置时由调用方回退到应用绑定配置）
+     *
+     * @param modelId        对话模型 ID
+     * @param systemPrompt   系统提示词（可为 null，使用默认）
+     * @param tools          本次循环可用的工具列表（可为空）
+     * @param datasetIdsJson 知识库数据集 ID JSON 数组（可为 null）
+     * @param history        历史消息（不含 system）
+     * @param maxIterations  最大循环轮数
+     */
+    public AgentResult chat(Long modelId, String systemPrompt, List<AgentTool> tools,
+                            String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
+        return doChat(modelId, systemPrompt, tools, datasetIdsJson, history, maxIterations);
+    }
+
+    /** Agent 循环核心实现 */
+    private AgentResult doChat(Long modelId, String systemPrompt, List<AgentTool> tools,
+                               String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
 
-        // 加载应用关联工具
-        List<AgentTool> tools = loadTools(app.getToolIds());
         ChatModel chatModel = modelService.chatModelOf(modelId);
 
         // 组装消息
         String finalSystemPrompt = systemPrompt == null || systemPrompt.isBlank()
                 ? "你是一个智能助手。请根据对话内容判断是否需要调用工具来完成任务，如果工具结果对回答有帮助，请结合工具结果作答。"
                 : systemPrompt;
-        String kbContext = buildKnowledgeContext(app.getDatasetIds(), lastUserInput(history));
+        String kbContext = buildKnowledgeContext(datasetIdsJson, lastUserInput(history));
         if (!kbContext.isBlank()) {
             finalSystemPrompt += "\n\n" + kbContext;
         }
@@ -159,24 +180,28 @@ public class AgentService {
         }
     }
 
-    /** 解析应用绑定的工具 ID 列表并加载工具 */
-    private List<AgentTool> loadTools(String toolIdsJson) {
-        if (toolIdsJson == null || toolIdsJson.isBlank()) {
+    /**
+     * 解析工具 ID JSON 数组并加载启用的工具（应用绑定或节点级配置均可）
+     */
+    public List<AgentTool> loadTools(String toolIdsJson) {
+        if (toolIdsJson == null || toolIdsJson.isBlank() || "null".equals(toolIdsJson.trim())) {
             return List.of();
         }
         try {
             List<Long> ids = objectMapper.readValue(toolIdsJson, new TypeReference<List<Long>>() {
             });
             List<AgentTool> result = new ArrayList<>();
-            for (Long id : ids) {
-                AgentTool tool = toolService.getById(id);
-                if (tool.getStatus() != null && tool.getStatus() == 1) {
-                    result.add(tool);
+            if (ids != null) {
+                for (Long id : ids) {
+                    AgentTool tool = toolService.getById(id);
+                    if (tool.getStatus() != null && tool.getStatus() == 1) {
+                        result.add(tool);
+                    }
                 }
             }
             return result;
         } catch (Exception e) {
-            throw new BizException("应用工具配置解析失败: " + e.getMessage());
+            throw new BizException("工具配置解析失败: " + e.getMessage());
         }
     }
 
