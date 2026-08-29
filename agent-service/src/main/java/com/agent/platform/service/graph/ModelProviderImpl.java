@@ -1,6 +1,6 @@
 package com.agent.platform.service.graph;
 
-import com.agent.platform.workflow.spi.ModelProvider;
+import com.agent.platform.graph.spi.ModelProvider;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.ModelService;
 import lombok.RequiredArgsConstructor;

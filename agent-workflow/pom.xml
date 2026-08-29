@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>agent-workflow</artifactId>
-    <name>agent-graph</name>
+    <name>agent-workflow</name>
     <description>工作流图引擎：DAG 调度、并行 fork/join、排他分支、节点处理器 SPI（不依赖业务层）</description>
 
     <dependencies>
