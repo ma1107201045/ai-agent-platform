@@ -1,5 +1,6 @@
-package com.agent.platform.engine;
+package com.agent.platform.graph;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.util.List;
@@ -17,10 +18,19 @@ public class WorkflowGraph {
     @Data
     public static class WorkflowNode {
         private String id;
-        /** start / end / llm / condition / code / http */
+        /** 节点类型标识，取值见 {@link NodeType#getCode()}（保持字符串以兼容前端 DSL） */
         private String type;
         private String label;
         private Map<String, Object> config;
+
+        /**
+         * 节点类型枚举视图；未知类型返回 null。
+         * 引擎内部请用本方法做类型判断，避免字符串比较。
+         */
+        @JsonIgnore
+        public NodeType nodeType() {
+            return NodeType.fromCode(type);
+        }
     }
 
     @Data

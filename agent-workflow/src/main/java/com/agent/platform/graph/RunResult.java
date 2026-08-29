@@ -1,4 +1,4 @@
-package com.agent.platform.engine;
+package com.agent.platform.graph;
 
 import lombok.Builder;
 import lombok.Data;
@@ -22,10 +22,11 @@ public class RunResult {
     @Builder
     public static class TraceItem {
         private String nodeId;
-        private String nodeType;
+        /** 节点类型；序列化为 {@link NodeType#getCode()} 小写标识 */
+        private NodeType nodeType;
         private String label;
-        /** success / skipped / error */
-        private String status;
+        /** 执行状态；序列化为 {@link NodeStatus#getCode()} 小写标识 */
+        private NodeStatus status;
         private String input;
         private String output;
         private long costMs;
