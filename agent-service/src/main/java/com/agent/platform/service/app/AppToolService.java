@@ -30,7 +30,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
-public class ToolService {
+public class AppToolService {
 
     private final AppAgentToolMapper toolMapper;
     private final ObjectMapper objectMapper;

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  */
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class SysUserService {
 
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;

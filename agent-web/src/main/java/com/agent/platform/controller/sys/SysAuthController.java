@@ -1,7 +1,7 @@
 package com.agent.platform.controller.sys;
 
 import com.agent.platform.common.result.Result;
-import com.agent.platform.service.sys.AuthService;
+import com.agent.platform.service.sys.SysAuthService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -18,19 +18,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class SysAuthController {
 
-    private final AuthService authService;
+    private final SysAuthService authService;
 
     /** 登录 */
     @PostMapping("/login")
-    public Result<AuthService.LoginResult> login(@RequestBody @Valid LoginReq req) {
+    public Result<SysAuthService.LoginResult> login(@RequestBody @Valid LoginReq req) {
         return Result.ok(authService.login(req.getUsername(), req.getPassword()));
     }
 
     /** 当前登录用户信息 */
     @GetMapping("/me")
-    public Result<AuthService.UserProfile> me() {
+    public Result<SysAuthService.UserProfile> me() {
         return Result.ok(authService.me());
     }
 

@@ -25,13 +25,13 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class AgentService {
+public class AppAgentService {
 
     private static final int DEFAULT_MAX_ITERATIONS = 6;
 
     private final AppService appService;
     private final ModelService modelService;
-    private final ToolService toolService;
+    private final AppToolService toolService;
     private final KnowledgeService knowledgeService;
     private final ObjectMapper objectMapper;
 

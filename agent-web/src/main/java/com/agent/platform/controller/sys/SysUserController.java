@@ -2,7 +2,7 @@ package com.agent.platform.controller.sys;
 
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.sys.SysUser;
-import com.agent.platform.service.sys.UserService;
+import com.agent.platform.service.sys.SysUserService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-public class UserController {
+public class SysUserController {
 
-    private final UserService userService;
+    private final SysUserService userService;
 
     @GetMapping
     public Result<Page<SysUser>> page(@RequestParam(defaultValue = "1") long page,

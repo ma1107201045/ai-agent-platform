@@ -10,7 +10,7 @@ import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
-import com.agent.platform.service.app.AgentService;
+import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.app.AppService;
 import com.agent.platform.service.model.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,11 +28,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/public")
 @RequiredArgsConstructor
-public class PublicController {
+public class PortalPublicController {
 
     private final AppService appService;
     private final ModelService modelService;
-    private final AgentService agentService;
+    private final AppAgentService agentService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
 
@@ -88,7 +88,7 @@ public class PublicController {
             if (modelId == null) {
                 throw new BizException("尚未配置可用的对话模型");
             }
-            AgentService.AgentResult result = agentService.chat(id, modelId, null, history, null);
+            AppAgentService.AgentResult result = agentService.chat(id, modelId, null, history, null);
             answer = result.getAnswer();
             detail = result.getSteps();
         } else {

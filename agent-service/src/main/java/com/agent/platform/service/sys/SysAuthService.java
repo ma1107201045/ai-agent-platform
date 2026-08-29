@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
  */
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class SysAuthService {
 
     private final SysUserMapper userMapper;
     private final JwtUtil jwtUtil;

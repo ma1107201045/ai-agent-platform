@@ -8,9 +8,9 @@ import com.agent.platform.workflow.RunResult;
 import com.agent.platform.workflow.WorkflowEngine;
 import com.agent.platform.workflow.WorkflowGraph;
 import com.agent.platform.llm.model.ChatMessage;
-import com.agent.platform.service.app.AgentService;
+import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.app.AppService;
-import com.agent.platform.service.chat.ConversationService;
+import com.agent.platform.service.chat.ChatConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -31,8 +31,8 @@ import java.util.Map;
 public class AppController {
 
     private final AppService appService;
-    private final AgentService agentService;
-    private final ConversationService conversationService;
+    private final AppAgentService agentService;
+    private final ChatConversationService conversationService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
 
@@ -93,7 +93,7 @@ public class AppController {
 
     /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
     @GetMapping("/stats/batch")
-    public Result<Map<Long, ConversationService.AppStats>> batchStats(@RequestParam String ids) {
+    public Result<Map<Long, ChatConversationService.AppStats>> batchStats(@RequestParam String ids) {
         List<Long> idList = parseIds(ids);
         return Result.ok(conversationService.statsBatch(idList));
     }
@@ -164,7 +164,7 @@ public class AppController {
      * Agent 自主对话（非流式）：规划-工具调用-观察循环
      */
     @PostMapping("/{id}/agent/chat")
-    public Result<AgentService.AgentResult> agentChat(@PathVariable Long id, @RequestBody AgentChatRequest request) {
+    public Result<AppAgentService.AgentResult> agentChat(@PathVariable Long id, @RequestBody AgentChatRequest request) {
         if (request.getModelId() == null) {
             throw new BizException("请选择对话模型");
         }

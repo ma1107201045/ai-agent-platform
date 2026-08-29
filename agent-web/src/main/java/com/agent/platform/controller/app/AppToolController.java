@@ -2,7 +2,7 @@ package com.agent.platform.controller.app;
 
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.app.AppAgentTool;
-import com.agent.platform.service.app.ToolService;
+import com.agent.platform.service.app.AppToolService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -16,9 +16,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/tools")
 @RequiredArgsConstructor
-public class ToolController {
+public class AppToolController {
 
-    private final ToolService toolService;
+    private final AppToolService toolService;
 
     @GetMapping
     public Result<Page<AppAgentTool>> page(@RequestParam(defaultValue = "1") long page,

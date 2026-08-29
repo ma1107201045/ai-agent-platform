@@ -31,7 +31,9 @@ public class AppService {
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
 
-    /** 分页查询应用，支持名称模糊搜索与类型过滤 */
+    /**
+     * 分页查询应用，支持名称模糊搜索与类型过滤
+     */
     public Page<AppAgent> page(long page, long size, String keyword, String type) {
         LambdaQueryWrapper<AppAgent> qw = new LambdaQueryWrapper<AppAgent>()
                 .orderByDesc(AppAgent::getId);
@@ -68,7 +70,9 @@ public class AppService {
         return app;
     }
 
-    /** 更新应用：仅允许更新业务字段，防止 status / publishedVersionId 等敏感字段被覆盖 */
+    /**
+     * 更新应用：仅允许更新业务字段，防止 status / publishedVersionId 等敏感字段被覆盖
+     */
     public void update(AppAgent app) {
         getById(app.getId());
         LambdaUpdateWrapper<AppAgent> uw = new LambdaUpdateWrapper<AppAgent>()
@@ -86,7 +90,9 @@ public class AppService {
         appMapper.update(null, uw);
     }
 
-    /** 删除应用：级联清理发布版本、会话与消息，避免脏数据残留 */
+    /**
+     * 删除应用：级联清理发布版本、会话与消息，避免脏数据残留
+     */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         getById(id);
@@ -156,7 +162,9 @@ public class AppService {
         return version;
     }
 
-    /** 版本列表（按版本号倒序） */
+    /**
+     * 版本列表（按版本号倒序）
+     */
     public List<AppAgentVersion> listVersions(Long appId) {
         getById(appId);
         return versionMapper.selectList(new LambdaQueryWrapper<AppAgentVersion>()

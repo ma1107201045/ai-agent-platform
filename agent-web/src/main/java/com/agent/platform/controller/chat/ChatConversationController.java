@@ -4,7 +4,7 @@ import com.agent.platform.common.result.Result;
 import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.entity.chat.ChatConversation;
 import com.agent.platform.dao.entity.chat.ChatMessage;
-import com.agent.platform.service.chat.ConversationService;
+import com.agent.platform.service.chat.ChatConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +23,9 @@ import java.util.concurrent.Executors;
 @RestController
 @RequestMapping("/api/conversations")
 @RequiredArgsConstructor
-public class ConversationController {
+public class ChatConversationController {
 
-    private final ConversationService conversationService;
+    private final ChatConversationService conversationService;
     private final ExecutorService streamExecutor = Executors.newCachedThreadPool();
 
     /** 当前用户的会话列表（可按应用过滤） */

@@ -9,7 +9,7 @@ import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
-import com.agent.platform.service.app.AgentService;
+import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.app.AppService;
 import com.agent.platform.service.model.ModelService;
 import com.agent.platform.workflow.RunResult;
@@ -37,13 +37,13 @@ import java.util.function.Consumer;
  */
 @Service
 @RequiredArgsConstructor
-public class ConversationService {
+public class ChatConversationService {
 
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
     private final AppService appService;
     private final ModelService modelService;
-    private final AgentService agentService;
+    private final AppAgentService agentService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
 
@@ -199,7 +199,7 @@ public class ConversationService {
             List<ChatMessage> history = messages(conversationId, userId);
             List<com.agent.platform.llm.model.ChatMessage> llmHistory = toLlmMessages(history);
             llmHistory.add(com.agent.platform.llm.model.ChatMessage.user(content));
-            AgentService.AgentResult result = agentService.chat(conv.getAppId(), mid, null, llmHistory, null);
+            AppAgentService.AgentResult result = agentService.chat(conv.getAppId(), mid, null, llmHistory, null);
             answer = result.getAnswer();
             traceJson = toJson(result.getSteps());
         } else {
