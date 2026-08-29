@@ -1,5 +1,5 @@
 import request from './request'
-import type { App, AppVersion, AppStats, ChatMessage, PageResult, RunResult } from './types'
+import type { AgentResult, App, AppVersion, AppStats, ChatMessage, PageResult, RunResult } from './types'
 
 export const appApi = {
   page(params: { page?: number; size?: number; keyword?: string; type?: string }) {
@@ -45,5 +45,12 @@ export const appApi = {
     return request.get<never, Record<number, AppStats>>('/apps/stats/batch', {
       params: { ids: ids.join(',') }
     })
+  },
+  /** Agent 自主对话（非流式）：规划-工具调用-观察循环 */
+  agentChat(
+    appId: number,
+    data: { modelId: number; systemPrompt?: string; messages: ChatMessage[]; maxIterations?: number }
+  ) {
+    return request.post<never, AgentResult>(`/apps/${appId}/agent/chat`, data)
   }
 }

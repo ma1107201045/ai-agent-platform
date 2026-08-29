@@ -2,7 +2,7 @@ package com.agent.platform.service.workflow;
 
 import com.agent.platform.workflow.spi.ModelProvider;
 import com.agent.platform.llm.spi.ChatModel;
-import com.agent.platform.service.ModelService;
+import com.agent.platform.service.model.ModelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

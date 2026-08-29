@@ -15,7 +15,7 @@ import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import { appApi } from '@/api/app'
 import { knowledgeApi } from '@/api/knowledge'
-import { llmApi } from '@/api/llm'
+import { modelApi } from '@/api/model'
 import { toolApi } from '@/api/tool'
 import type { AppVersion, AppTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
 import {
@@ -431,7 +431,7 @@ async function loadApp() {
 }
 
 async function loadModels() {
-  chatModels.value = await llmApi.chatModels()
+  chatModels.value = await modelApi.chatModels()
 }
 
 async function loadTools() {

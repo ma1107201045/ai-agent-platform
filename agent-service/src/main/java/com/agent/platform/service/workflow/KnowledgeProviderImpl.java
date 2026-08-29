@@ -2,7 +2,7 @@ package com.agent.platform.service.workflow;
 
 import com.agent.platform.workflow.spi.KnowledgeHit;
 import com.agent.platform.workflow.spi.KnowledgeProvider;
-import com.agent.platform.service.KnowledgeService;
+import com.agent.platform.service.knowledge.KnowledgeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

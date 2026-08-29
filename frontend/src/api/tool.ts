@@ -1,5 +1,5 @@
 import request from './request'
-import type { AgentResult, AppTool, ChatMessage, PageResult } from './types'
+import type { AppTool, PageResult } from './types'
 
 /** Agent 工具 API */
 export const toolApi = {
@@ -23,12 +23,5 @@ export const toolApi = {
   },
   test(id: number, argumentsStr: string) {
     return request.post<never, string>(`/tools/${id}/test`, { arguments: argumentsStr })
-  }
-}
-
-/** Agent 对话 API */
-export const agentApi = {
-  chat(appId: number, data: { modelId: number; systemPrompt?: string; messages: ChatMessage[]; maxIterations?: number }) {
-    return request.post<never, AgentResult>(`/agent/${appId}/chat`, data)
   }
 }

@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ChatDotRound, Delete, EditPen, Promotion, User } from '@element-plus/icons-vue'
 import { appApi } from '@/api/app'
 import { conversationApi } from '@/api/conversation'
-import { llmApi } from '@/api/llm'
+import { modelApi } from '@/api/model'
 import type { AgentStep, ChatConversation, ChatModelInfo, TraceItem } from '@/api/types'
 import MarkdownContent from '@/components/MarkdownContent.vue'
 
@@ -81,7 +81,7 @@ async function load() {
   } else if (app.workflowJson) {
     mode.value = 'workflow'
   }
-  models.value = await llmApi.chatModels()
+  models.value = await modelApi.chatModels()
   if (models.value.length > 0 && modelId.value === null) {
     modelId.value = models.value[0].id
   }

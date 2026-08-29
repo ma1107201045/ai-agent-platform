@@ -144,6 +144,35 @@ export interface ChatMessage {
   content: string
 }
 
+/** Token 用量统计 */
+export interface Usage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+/** 工具调用 */
+export interface ToolCall {
+  id: string
+  name: string
+  arguments: string
+}
+
+/** 非流式对话响应 */
+export interface ChatResponse {
+  content?: string
+  toolCalls?: ToolCall[]
+  finishReason?: string
+  usage?: Usage
+  model?: string
+}
+
+/** 向量化结果 */
+export interface EmbeddingResult {
+  vectors: number[][]
+  usage?: Usage
+}
+
 /** SSE 流式块（后端 ChatChunk：delta 为内容增量） */
 export interface ChatChunk {
   delta?: string
