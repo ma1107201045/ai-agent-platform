@@ -36,7 +36,7 @@ const gridColor = computed(() => (themeStore.isDark ? '#333a52' : '#d5dbe3'))
 // ---------- 画布 ----------
 const nodes = ref<Array<any>>([])
 const edges = ref<Array<any>>([])
-const { addNodes, removeNodes, onConnect, setCenter, fitView, getNodes, setNodes, getEdges } = useVueFlow()
+const { addNodes, removeNodes, onConnect, setCenter, fitView, getNodes, getEdges } = useVueFlow()
 
 // ---------- 历史（撤销/重做） ----------
 const MAX_HISTORY = 50
@@ -796,26 +796,38 @@ function selectedBoxes() {
 }
 
 /**
- * 批量应用节点新位置：直接 setNodes 写入 vue-flow 内部 store，保证画布立即重排；
- * 再同步父数组（作为保存/撤销快照基准）并记录历史。
+ * 批量应用节点新位置：
+ * 1) 原地修改内部 store 节点对象的 position（与 vue-flow 拖动的更新机制一致，
+ *    拖动能生效、这里就必然生效），画布立即重排；
+ * 2) 再用全新浅拷贝数组替换 v-model 的 nodes，保证受控同步与保存/撤销快照一致；
+ * 3) 记录历史并反馈实际移动的节点数。
  */
 function applyNodePositions(next: Record<string, Partial<{ x: number; y: number }>>, msg: string) {
-  setNodes(
-    getNodes.value.map((n) => {
-      const p = next[n.id]
-      return p ? { ...n, position: { ...n.position, ...p } } : n
-    })
-  )
-  nodes.value = getNodes.value
+  const ids = Object.keys(next)
+  if (!ids.length) {
+    ElMessage.warning('未选中任何节点：请先按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中')
+    return
+  }
+  const current = getNodes.value
+  const moved: string[] = []
+  current.forEach((n) => {
+    const p = next[n.id]
+    if (p) {
+      if (typeof p.x === 'number') n.position.x = p.x
+      if (typeof p.y === 'number') n.position.y = p.y
+      moved.push(n.id)
+    }
+  })
+  nodes.value = current.map((n) => ({ ...n }))
   snapshot()
-  ElMessage.success(msg)
+  ElMessage.success(`${msg}（已移动 ${moved.length} 个节点）`)
 }
 
 /** 对齐选中节点：以包围盒为基准，left/hcenter/right 对齐 X 轴，top/vcenter/bottom 对齐 Y 轴 */
 function alignNodes(mode: AlignMode) {
   const boxes = selectedBoxes()
   if (boxes.length < 2) {
-    ElMessage.warning('请至少选中 2 个节点再对齐')
+    ElMessage.warning('请先选中至少 2 个节点：按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中')
     return
   }
   const minX = Math.min(...boxes.map((b) => b.x))
@@ -842,8 +854,8 @@ function alignNodes(mode: AlignMode) {
 /** 均匀分布选中节点：沿 X 轴（horizontal）或 Y 轴（vertical）保持首尾不动、间隙相等 */
 function distributeNodes(mode: DistributeMode) {
   const boxes = selectedBoxes()
-  if (boxes.length < 3) {
-    ElMessage.warning('请至少选中 3 个节点再分布')
+  if (boxes.length < 2) {
+    ElMessage.warning('请先选中至少 2 个节点：按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中')
     return
   }
   const next: Record<string, Partial<{ x: number; y: number }>> = {}
@@ -1308,40 +1320,42 @@ onUnmounted(() => {
 
         <!-- 布局 -->
         <div class="op-group">
-          <el-dropdown trigger="click" placement="bottom-start" @command="(c: any) => alignNodes(c)">
-            <el-tooltip content="对齐选中节点" placement="right">
-              <span class="op-wrap">
-                <el-button class="op-btn" text circle :disabled="selectedCount < 2">
-                  <el-icon :size="16"><Aim /></el-icon>
-                </el-button>
-              </span>
-            </el-tooltip>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="left">左对齐</el-dropdown-item>
-                <el-dropdown-item command="hcenter">水平居中</el-dropdown-item>
-                <el-dropdown-item command="right">右对齐</el-dropdown-item>
-                <el-dropdown-item command="top">顶对齐</el-dropdown-item>
-                <el-dropdown-item command="vcenter">垂直居中</el-dropdown-item>
-                <el-dropdown-item command="bottom">底对齐</el-dropdown-item>
-              </el-dropdown-menu>
+          <el-popover placement="right-start" :width="176" trigger="click" :show-arrow="false" popper-class="layout-popover">
+            <template #reference>
+              <el-tooltip :content="`对齐选中节点（已选 ${selectedCount} 个，至少 2 个）`" placement="right">
+                <span class="op-wrap">
+                  <el-button class="op-btn" text circle :disabled="selectedCount < 2">
+                    <el-icon :size="16"><Aim /></el-icon>
+                  </el-button>
+                </span>
+              </el-tooltip>
             </template>
-          </el-dropdown>
-          <el-dropdown trigger="click" placement="bottom-start" @command="(c: any) => distributeNodes(c)">
-            <el-tooltip content="均匀分布选中节点" placement="right">
-              <span class="op-wrap">
-                <el-button class="op-btn" text circle :disabled="selectedCount < 3">
-                  <el-icon :size="16"><Rank /></el-icon>
-                </el-button>
-              </span>
-            </el-tooltip>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="horizontal">水平等距分布</el-dropdown-item>
-                <el-dropdown-item command="vertical">垂直等距分布</el-dropdown-item>
-              </el-dropdown-menu>
+            <div class="layout-menu">
+              <div class="layout-menu-tip">已选中 {{ selectedCount }} 个节点</div>
+              <div class="layout-menu-item" @click="alignNodes('left')">左对齐</div>
+              <div class="layout-menu-item" @click="alignNodes('hcenter')">水平居中</div>
+              <div class="layout-menu-item" @click="alignNodes('right')">右对齐</div>
+              <div class="layout-menu-item" @click="alignNodes('top')">顶对齐</div>
+              <div class="layout-menu-item" @click="alignNodes('vcenter')">垂直居中</div>
+              <div class="layout-menu-item" @click="alignNodes('bottom')">底对齐</div>
+            </div>
+          </el-popover>
+          <el-popover placement="right-start" :width="176" trigger="click" :show-arrow="false" popper-class="layout-popover">
+            <template #reference>
+              <el-tooltip :content="`均匀分布选中节点（已选 ${selectedCount} 个，至少 2 个）`" placement="right">
+                <span class="op-wrap">
+                  <el-button class="op-btn" text circle :disabled="selectedCount < 2">
+                    <el-icon :size="16"><Rank /></el-icon>
+                  </el-button>
+                </span>
+              </el-tooltip>
             </template>
-          </el-dropdown>
+            <div class="layout-menu">
+              <div class="layout-menu-tip">已选中 {{ selectedCount }} 个节点</div>
+              <div class="layout-menu-item" @click="distributeNodes('horizontal')">水平等距分布</div>
+              <div class="layout-menu-item" @click="distributeNodes('vertical')">垂直等距分布</div>
+            </div>
+          </el-popover>
           <el-tooltip content="自动布局全部节点" placement="right">
             <span class="op-wrap">
               <el-button class="op-btn" text circle @click="autoLayout">
@@ -1484,9 +1498,10 @@ onUnmounted(() => {
             <span>· 开始/结束定义流程边界</span>
             <span>· 点击节点右侧「+」快速插入并连线</span>
             <span>· 条件分支 + 并行出边实现复杂流程</span>
-            <span>· 拖拽空白平移画布，按住 Shift 拖拽可框选多节点</span>
+            <span>· 拖拽空白平移画布，按住 Shift 拖拽可框选多节点，按住 Ctrl 点击可追加选中</span>
           </div>
         </div>
+        <!-- 多选键注意：vue-flow 用 event.key 匹配按键，Ctrl 键的 key 是 'Control'、Cmd 键的 key 是 'Meta'；传 'Ctrl' 永远匹配不上 -->
         <VueFlow
           v-model:nodes="nodes"
           v-model:edges="edges"
@@ -1494,7 +1509,7 @@ onUnmounted(() => {
           :min-zoom="0.2"
           :max-zoom="2"
           :selection-key-code="'Shift'"
-          :multi-selection-key-code="['Meta', 'Ctrl']"
+          :multi-selection-key-code="['Meta', 'Control']"
           :edges-updatable="false"
           class="flow"
           @node-click="onNodeClick"
@@ -1869,11 +1884,39 @@ onUnmounted(() => {
 .op-group > *,
 .op-rail > :not(.op-group):not(.op-divider),
 .op-wrap,
-.op-group :deep(.el-dropdown) {
+.op-group :deep(.el-dropdown),
+.op-group :deep(.el-popover),
+.op-group :deep(.el-tooltip__trigger) {
   width: 100%;
   display: flex;
   justify-content: center;
   flex-shrink: 0;
+}
+/* 对齐/均匀分布的自定义弹出菜单 */
+.layout-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.layout-menu-tip {
+  padding: 4px 10px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px dashed var(--border-color);
+}
+.layout-menu-item {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--text-primary, #1f2329);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+.layout-menu-item:hover {
+  background: var(--el-color-primary-light-9);
+  color: var(--brand-1);
 }
 .op-divider {
   width: 60%;
