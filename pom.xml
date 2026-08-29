@@ -70,7 +70,7 @@
             </dependency>
 
             <!-- 第三方 -->
-            <!-- MVEL 表达式引擎（agent-graph 代码/条件节点、agent-service 工具脚本共用） -->
+            <!-- MVEL 表达式引擎（agent-workflow 代码/条件节点、agent-service 工具脚本共用） -->
             <dependency>
                 <groupId>org.mvel</groupId>
                 <artifactId>mvel2</artifactId>

@@ -1,4 +1,4 @@
-package com.agent.platform.graph.spi;
+package com.agent.platform.workflow.spi;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

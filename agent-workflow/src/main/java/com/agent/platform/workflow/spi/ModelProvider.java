@@ -1,4 +1,4 @@
-package com.agent.platform.graph.spi;
+package com.agent.platform.workflow.spi;
 
 import com.agent.platform.llm.spi.ChatModel;
 

@@ -1,9 +1,9 @@
-package com.agent.platform.graph;
+package com.agent.platform.workflow;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.graph.node.*;
-import com.agent.platform.graph.spi.KnowledgeProvider;
-import com.agent.platform.graph.spi.ModelProvider;
+import com.agent.platform.workflow.node.*;
+import com.agent.platform.workflow.spi.KnowledgeProvider;
+import com.agent.platform.workflow.spi.ModelProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

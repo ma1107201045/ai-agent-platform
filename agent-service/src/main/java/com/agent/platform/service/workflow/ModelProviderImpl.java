@@ -1,6 +1,6 @@
-package com.agent.platform.service.graph;
+package com.agent.platform.service.workflow;
 
-import com.agent.platform.graph.spi.ModelProvider;
+import com.agent.platform.workflow.spi.ModelProvider;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.ModelService;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * {@link ModelProvider} 的业务实现：委托给 {@link ModelService}。
  * <p>
- * 本类是 agent-service 与 agent-graph 之间的适配层，
+ * 本类是 agent-service 与 agent-workflow 之间的适配层，
  * 使图引擎无需依赖模型管理实现即可获取对话模型。
  */
 @Component

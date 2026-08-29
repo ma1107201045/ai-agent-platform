@@ -1,4 +1,4 @@
-package com.agent.platform.graph;
+package com.agent.platform.workflow;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

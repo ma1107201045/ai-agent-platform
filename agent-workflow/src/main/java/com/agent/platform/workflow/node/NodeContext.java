@@ -1,9 +1,9 @@
-package com.agent.platform.graph.node;
+package com.agent.platform.workflow.node;
 
-import com.agent.platform.graph.VariableRenderer;
-import com.agent.platform.graph.WorkflowGraph;
-import com.agent.platform.graph.spi.KnowledgeProvider;
-import com.agent.platform.graph.spi.ModelProvider;
+import com.agent.platform.workflow.VariableRenderer;
+import com.agent.platform.workflow.WorkflowGraph;
+import com.agent.platform.workflow.spi.KnowledgeProvider;
+import com.agent.platform.workflow.spi.ModelProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Collections;

@@ -1,4 +1,4 @@
-package com.agent.platform.graph.node;
+package com.agent.platform.workflow.node;
 
 import lombok.Data;
 

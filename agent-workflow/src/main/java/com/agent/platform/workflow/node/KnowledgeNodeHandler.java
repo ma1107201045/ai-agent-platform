@@ -1,8 +1,8 @@
-package com.agent.platform.graph.node;
+package com.agent.platform.workflow.node;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.graph.NodeType;
-import com.agent.platform.graph.spi.KnowledgeHit;
+import com.agent.platform.workflow.NodeType;
+import com.agent.platform.workflow.spi.KnowledgeHit;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

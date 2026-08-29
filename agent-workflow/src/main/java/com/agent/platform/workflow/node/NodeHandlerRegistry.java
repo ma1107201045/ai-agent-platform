@@ -1,7 +1,7 @@
-package com.agent.platform.graph.node;
+package com.agent.platform.workflow.node;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.graph.NodeType;
+import com.agent.platform.workflow.NodeType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
