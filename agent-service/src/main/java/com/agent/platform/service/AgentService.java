@@ -1,8 +1,8 @@
 package com.agent.platform.service;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.dao.entity.AgentApp;
-import com.agent.platform.dao.entity.AgentTool;
+import com.agent.platform.dao.entity.App;
+import com.agent.platform.dao.entity.AppTool;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -44,7 +44,7 @@ public class AgentService {
      */
     public AgentResult chat(Long appId, Long modelId, String systemPrompt,
                             List<ChatMessage> history, Integer maxIterations) {
-        AgentApp app = appService.getById(appId);
+        App app = appService.getById(appId);
         return doChat(modelId, systemPrompt, loadTools(app.getToolIds()),
                 app.getDatasetIds(), history, maxIterations);
     }
@@ -60,13 +60,13 @@ public class AgentService {
      * @param history        历史消息（不含 system）
      * @param maxIterations  最大循环轮数
      */
-    public AgentResult chat(Long modelId, String systemPrompt, List<AgentTool> tools,
+    public AgentResult chat(Long modelId, String systemPrompt, List<AppTool> tools,
                             String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         return doChat(modelId, systemPrompt, tools, datasetIdsJson, history, maxIterations);
     }
 
     /** Agent 循环核心实现 */
-    private AgentResult doChat(Long modelId, String systemPrompt, List<AgentTool> tools,
+    private AgentResult doChat(Long modelId, String systemPrompt, List<AppTool> tools,
                                String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
 
@@ -113,7 +113,7 @@ public class AgentService {
                 long start = System.currentTimeMillis();
                 String result;
                 try {
-                    AgentTool tool = tools.stream()
+                    AppTool tool = tools.stream()
                             .filter(t -> t.getName().equals(tc.name()))
                             .findFirst()
                             .orElse(null);
@@ -183,17 +183,17 @@ public class AgentService {
     /**
      * 解析工具 ID JSON 数组并加载启用的工具（应用绑定或节点级配置均可）
      */
-    public List<AgentTool> loadTools(String toolIdsJson) {
+    public List<AppTool> loadTools(String toolIdsJson) {
         if (toolIdsJson == null || toolIdsJson.isBlank() || "null".equals(toolIdsJson.trim())) {
             return List.of();
         }
         try {
             List<Long> ids = objectMapper.readValue(toolIdsJson, new TypeReference<List<Long>>() {
             });
-            List<AgentTool> result = new ArrayList<>();
+            List<AppTool> result = new ArrayList<>();
             if (ids != null) {
                 for (Long id : ids) {
-                    AgentTool tool = toolService.getById(id);
+                    AppTool tool = toolService.getById(id);
                     if (tool.getStatus() != null && tool.getStatus() == 1) {
                         result.add(tool);
                     }

@@ -4,12 +4,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { CopyDocument, Promotion, Right } from '@element-plus/icons-vue'
 import { appApi } from '@/api/app'
-import type { AgentApp, AgentAppVersion, AppStats } from '@/api/types'
+import type { App, AppVersion, AppStats } from '@/api/types'
 
 const router = useRouter()
 const loading = ref(false)
-const list = ref<AgentApp[]>([])
-const versions = ref<Record<number, AgentAppVersion>>({})
+const list = ref<App[]>([])
+const versions = ref<Record<number, AppVersion>>({})
 const stats = ref<Record<number, AppStats>>({})
 
 const typeMeta: Record<string, { label: string; icon: string; color: string }> = {
@@ -24,14 +24,14 @@ const coverColors: Record<string, [string, string]> = {
   agent: ['#8b5cf6', '#d946ef']
 }
 
-const gradientOf = (row: AgentApp) => {
+const gradientOf = (row: App) => {
   const c = coverColors[row.type] || coverColors.chatflow
   return `linear-gradient(135deg, ${c[0]} 0%, ${c[1]} 100%)`
 }
 
 const publicUrl = (id: number) => `${location.origin}/public/${id}`
 
-async function copyUrl(row: AgentApp) {
+async function copyUrl(row: App) {
   try {
     await navigator.clipboard.writeText(publicUrl(row.id))
     ElMessage.success('链接已复制')

@@ -18,7 +18,7 @@ const stats = ref([
 
 const quickActions = [
   { title: '创建智能体应用', desc: '对话流 / 工作流 / 智能体', icon: MagicStick, path: '/apps', color: '#5b6cff' },
-  { title: '导入知识库', desc: '文档切块、向量化、RAG 检索', icon: Files, path: '/knowledge', color: '#8b5cf6' },
+  { title: '导入知识库', desc: '文档切块、向量化、RAG 检索', icon: Files, path: '/data/knowledge', color: '#8b5cf6' },
   { title: '接入模型', desc: '配置 DeepSeek 等供应商', icon: Cpu, path: '/models', color: '#0ea5e9' }
 ]
 

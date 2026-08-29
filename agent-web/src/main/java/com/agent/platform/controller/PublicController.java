@@ -2,7 +2,7 @@ package com.agent.platform.controller;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.entity.AgentApp;
+import com.agent.platform.dao.entity.App;
 import com.agent.platform.workflow.RunResult;
 import com.agent.platform.workflow.WorkflowEngine;
 import com.agent.platform.workflow.WorkflowGraph;
@@ -39,7 +39,7 @@ public class PublicController {
     /** 公开应用信息（仅已发布） */
     @GetMapping("/apps/{id}")
     public Result<PublicAppInfo> appInfo(@PathVariable Long id) {
-        AgentApp app = requirePublished(id);
+        App app = requirePublished(id);
         PublicAppInfo info = new PublicAppInfo();
         info.setId(app.getId());
         info.setName(app.getName());
@@ -68,7 +68,7 @@ public class PublicController {
         }
         List<ChatMessage> history = new ArrayList<>(messages.subList(0, messages.size() - 1));
 
-        AgentApp app = appService.getById(id);
+        App app = appService.getById(id);
         String answer;
         Object detail = null;
         if ("workflow".equals(app.getType())) {
@@ -110,8 +110,8 @@ public class PublicController {
         return Result.ok(result);
     }
 
-    private AgentApp requirePublished(Long id) {
-        AgentApp app = appService.getById(id);
+    private App requirePublished(Long id) {
+        App app = appService.getById(id);
         if (app.getStatus() == null || app.getStatus() != 1) {
             throw new BizException("应用未发布，无法对外访问");
         }

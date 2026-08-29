@@ -17,7 +17,7 @@ import { appApi } from '@/api/app'
 import { knowledgeApi } from '@/api/knowledge'
 import { llmApi } from '@/api/llm'
 import { toolApi } from '@/api/tool'
-import type { AgentAppVersion, AgentTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
+import type { AppVersion, AppTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
 import {
   NODE_TYPE_META, dslToFlow, flowToDsl, genNodeId
 } from '@/utils/flow'
@@ -142,7 +142,7 @@ const selectedNodeId = ref<string | null>(null)
 const selectedEdgeId = ref<string | null>(null)
 const chatModels = ref<ChatModelInfo[]>([])
 const datasets = ref<KnowledgeDataset[]>([])
-const allTools = ref<AgentTool[]>([])
+const allTools = ref<AppTool[]>([])
 const boundToolIds = ref<number[]>([])
 const boundDatasetIds = ref<number[]>([])
 const welcomeMessage = ref('')
@@ -882,7 +882,7 @@ function goChat() {
 
 // ---------- 版本历史 ----------
 const versionsVisible = ref(false)
-const versions = ref<AgentAppVersion[]>([])
+const versions = ref<AppVersion[]>([])
 const loadingVersions = ref(false)
 const rollingBack = ref(false)
 
@@ -903,7 +903,7 @@ async function openVersions() {
   }
 }
 
-async function rollbackTo(version: AgentAppVersion) {
+async function rollbackTo(version: AppVersion) {
   await ElMessageBox.confirm(
     `将把 v${version.version} 的工作流恢复到当前画布（草稿），不会自动发布，确认回滚？`,
     '回滚确认',
@@ -1258,7 +1258,7 @@ onUnmounted(() => {
         <template #header>
           <div class="agent-card-head">
             <span>绑定知识库</span>
-            <el-button link type="primary" @click="router.push('/knowledge')">前往知识库管理</el-button>
+            <el-button link type="primary" @click="router.push('/data/knowledge')">前往知识库管理</el-button>
           </div>
         </template>
         <p class="agent-tip">

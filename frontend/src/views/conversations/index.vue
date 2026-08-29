@@ -6,7 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { appApi } from '@/api/app'
 import { conversationApi } from '@/api/conversation'
 import type {
-  AgentApp,
+  App,
   AgentStep,
   ChatConversation,
   ChatMessageRecord,
@@ -18,7 +18,7 @@ const router = useRouter()
 const modeLabels: Record<string, string> = { direct: '直连模型', workflow: '工作流', agent: '智能体' }
 
 /* ---------- 应用 / 模式筛选 ---------- */
-const apps = ref<AgentApp[]>([])
+const apps = ref<App[]>([])
 const appMap = computed(() => new Map(apps.value.map((a) => [a.id, a])))
 const filterAppId = ref<number | null>(null)
 const filterMode = ref('')

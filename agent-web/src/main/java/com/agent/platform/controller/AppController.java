@@ -2,8 +2,8 @@ package com.agent.platform.controller;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.entity.AgentApp;
-import com.agent.platform.dao.entity.AgentAppVersion;
+import com.agent.platform.dao.entity.App;
+import com.agent.platform.dao.entity.AppVersion;
 import com.agent.platform.workflow.RunResult;
 import com.agent.platform.workflow.WorkflowEngine;
 import com.agent.platform.workflow.WorkflowGraph;
@@ -35,7 +35,7 @@ public class AppController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    public Result<Page<AgentApp>> page(@RequestParam(defaultValue = "1") long page,
+    public Result<Page<App>> page(@RequestParam(defaultValue = "1") long page,
                                        @RequestParam(defaultValue = "20") long size,
                                        @RequestParam(required = false) String keyword,
                                        @RequestParam(required = false) String type) {
@@ -43,17 +43,17 @@ public class AppController {
     }
 
     @GetMapping("/{id}")
-    public Result<AgentApp> getById(@PathVariable Long id) {
+    public Result<App> getById(@PathVariable Long id) {
         return Result.ok(appService.getById(id));
     }
 
     @PostMapping
-    public Result<AgentApp> create(@RequestBody AgentApp app) {
+    public Result<App> create(@RequestBody App app) {
         return Result.ok(appService.create(app));
     }
 
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody AgentApp app) {
+    public Result<Void> update(@PathVariable Long id, @RequestBody App app) {
         app.setId(id);
         appService.update(app);
         return Result.ok();
@@ -67,25 +67,25 @@ public class AppController {
 
     /** 发布（保存版本快照） */
     @PostMapping("/{id}/publish")
-    public Result<AgentAppVersion> publish(@PathVariable Long id, @RequestBody PublishRequest request) {
+    public Result<AppVersion> publish(@PathVariable Long id, @RequestBody PublishRequest request) {
         return Result.ok(appService.publish(id, request.getWorkflowJson(), request.getPromptConfig(), 1L));
     }
 
     /** 获取当前发布版本 */
     @GetMapping("/{id}/published")
-    public Result<AgentAppVersion> published(@PathVariable Long id) {
+    public Result<AppVersion> published(@PathVariable Long id) {
         return Result.ok(appService.getPublishedVersion(id));
     }
 
     /** 版本列表（按版本号倒序） */
     @GetMapping("/{id}/versions")
-    public Result<List<AgentAppVersion>> versions(@PathVariable Long id) {
+    public Result<List<AppVersion>> versions(@PathVariable Long id) {
         return Result.ok(appService.listVersions(id));
     }
 
     /** 回滚到指定版本（恢复草稿，不自动发布） */
     @PostMapping("/{id}/versions/{versionId}/rollback")
-    public Result<AgentAppVersion> rollback(@PathVariable Long id, @PathVariable Long versionId) {
+    public Result<AppVersion> rollback(@PathVariable Long id, @PathVariable Long versionId) {
         return Result.ok(appService.rollback(id, versionId));
     }
 
@@ -98,8 +98,8 @@ public class AppController {
 
     /** 批量获取发布版本：ids 逗号分隔，返回 Map<appId, version> */
     @GetMapping("/published/batch")
-    public Result<Map<Long, AgentAppVersion>> publishedBatch(@RequestParam String ids) {
-        Map<Long, AgentAppVersion> map = new HashMap<>();
+    public Result<Map<Long, AppVersion>> publishedBatch(@RequestParam String ids) {
+        Map<Long, AppVersion> map = new HashMap<>();
         for (Long id : parseIds(ids)) {
             try {
                 map.put(id, appService.getPublishedVersion(id));

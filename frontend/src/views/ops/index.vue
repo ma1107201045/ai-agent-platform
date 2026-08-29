@@ -4,7 +4,7 @@ import { ChatDotRound, DataAnalysis, MagicStick, Promotion } from '@element-plus
 import { appApi } from '@/api/app'
 import { conversationApi } from '@/api/conversation'
 import type {
-  AgentApp,
+  App,
   AgentStep,
   AppStats,
   ChatConversation,
@@ -16,7 +16,7 @@ const tab = ref('overview')
 
 /* ---------- 数据看板 ---------- */
 const loadingApps = ref(false)
-const apps = ref<AgentApp[]>([])
+const apps = ref<App[]>([])
 const stats = ref<Record<number, AppStats>>({})
 
 const totalApps = computed(() => apps.value.length)

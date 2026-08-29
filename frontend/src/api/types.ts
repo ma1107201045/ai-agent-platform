@@ -40,7 +40,7 @@ export interface LoginResult {
 
 export type AppType = 'chatflow' | 'workflow' | 'agent'
 
-export interface AgentApp {
+export interface App {
   id: number
   tenantId: number
   name: string
@@ -59,7 +59,7 @@ export interface AgentApp {
 }
 
 /** Agent 工具 */
-export interface AgentTool {
+export interface AppTool {
   id: number
   tenantId: number
   name: string
@@ -201,7 +201,7 @@ export interface AppStats {
   messageCount: number
 }
 
-export interface AgentAppVersion {
+export interface AppVersion {
   id: number
   appId: number
   version: number

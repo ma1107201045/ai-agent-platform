@@ -1,6 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
+import type { RouteMeta, RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { DEFAULT_HOME } from '@/config/menu'
+
+/**
+ * 路由规范：
+ * 1. 除 /login、/public/:id 外，所有页面都挂在 DefaultLayout 下作为 children
+ * 2. 一级路径前缀与侧边栏菜单分组一一对应（见 @/config/menu.ts）：
+ *    /workbench 工作台 · /apps 应用 · /data 数据 · /tools 工具 · /publish 发布
+ *    /ops 观测 · /eval 评测 · /models 模型 · /system 系统管理 · /support 帮助与文档
+ * 3. 每个分组内：已上线页面在前，规划中（planned）页面居中，详情页（带动态参数、meta.hidden）在末尾
+ */
+
+/** 规划中的模块：统一指向“建设中”占位页 */
+function planned(path: string, name: string, meta: RouteMeta): RouteRecordRaw {
+  return {
+    path,
+    name,
+    component: () => import('@/views/placeholder/index.vue'),
+    meta: { planned: true, ...meta }
+  }
+}
 
 const routes: RouteRecordRaw[] = [
   {
@@ -18,50 +38,99 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/dashboard',
+    redirect: DEFAULT_HOME,
     children: [
+      /* ---------------- 工作台 /workbench ---------------- */
       {
-        path: 'dashboard',
-        name: 'Dashboard',
+        path: 'workbench/dashboard',
+        name: 'WorkbenchDashboard',
         component: () => import('@/views/dashboard/index.vue'),
         meta: { title: '工作台概览' }
       },
-      {
-        path: 'publish',
-        name: 'Publish',
-        component: () => import('@/views/publish/index.vue'),
-        meta: { title: '发布管理' }
-      },
-      {
-        path: 'ops',
-        name: 'Ops',
-        component: () => import('@/views/ops/index.vue'),
-        meta: { title: '运行监控' }
-      },
+      planned('workbench/notifications', 'WorkbenchNotifications', {
+        title: '通知中心',
+        phase: 'P2',
+        desc: '汇聚系统消息、任务结果与告警通知，一处查看',
+        features: [
+          { name: '消息列表', detail: '系统、任务、告警消息统一聚合' },
+          { name: '偏好设置', detail: '通知类型与渠道偏好配置' },
+          { name: '已读管理', detail: '消息已读与批量操作' }
+        ],
+        dependency: '需后端新增消息中心服务'
+      }),
+
+      /* ---------------- 应用 /apps ---------------- */
       {
         path: 'apps',
         name: 'Apps',
         component: () => import('@/views/apps/index.vue'),
-        meta: { title: '应用管理' }
+        meta: { title: '智能体' }
       },
-      {
-        path: 'conversations',
-        name: 'Conversations',
-        component: () => import('@/views/conversations/index.vue'),
-        meta: { title: '对话记录' }
-      },
-      {
-        path: 'knowledge',
-        name: 'Knowledge',
-        component: () => import('@/views/knowledge/index.vue'),
-        meta: { title: '知识库' }
-      },
-      {
-        path: 'tools',
-        name: 'Tools',
-        component: () => import('@/views/tools/index.vue'),
-        meta: { title: '工具管理' }
-      },
+      planned('apps/templates', 'AppTemplates', {
+        title: '应用模板',
+        phase: 'P2',
+        desc: '从模板一键创建应用，覆盖常见业务场景，降低上手成本',
+        features: [
+          { name: '场景模板库', detail: '内置对话助手、翻译、客服等常用场景模板' },
+          { name: '一键创建', detail: '选择模板生成可编排应用，快速起步' }
+        ],
+        dependency: '需后端维护模板市场数据与模板实例化接口'
+      }),
+      planned('apps/marketplace', 'AppMarketplace', {
+        title: '应用市场',
+        phase: 'P1',
+        desc: '发现、分享并一键安装社区智能体，像应用商店一样获取场景能力',
+        features: [
+          { name: '应用发现', detail: '按场景/分类浏览与搜索已发布应用' },
+          { name: '一键安装', detail: '从市场安装应用到当前工作空间' },
+          { name: '应用上架', detail: '将自有应用发布为市场可安装模板' }
+        ],
+        dependency: '需后端新增应用市场数据与安装接口'
+      }),
+      planned('apps/multi-agent', 'MultiAgent', {
+        title: '多智能体编排',
+        phase: 'P1',
+        desc: '编排多个角色智能体协作分工，胜任复杂业务流程',
+        features: [
+          { name: '智能体团队', detail: '定义多个角色智能体及其协作关系' },
+          { name: '任务路由', detail: '将任务分配给最合适的智能体执行' },
+          { name: '协作对话', detail: '可视化查看智能体间传递与决策过程' }
+        ],
+        dependency: '需扩展 WorkflowEngine 支持多智能体协作'
+      }),
+      planned('apps/prompts', 'AppPrompts', {
+        title: '提示词库',
+        phase: 'P0',
+        desc: '集中管理可复用的提示词模板与版本，支撑应用编排与调试',
+        features: [
+          { name: '模板管理', detail: '维护系统/业务提示词模板与变量占位' },
+          { name: '版本管理', detail: '提示词迭代留痕，支持回退历史版本' },
+          { name: '调试试跑', detail: '在线调试提示词，对比不同写法效果' }
+        ],
+        dependency: '需后端新增提示词实体与版本快照'
+      }),
+      planned('apps/schedules', 'AppSchedules', {
+        title: '定时任务',
+        phase: 'P2',
+        desc: '按时间或事件触发智能体/工作流自动执行',
+        features: [
+          { name: '定时触发', detail: 'Cron 表达式配置周期执行' },
+          { name: '事件触发', detail: 'Webhook 或业务事件触发运行' },
+          { name: '执行记录', detail: '查看每次触发的运行结果' }
+        ],
+        dependency: '需后端新增任务调度与触发服务'
+      }),
+      planned('apps/guardrails', 'AppGuardrails', {
+        title: '内容安全',
+        phase: 'P1',
+        desc: '输入输出内容校验与敏感词过滤，保障应用合规安全',
+        features: [
+          { name: '敏感词库', detail: '自定义敏感词与拦截策略' },
+          { name: '输入校验', detail: 'Prompt 注入与越权输入检测' },
+          { name: '输出过滤', detail: '生成内容合规过滤与降级回复' }
+        ],
+        dependency: '需在模型调用链路上增加护栏拦截'
+      }),
       {
         path: 'apps/:id/edit',
         name: 'AppEdit',
@@ -74,569 +143,340 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/apps/chat.vue'),
         meta: { title: '对话调试', hidden: true }
       },
+
+      /* ---------------- 数据 /data ---------------- */
+      {
+        path: 'data/knowledge',
+        name: 'DataKnowledge',
+        component: () => import('@/views/knowledge/index.vue'),
+        meta: { title: '知识库' }
+      },
+      planned('data/memory', 'DataMemory', {
+        title: '记忆管理',
+        phase: 'P0',
+        desc: '管理智能体的长期记忆与知识沉淀，让对话越用越懂用户',
+        features: [
+          { name: '会话变量', detail: '跨会话保存用户偏好与上下文变量' },
+          { name: '长期记忆', detail: '自动抽取事实并沉淀为可检索的记忆库' },
+          { name: '记忆策略', detail: '配置记忆写入、更新与遗忘策略' }
+        ],
+        dependency: '需后端新增记忆存储与抽取服务'
+      }),
+      planned('data/storage', 'DataStorage', {
+        title: '数据存储',
+        phase: 'P1',
+        desc: '维护智能体使用的业务数据表，与记忆/知识库能力互补',
+        features: [
+          { name: '数据表管理', detail: '建表、增删改查业务数据' },
+          { name: '关联记忆', detail: '数据表内容作为对话上下文来源' },
+          { name: '数据导入', detail: '批量导入与导出数据' }
+        ],
+        dependency: '需后端新增结构化数据存储服务'
+      }),
+      planned('data/assets', 'DataAssets', {
+        title: '素材管理',
+        phase: 'P2',
+        desc: '统一管理上传的图片与文件，供应用与知识库复用',
+        features: [
+          { name: '文件上传', detail: '图片、文档统一存储与管理' },
+          { name: '素材引用', detail: '在应用对话与知识库中引用素材' }
+        ],
+        dependency: '需后端新增素材存储与引用接口'
+      }),
+
+      /* ---------------- 工具 /tools ---------------- */
+      {
+        path: 'tools',
+        name: 'Tools',
+        component: () => import('@/views/tools/index.vue'),
+        meta: { title: '工具管理' }
+      },
+      planned('tools/marketplace', 'ToolMarketplace', {
+        title: '插件市场',
+        phase: 'P2',
+        desc: '内置常用工具模板与一键安装，降低接入成本',
+        features: [
+          { name: '模板市场', detail: '内置搜索、HTTP、数据库等常用工具模板' },
+          { name: '一键安装', detail: '从市场安装工具到当前工作空间' }
+        ],
+        dependency: '需后端维护工具模板市场数据'
+      }),
+      planned('tools/integrations', 'ToolIntegrations', {
+        title: '数据集成',
+        phase: 'P2',
+        desc: '连接外部业务系统与数据源，扩展智能体能力边界',
+        features: [
+          { name: '连接器管理', detail: '数据库、HTTP、企业应用等连接器' },
+          { name: '认证配置', detail: 'OAuth、API Key 等认证方式管理' },
+          { name: '集成调用', detail: '在工具与应用中调用已配置连接器' }
+        ],
+        dependency: '需后端新增连接器配置与代理调用能力'
+      }),
+
+      /* ---------------- 发布 /publish ---------------- */
+      {
+        path: 'publish',
+        name: 'Publish',
+        component: () => import('@/views/publish/index.vue'),
+        meta: { title: '发布管理' }
+      },
+      planned('publish/channels', 'PublishChannels', {
+        title: '渠道管理',
+        phase: 'P0',
+        desc: '将智能体一键接入微信、飞书、钉钉、Web 等终端渠道',
+        features: [
+          { name: '渠道接入', detail: '公众号、飞书、钉钉、网页插件等' },
+          { name: '渠道配置', detail: '各渠道的凭证与回复模式配置' },
+          { name: '渠道监控', detail: '渠道级调用量与错误统计' }
+        ],
+        dependency: '需后端新增渠道实体与消息协议适配'
+      }),
+      planned('publish/api-keys', 'PublishApiKeys', {
+        title: 'API 密钥',
+        phase: 'P0',
+        desc: '生成与管理应用调用密钥，将智能体接入外部业务系统',
+        features: [
+          { name: '密钥管理', detail: '创建、禁用、轮换与删除 API Key' },
+          { name: '调用示例', detail: 'REST API 调用方式与多语言代码示例' },
+          { name: '配额控制', detail: '限流、过期时间与调用额度管理' }
+        ],
+        dependency: '需后端新增 API Key 表与请求鉴权'
+      }),
+      planned('publish/docs', 'PublishDocs', {
+        title: 'API 文档',
+        phase: 'P1',
+        desc: '查看应用调用的接口说明与代码示例，快速完成接入',
+        features: [
+          { name: '接口文档', detail: '在线查看请求/响应定义与鉴权方式' },
+          { name: '代码示例', detail: '多语言 SDK 与调用示例' },
+          { name: '接口调试', detail: '在文档页直接调试调用' }
+        ],
+        dependency: '需基于应用 API 生成在线文档'
+      }),
+      planned('publish/versions', 'PublishVersions', {
+        title: '版本历史',
+        phase: 'P1',
+        desc: '查看发布历史快照，支持一键回滚到指定版本',
+        features: [
+          { name: '版本列表', detail: '按时间查看每次发布的配置快照' },
+          { name: '回滚发布', detail: '将线上版本一键回滚到历史版本' }
+        ],
+        dependency: '后端已有 AgentAppVersion 快照数据，需补充版本列表与回滚接口'
+      }),
+
+      /* ---------------- 观测 /ops ---------------- */
+      {
+        path: 'ops',
+        name: 'Ops',
+        component: () => import('@/views/ops/index.vue'),
+        meta: { title: '运行监控' }
+      },
+      {
+        path: 'ops/conversations',
+        name: 'OpsConversations',
+        component: () => import('@/views/conversations/index.vue'),
+        meta: { title: '对话记录' }
+      },
+      planned('ops/conversations/label', 'OpsConversationLabel', {
+        title: '对话标注',
+        phase: 'P1',
+        desc: '对对话质量进行标注与反馈回流，持续提升智能体效果',
+        features: [
+          { name: '反馈标注', detail: '对消息进行好评/差评、人工标注与补充答案' },
+          { name: '标注数据集', detail: '按应用汇总标注样本，导出为评测/微调数据集' }
+        ],
+        dependency: '需在 ChatMessage 上补充反馈与标注字段'
+      }),
+      planned('ops/usage', 'OpsUsage', {
+        title: '用量统计',
+        phase: 'P0',
+        desc: '按应用、模型统计 Token 消耗与调用趋势，掌控运行成本',
+        features: [
+          { name: 'Token 统计', detail: '输入/输出 Token、按日趋势与总量统计' },
+          { name: '成本估算', detail: '结合模型单价估算调用成本' }
+        ],
+        dependency: '需在消息落库时记录 Token 并新增聚合统计接口'
+      }),
+      planned('ops/billing', 'OpsBilling', {
+        title: '费用账单',
+        phase: 'P1',
+        desc: '查看调用消费明细与成本构成，掌控平台使用费用',
+        features: [
+          { name: '消费明细', detail: '按应用/模型/时间维度查看费用' },
+          { name: '账单报表', detail: '月度账单与成本趋势导出' },
+          { name: '额度管理', detail: '余额与预算提醒设置' }
+        ],
+        dependency: '需后端在用量统计基础上核算费用'
+      }),
+      planned('ops/alerts', 'OpsAlerts', {
+        title: '告警管理',
+        phase: 'P2',
+        desc: '监控错误率与用量指标，超过阈值自动通知',
+        features: [
+          { name: '告警规则', detail: '配置错误率、用量、延迟等阈值规则' },
+          { name: '通知渠道', detail: '通过邮件、Webhook 推送告警消息' }
+        ],
+        dependency: '需后端新增指标监控与通知投递能力'
+      }),
+
+      /* ---------------- 评测 /eval ---------------- */
+      planned('eval', 'Eval', {
+        title: '评测中心',
+        phase: 'P0',
+        desc: '批量运行评测数据集评估应用效果，沉淀可量化的质量报告',
+        features: [
+          { name: '批量评测', detail: '批量运行并输出正确率、得分与报告' },
+          { name: '评测报告', detail: '查看历史评测结果与趋势对比' }
+        ],
+        dependency: '需后端新增评测实体及运行接口'
+      }),
+      planned('eval/datasets', 'EvalDatasets', {
+        title: '评测数据集',
+        phase: 'P1',
+        desc: '管理用于评测与微调的问答数据集，独立于知识库',
+        features: [
+          { name: '数据集维护', detail: '导入/标注问答对，按项目组织' },
+          { name: '数据回流', detail: '从对话标注一键回流为数据集' },
+          { name: '导出应用', detail: '导出为评测或微调所需格式' }
+        ],
+        dependency: '需后端新增数据集实体与导入导出接口'
+      }),
+      planned('eval/experiments', 'EvalExperiments', {
+        title: '对比实验',
+        phase: 'P1',
+        desc: '同一测试集对比不同版本、模型与 Prompt 的效果差异',
+        features: [
+          { name: '对比运行', detail: '多配置并行评测并横向对比' },
+          { name: '差异分析', detail: '逐用例查看答案差异与评分' },
+          { name: '最佳实践', detail: '沉淀胜出配置为推荐基线' }
+        ],
+        dependency: '需复用测试集评测能力并扩展对比存储'
+      }),
+
+      /* ---------------- 模型 /models ---------------- */
       {
         path: 'models',
         name: 'Models',
         component: () => import('@/views/models/index.vue'),
         meta: { title: '供应商管理' }
       },
+      planned('models/playground', 'ModelPlayground', {
+        title: '模型广场',
+        phase: 'P2',
+        desc: '浏览各供应商模型能力，在线试运行后再接入',
+        features: [
+          { name: '模型浏览', detail: '按能力/价格/上下文分类浏览模型' },
+          { name: '在线试玩', detail: '免配置快速体验模型效果' },
+          { name: '一键接入', detail: '从广场直接创建模型配置' }
+        ],
+        dependency: '需后端维护模型目录与试用代理'
+      }),
+      planned('models/finetune', 'ModelFinetune', {
+        title: '模型微调',
+        phase: 'P2',
+        desc: '基于自有数据对模型进行微调训练，打造专属模型',
+        features: [
+          { name: '训练任务', detail: '创建微调任务并跟踪训练状态' },
+          { name: '数据校验', detail: '训练数据格式校验与统计' },
+          { name: '效果评估', detail: '微调前后效果对比与发布' }
+        ],
+        dependency: '需对接支持微调的供应商接口'
+      }),
+      planned('models/gateway', 'ModelGateway', {
+        title: '模型网关',
+        phase: 'P1',
+        desc: '统一模型路由、限流与故障回退，保障服务稳定与成本可控',
+        features: [
+          { name: '路由策略', detail: '按模型/供应商配置路由与权重' },
+          { name: '限流配额', detail: '模型级限流与配额控制' },
+          { name: '故障回退', detail: '主供应商异常时自动切换备用' }
+        ],
+        dependency: '需抽象模型调用层为可路由网关'
+      }),
+
+      /* ---------------- 系统管理 /system ---------------- */
       {
-        path: 'users',
-        name: 'Users',
+        path: 'system/users',
+        name: 'SystemUsers',
         component: () => import('@/views/users/index.vue'),
         meta: { title: '团队与权限' }
       },
-      /* ---------- 规划中的模块（建设中占位页） ---------- */
-      {
-        path: 'conversations/label',
-        name: 'ConversationLabel',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '对话标注',
-          planned: true,
-          phase: 'P1',
-          desc: '对对话质量进行标注与反馈回流，持续提升智能体效果',
-          features: [
-            { name: '反馈标注', detail: '对消息进行好评/差评、人工标注与补充答案' },
-            { name: '标注数据集', detail: '按应用汇总标注样本，导出为评测/微调数据集' }
-          ],
-          dependency: '需在 ChatMessage 上补充反馈与标注字段'
-        }
-      },
-      {
-        path: 'tools/marketplace',
-        name: 'ToolMarketplace',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '插件市场',
-          planned: true,
-          phase: 'P2',
-          desc: '内置常用工具模板与一键安装，降低接入成本',
-          features: [
-            { name: '模板市场', detail: '内置搜索、HTTP、数据库等常用工具模板' },
-            { name: '一键安装', detail: '从市场安装工具到当前工作空间' }
-          ],
-          dependency: '需后端维护工具模板市场数据'
-        }
-      },
-      {
-        path: 'publish/api-keys',
-        name: 'PublishApiKeys',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: 'API 密钥',
-          planned: true,
-          phase: 'P0',
-          desc: '生成与管理应用调用密钥，将智能体接入外部业务系统',
-          features: [
-            { name: '密钥管理', detail: '创建、禁用、轮换与删除 API Key' },
-            { name: '调用示例', detail: 'REST API 调用方式与多语言代码示例' },
-            { name: '配额控制', detail: '限流、过期时间与调用额度管理' }
-          ],
-          dependency: '需后端新增 API Key 表与请求鉴权'
-        }
-      },
-      {
-        path: 'publish/versions',
-        name: 'PublishVersions',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '版本历史',
-          planned: true,
-          phase: 'P1',
-          desc: '查看发布历史快照，支持一键回滚到指定版本',
-          features: [
-            { name: '版本列表', detail: '按时间查看每次发布的配置快照' },
-            { name: '回滚发布', detail: '将线上版本一键回滚到历史版本' }
-          ],
-          dependency: '后端已有 AgentAppVersion 快照数据，需补充版本列表与回滚接口'
-        }
-      },
-      {
-        path: 'ops/usage',
-        name: 'OpsUsage',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '用量统计',
-          planned: true,
-          phase: 'P0',
-          desc: '按应用、模型统计 Token 消耗与调用趋势，掌控运行成本',
-          features: [
-            { name: 'Token 统计', detail: '输入/输出 Token、按日趋势与总量统计' },
-            { name: '成本估算', detail: '结合模型单价估算调用成本' }
-          ],
-          dependency: '需在消息落库时记录 Token 并新增聚合统计接口'
-        }
-      },
-      {
-        path: 'eval',
-        name: 'Eval',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '评测中心',
-          planned: true,
-          phase: 'P0',
-          desc: '批量运行评测数据集评估应用效果，沉淀可量化的质量报告',
-          features: [
-            { name: '批量评测', detail: '批量运行并输出正确率、得分与报告' },
-            { name: '评测报告', detail: '查看历史评测结果与趋势对比' }
-          ],
-          dependency: '需后端新增评测实体及运行接口'
-        }
-      },
-      {
-        path: 'users/audit',
-        name: 'UserAudit',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '操作日志',
-          planned: true,
-          phase: 'P2',
-          desc: '记录关键操作行为，支持审计追溯与安全合规',
-          features: [
-            { name: '操作审计', detail: '记录登录、应用变更、密钥操作等关键行为' },
-            { name: '日志检索', detail: '按用户、时间、操作类型检索追溯' }
-          ],
-          dependency: '需后端新增审计日志记录与查询接口'
-        }
-      },
-      {
-        path: 'apps/templates',
-        name: 'AppTemplates',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '应用模板',
-          planned: true,
-          phase: 'P2',
-          desc: '从模板一键创建应用，覆盖常见业务场景，降低上手成本',
-          features: [
-            { name: '场景模板库', detail: '内置对话助手、翻译、客服等常用场景模板' },
-            { name: '一键创建', detail: '选择模板生成可编排应用，快速起步' }
-          ],
-          dependency: '需后端维护模板市场数据与模板实例化接口'
-        }
-      },
-      {
-        path: 'knowledge/assets',
-        name: 'KnowledgeAssets',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '素材管理',
-          planned: true,
-          phase: 'P2',
-          desc: '统一管理上传的图片与文件，供应用与知识库复用',
-          features: [
-            { name: '文件上传', detail: '图片、文档统一存储与管理' },
-            { name: '素材引用', detail: '在应用对话与知识库中引用素材' }
-          ],
-          dependency: '需后端新增素材存储与引用接口'
-        }
-      },
-      {
-        path: 'ops/alerts',
-        name: 'OpsAlerts',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '告警管理',
-          planned: true,
-          phase: 'P2',
-          desc: '监控错误率与用量指标，超过阈值自动通知',
-          features: [
-            { name: '告警规则', detail: '配置错误率、用量、延迟等阈值规则' },
-            { name: '通知渠道', detail: '通过邮件、Webhook 推送告警消息' }
-          ],
-          dependency: '需后端新增指标监控与通知投递能力'
-        }
-      },
-      {
-        path: 'workspace',
-        name: 'Workspace',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '工作空间',
-          planned: true,
-          phase: 'P2',
-          desc: '多工作空间隔离与管理，成员按空间协作',
-          features: [
-            { name: '空间管理', detail: '创建、切换与归档工作空间' },
-            { name: '成员协作', detail: '按空间分配成员与角色' }
-          ],
-          dependency: '后端已有 SysTenant 实体，需补充空间级管理接口'
-        }
-      },
-      {
-        path: 'help',
-        name: 'Help',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '使用指南',
-          planned: true,
-          phase: 'P2',
-          desc: '内置使用文档与常见问题，帮助快速上手',
-          features: [
-            { name: '使用文档', detail: '分模块的操作指南与最佳实践' },
-            { name: '常见问题', detail: 'FAQ 与常见排障指引' }
-          ],
-          dependency: '纯前端内容页，无需后端改动'
-        }
-      },
-      {
-        path: 'apps/marketplace',
-        name: 'AppMarketplace',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '应用市场',
-          planned: true,
-          phase: 'P1',
-          desc: '发现、分享并一键安装社区智能体，像应用商店一样获取场景能力',
-          features: [
-            { name: '应用发现', detail: '按场景/分类浏览与搜索已发布应用' },
-            { name: '一键安装', detail: '从市场安装应用到当前工作空间' },
-            { name: '应用上架', detail: '将自有应用发布为市场可安装模板' }
-          ],
-          dependency: '需后端新增应用市场数据与安装接口'
-        }
-      },
-      {
-        path: 'apps/memory',
-        name: 'AppMemory',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '记忆管理',
-          planned: true,
-          phase: 'P0',
-          desc: '管理智能体的长期记忆与知识沉淀，让对话越用越懂用户',
-          features: [
-            { name: '会话变量', detail: '跨会话保存用户偏好与上下文变量' },
-            { name: '长期记忆', detail: '自动抽取事实并沉淀为可检索的记忆库' },
-            { name: '记忆策略', detail: '配置记忆写入、更新与遗忘策略' }
-          ],
-          dependency: '需后端新增记忆存储与抽取服务'
-        }
-      },
-      {
-        path: 'apps/multi-agent',
-        name: 'MultiAgent',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '多智能体编排',
-          planned: true,
-          phase: 'P1',
-          desc: '编排多个角色智能体协作分工，胜任复杂业务流程',
-          features: [
-            { name: '智能体团队', detail: '定义多个角色智能体及其协作关系' },
-            { name: '任务路由', detail: '将任务分配给最合适的智能体执行' },
-            { name: '协作对话', detail: '可视化查看智能体间传递与决策过程' }
-          ],
-          dependency: '需扩展 WorkflowEngine 支持多智能体协作'
-        }
-      },
-      {
-        path: 'apps/schedules',
-        name: 'AppSchedules',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '定时任务',
-          planned: true,
-          phase: 'P2',
-          desc: '按时间或事件触发智能体/工作流自动执行',
-          features: [
-            { name: '定时触发', detail: 'Cron 表达式配置周期执行' },
-            { name: '事件触发', detail: 'Webhook 或业务事件触发运行' },
-            { name: '执行记录', detail: '查看每次触发的运行结果' }
-          ],
-          dependency: '需后端新增任务调度与触发服务'
-        }
-      },
-      {
-        path: 'apps/guardrails',
-        name: 'AppGuardrails',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '内容安全',
-          planned: true,
-          phase: 'P1',
-          desc: '输入输出内容校验与敏感词过滤，保障应用合规安全',
-          features: [
-            { name: '敏感词库', detail: '自定义敏感词与拦截策略' },
-            { name: '输入校验', detail: 'Prompt 注入与越权输入检测' },
-            { name: '输出过滤', detail: '生成内容合规过滤与降级回复' }
-          ],
-          dependency: '需在模型调用链路上增加护栏拦截'
-        }
-      },
-      {
-        path: 'eval/datasets',
-        name: 'EvalDatasets',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '评测数据集',
-          planned: true,
-          phase: 'P1',
-          desc: '管理用于评测与微调的问答数据集，独立于知识库',
-          features: [
-            { name: '数据集维护', detail: '导入/标注问答对，按项目组织' },
-            { name: '数据回流', detail: '从对话标注一键回流为数据集' },
-            { name: '导出应用', detail: '导出为评测或微调所需格式' }
-          ],
-          dependency: '需后端新增数据集实体与导入导出接口'
-        }
-      },
-      {
-        path: 'tools/integrations',
-        name: 'ToolIntegrations',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '数据集成',
-          planned: true,
-          phase: 'P2',
-          desc: '连接外部业务系统与数据源，扩展智能体能力边界',
-          features: [
-            { name: '连接器管理', detail: '数据库、HTTP、企业应用等连接器' },
-            { name: '认证配置', detail: 'OAuth、API Key 等认证方式管理' },
-            { name: '集成调用', detail: '在工具与应用中调用已配置连接器' }
-          ],
-          dependency: '需后端新增连接器配置与代理调用能力'
-        }
-      },
-      {
-        path: 'publish/channels',
-        name: 'PublishChannels',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '渠道管理',
-          planned: true,
-          phase: 'P0',
-          desc: '将智能体一键接入微信、飞书、钉钉、Web 等终端渠道',
-          features: [
-            { name: '渠道接入', detail: '公众号、飞书、钉钉、网页插件等' },
-            { name: '渠道配置', detail: '各渠道的凭证与回复模式配置' },
-            { name: '渠道监控', detail: '渠道级调用量与错误统计' }
-          ],
-          dependency: '需后端新增渠道实体与消息协议适配'
-        }
-      },
+      planned('system/users/audit', 'SystemUserAudit', {
+        title: '操作日志',
+        phase: 'P2',
+        desc: '记录关键操作行为，支持审计追溯与安全合规',
+        features: [
+          { name: '操作审计', detail: '记录登录、应用变更、密钥操作等关键行为' },
+          { name: '日志检索', detail: '按用户、时间、操作类型检索追溯' }
+        ],
+        dependency: '需后端新增审计日志记录与查询接口'
+      }),
+      planned('system/workspace', 'SystemWorkspace', {
+        title: '工作空间',
+        phase: 'P2',
+        desc: '多工作空间隔离与管理，成员按空间协作',
+        features: [
+          { name: '空间管理', detail: '创建、切换与归档工作空间' },
+          { name: '成员协作', detail: '按空间分配成员与角色' }
+        ],
+        dependency: '后端已有 SysTenant 实体，需补充空间级管理接口'
+      }),
+      planned('system/trash', 'SystemTrash', {
+        title: '回收站',
+        phase: 'P2',
+        desc: '找回误删的应用、知识库与工具，支持恢复或彻底删除',
+        features: [
+          { name: '删除列表', detail: '集中查看已删除资源' },
+          { name: '恢复/清除', detail: '一键恢复或彻底删除' },
+          { name: '自动清理', detail: '过期数据自动清除策略' }
+        ],
+        dependency: '需后端为删除操作增加软删除与回收站表'
+      }),
+      planned('system/announcements', 'SystemAnnouncements', {
+        title: '公告管理',
+        phase: 'P2',
+        desc: '向平台用户发布系统公告与运营通知',
+        features: [
+          { name: '公告发布', detail: '创建面向全部或指定用户群的公告' },
+          { name: '有效期管理', detail: '公告上线/下线时间控制' },
+          { name: '送达统计', detail: '查看公告阅读与送达情况' }
+        ],
+        dependency: '需后端新增公告实体与发布接口'
+      }),
+      planned('system/security', 'SystemSecurity', {
+        title: '账号与安全',
+        phase: 'P0',
+        desc: '管理个人资料、登录密码与安全验证，守护账号安全',
+        features: [
+          { name: '个人资料', detail: '昵称、头像、邮箱等资料维护' },
+          { name: '密码管理', detail: '修改密码与找回设置' },
+          { name: '安全验证', detail: 'MFA 二次验证与登录设备管理' }
+        ],
+        dependency: '需后端新增账号安全相关接口',
+        hidden: true
+      }),
 
-      {
-        path: 'eval/experiments',
-        name: 'EvalExperiments',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '对比实验',
-          planned: true,
-          phase: 'P1',
-          desc: '同一测试集对比不同版本、模型与 Prompt 的效果差异',
-          features: [
-            { name: '对比运行', detail: '多配置并行评测并横向对比' },
-            { name: '差异分析', detail: '逐用例查看答案差异与评分' },
-            { name: '最佳实践', detail: '沉淀胜出配置为推荐基线' }
-          ],
-          dependency: '需复用测试集评测能力并扩展对比存储'
-        }
-      },
-      {
-        path: 'models/playground',
-        name: 'ModelPlayground',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '模型广场',
-          planned: true,
-          phase: 'P2',
-          desc: '浏览各供应商模型能力，在线试运行后再接入',
-          features: [
-            { name: '模型浏览', detail: '按能力/价格/上下文分类浏览模型' },
-            { name: '在线试玩', detail: '免配置快速体验模型效果' },
-            { name: '一键接入', detail: '从广场直接创建模型配置' }
-          ],
-          dependency: '需后端维护模型目录与试用代理'
-        }
-      },
-      {
-        path: 'models/finetune',
-        name: 'ModelFinetune',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '模型微调',
-          planned: true,
-          phase: 'P2',
-          desc: '基于自有数据对模型进行微调训练，打造专属模型',
-          features: [
-            { name: '训练任务', detail: '创建微调任务并跟踪训练状态' },
-            { name: '数据校验', detail: '训练数据格式校验与统计' },
-            { name: '效果评估', detail: '微调前后效果对比与发布' }
-          ],
-          dependency: '需对接支持微调的供应商接口'
-        }
-      },
-      {
-        path: 'models/gateway',
-        name: 'ModelGateway',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '模型网关',
-          planned: true,
-          phase: 'P1',
-          desc: '统一模型路由、限流与故障回退，保障服务稳定与成本可控',
-          features: [
-            { name: '路由策略', detail: '按模型/供应商配置路由与权重' },
-            { name: '限流配额', detail: '模型级限流与配额控制' },
-            { name: '故障回退', detail: '主供应商异常时自动切换备用' }
-          ],
-          dependency: '需抽象模型调用层为可路由网关'
-        }
-      },
-      {
-        path: 'users/security',
-        name: 'UserSecurity',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '账号与安全',
-          planned: true,
-          phase: 'P0',
-          desc: '管理个人资料、登录密码与安全验证，守护账号安全',
-          features: [
-            { name: '个人资料', detail: '昵称、头像、邮箱等资料维护' },
-            { name: '密码管理', detail: '修改密码与找回设置' },
-            { name: '安全验证', detail: 'MFA 二次验证与登录设备管理' }
-          ],
-          dependency: '需后端新增账号安全相关接口'
-        }
-      },
-      {
-        path: 'notifications',
-        name: 'Notifications',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '通知中心',
-          planned: true,
-          phase: 'P2',
-          desc: '汇聚系统消息、任务结果与告警通知，一处查看',
-          features: [
-            { name: '消息列表', detail: '系统、任务、告警消息统一聚合' },
-            { name: '偏好设置', detail: '通知类型与渠道偏好配置' },
-            { name: '已读管理', detail: '消息已读与批量操作' }
-          ],
-          dependency: '需后端新增消息中心服务'
-        }
-      },
-      {
-        path: 'changelog',
-        name: 'Changelog',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '更新日志',
-          planned: true,
-          phase: 'P2',
-          desc: '跟踪平台版本更新与功能演进，及时了解新能力',
-          features: [
-            { name: '版本动态', detail: '按版本发布记录功能变更' },
-            { name: '订阅关注', detail: '关注重点功能上线通知' }
-          ],
-          dependency: '纯前端内容页，无需后端改动'
-        }
-      },
-      {
-        path: 'apps/prompts',
-        name: 'AppPrompts',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '提示词库',
-          planned: true,
-          phase: 'P0',
-          desc: '集中管理可复用的提示词模板与版本，支撑应用编排与调试',
-          features: [
-            { name: '模板管理', detail: '维护系统/业务提示词模板与变量占位' },
-            { name: '版本管理', detail: '提示词迭代留痕，支持回退历史版本' },
-            { name: '调试试跑', detail: '在线调试提示词，对比不同写法效果' }
-          ],
-          dependency: '需后端新增提示词实体与版本快照'
-        }
-      },
-      {
-        path: 'apps/storage',
-        name: 'AppStorage',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '数据存储',
-          planned: true,
-          phase: 'P1',
-          desc: '维护智能体使用的业务数据表，与记忆/知识库能力互补',
-          features: [
-            { name: '数据表管理', detail: '建表、增删改查业务数据' },
-            { name: '关联记忆', detail: '数据表内容作为对话上下文来源' },
-            { name: '数据导入', detail: '批量导入与导出数据' }
-          ],
-          dependency: '需后端新增结构化数据存储服务'
-        }
-      },
-      {
-        path: 'ops/billing',
-        name: 'OpsBilling',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '费用账单',
-          planned: true,
-          phase: 'P1',
-          desc: '查看调用消费明细与成本构成，掌控平台使用费用',
-          features: [
-            { name: '消费明细', detail: '按应用/模型/时间维度查看费用' },
-            { name: '账单报表', detail: '月度账单与成本趋势导出' },
-            { name: '额度管理', detail: '余额与预算提醒设置' }
-          ],
-          dependency: '需后端在用量统计基础上核算费用'
-        }
-      },
-      {
-        path: 'publish/docs',
-        name: 'PublishDocs',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: 'API 文档',
-          planned: true,
-          phase: 'P1',
-          desc: '查看应用调用的接口说明与代码示例，快速完成接入',
-          features: [
-            { name: '接口文档', detail: '在线查看请求/响应定义与鉴权方式' },
-            { name: '代码示例', detail: '多语言 SDK 与调用示例' },
-            { name: '接口调试', detail: '在文档页直接调试调用' }
-          ],
-          dependency: '需基于应用 API 生成在线文档'
-        }
-      },
-      {
-        path: 'trash',
-        name: 'Trash',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '回收站',
-          planned: true,
-          phase: 'P2',
-          desc: '找回误删的应用、知识库与工具，支持恢复或彻底删除',
-          features: [
-            { name: '删除列表', detail: '集中查看已删除资源' },
-            { name: '恢复/清除', detail: '一键恢复或彻底删除' },
-            { name: '自动清理', detail: '过期数据自动清除策略' }
-          ],
-          dependency: '需后端为删除操作增加软删除与回收站表'
-        }
-      },
-      {
-        path: 'system/announcements',
-        name: 'SystemAnnouncements',
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {
-          title: '公告管理',
-          planned: true,
-          phase: 'P2',
-          desc: '向平台用户发布系统公告与运营通知',
-          features: [
-            { name: '公告发布', detail: '创建面向全部或指定用户群的公告' },
-            { name: '有效期管理', detail: '公告上线/下线时间控制' },
-            { name: '送达统计', detail: '查看公告阅读与送达情况' }
-          ],
-          dependency: '需后端新增公告实体与发布接口'
-        }
-      }
+      /* ---------------- 帮助与文档 /support ---------------- */
+      planned('support/help', 'SupportHelp', {
+        title: '使用指南',
+        phase: 'P2',
+        desc: '内置使用文档与常见问题，帮助快速上手',
+        features: [
+          { name: '使用文档', detail: '分模块的操作指南与最佳实践' },
+          { name: '常见问题', detail: 'FAQ 与常见排障指引' }
+        ],
+        dependency: '纯前端内容页，无需后端改动'
+      }),
+      planned('support/changelog', 'SupportChangelog', {
+        title: '更新日志',
+        phase: 'P2',
+        desc: '跟踪平台版本更新与功能演进，及时了解新能力',
+        features: [
+          { name: '版本动态', detail: '按版本发布记录功能变更' },
+          { name: '订阅关注', detail: '关注重点功能上线通知' }
+        ],
+        dependency: '纯前端内容页，无需后端改动'
+      })
     ]
   }
 ]
@@ -660,7 +500,7 @@ router.beforeEach((to) => {
   }
   // 已登录访问登录页 → 首页
   if (userStore.token && to.path === '/login') {
-    return '/'
+    return DEFAULT_HOME
   }
   return true
 })

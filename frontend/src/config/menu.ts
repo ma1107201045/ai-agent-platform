@@ -1,0 +1,199 @@
+import type { Component } from 'vue'
+import {
+  Aim,
+  Avatar,
+  Bell,
+  Box,
+  ChatDotRound,
+  Clock,
+  Collection,
+  CollectionTag,
+  Connection,
+  CopyDocument,
+  Cpu,
+  CreditCard,
+  DataAnalysis,
+  DataBoard,
+  DataLine,
+  Delete,
+  Document,
+  EditPen,
+  Files,
+  Folder,
+  FolderOpened,
+  Grid,
+  Histogram,
+  Key,
+  Link,
+  List,
+  MagicStick,
+  Management,
+  Notebook,
+  Notification,
+  OfficeBuilding,
+  Operation,
+  Odometer,
+  Picture,
+  Platform,
+  Promotion,
+  QuestionFilled,
+  Reading,
+  SemiSelect,
+  Setting,
+  Share,
+  Shop,
+  ShoppingCart,
+  Timer,
+  Tools,
+  TrendCharts,
+  Umbrella,
+  User,
+  WarningFilled
+} from '@element-plus/icons-vue'
+
+/**
+ * 侧边栏菜单配置
+ *
+ * 约定：
+ * 1. group.key 即该分组的路由一级路径前缀，分组内所有页面路径都以 /{key} 开头
+ *    （/workbench 工作台 · /apps 应用 · /data 数据 · /tools 工具 · /publish 发布
+ *      /ops 观测 · /eval 评测 · /models 模型 · /system 系统管理 · /support 帮助与文档）
+ * 2. item.path 必须与 router 中已注册的路由 path 完全一致（开发环境启动时自动校验）
+ * 3. planned: true 的菜单项对应“建设中”占位页
+ * 4. 菜单顺序与 router 中的路由顺序保持一致：已上线页面在前，规划中页面在后
+ */
+export interface MenuItem {
+  /** 完整路由路径 */
+  path: string
+  title: string
+  icon: Component
+  planned?: boolean
+}
+
+export interface MenuGroup {
+  /** 分组标识，同时作为该分组路由的一级路径前缀 */
+  key: string
+  title: string
+  icon: Component
+  items: MenuItem[]
+}
+
+/** 登录后默认落地页 */
+export const DEFAULT_HOME = '/workbench/dashboard'
+
+export const menuGroups: MenuGroup[] = [
+  {
+    key: 'workbench',
+    title: '工作台',
+    icon: Odometer,
+    items: [
+      { path: '/workbench/dashboard', title: '工作台概览', icon: Odometer },
+      { path: '/workbench/notifications', title: '通知中心', icon: Bell, planned: true }
+    ]
+  },
+  {
+    key: 'apps',
+    title: '应用',
+    icon: MagicStick,
+    items: [
+      { path: '/apps', title: '智能体', icon: Grid },
+      { path: '/apps/templates', title: '应用模板', icon: CopyDocument, planned: true },
+      { path: '/apps/marketplace', title: '应用市场', icon: Shop, planned: true },
+      { path: '/apps/multi-agent', title: '多智能体编排', icon: Avatar, planned: true },
+      { path: '/apps/prompts', title: '提示词库', icon: Collection, planned: true },
+      { path: '/apps/schedules', title: '定时任务', icon: Timer, planned: true },
+      { path: '/apps/guardrails', title: '内容安全', icon: Umbrella, planned: true }
+    ]
+  },
+  {
+    key: 'data',
+    title: '数据',
+    icon: Files,
+    items: [
+      { path: '/data/knowledge', title: '知识库', icon: FolderOpened },
+      { path: '/data/memory', title: '记忆管理', icon: Notebook, planned: true },
+      { path: '/data/storage', title: '数据存储', icon: Folder, planned: true },
+      { path: '/data/assets', title: '素材管理', icon: Picture, planned: true }
+    ]
+  },
+  {
+    key: 'tools',
+    title: '工具',
+    icon: Tools,
+    items: [
+      { path: '/tools', title: '工具管理', icon: Operation },
+      { path: '/tools/marketplace', title: '插件市场', icon: ShoppingCart, planned: true },
+      { path: '/tools/integrations', title: '数据集成', icon: Link, planned: true }
+    ]
+  },
+  {
+    key: 'publish',
+    title: '发布',
+    icon: Promotion,
+    items: [
+      { path: '/publish', title: '发布管理', icon: Share },
+      { path: '/publish/channels', title: '渠道管理', icon: Platform, planned: true },
+      { path: '/publish/api-keys', title: 'API 密钥', icon: Key, planned: true },
+      { path: '/publish/docs', title: 'API 文档', icon: Reading, planned: true },
+      { path: '/publish/versions', title: '版本历史', icon: Clock, planned: true }
+    ]
+  },
+  {
+    key: 'ops',
+    title: '观测',
+    icon: DataLine,
+    items: [
+      { path: '/ops', title: '运行监控', icon: TrendCharts },
+      { path: '/ops/conversations', title: '对话记录', icon: ChatDotRound },
+      { path: '/ops/conversations/label', title: '对话标注', icon: CollectionTag, planned: true },
+      { path: '/ops/usage', title: '用量统计', icon: Histogram, planned: true },
+      { path: '/ops/billing', title: '费用账单', icon: CreditCard, planned: true },
+      { path: '/ops/alerts', title: '告警管理', icon: WarningFilled, planned: true }
+    ]
+  },
+  {
+    key: 'eval',
+    title: '评测',
+    icon: Aim,
+    items: [
+      { path: '/eval', title: '评测中心', icon: DataAnalysis, planned: true },
+      { path: '/eval/datasets', title: '评测数据集', icon: DataBoard, planned: true },
+      { path: '/eval/experiments', title: '对比实验', icon: SemiSelect, planned: true }
+    ]
+  },
+  {
+    key: 'models',
+    title: '模型',
+    icon: Cpu,
+    items: [
+      { path: '/models', title: '供应商管理', icon: Management },
+      { path: '/models/playground', title: '模型广场', icon: Box, planned: true },
+      { path: '/models/finetune', title: '模型微调', icon: EditPen, planned: true },
+      { path: '/models/gateway', title: '模型网关', icon: Connection, planned: true }
+    ]
+  },
+  {
+    key: 'system',
+    title: '系统管理',
+    icon: Setting,
+    items: [
+      { path: '/system/users', title: '团队与权限', icon: User },
+      { path: '/system/users/audit', title: '操作日志', icon: Document, planned: true },
+      { path: '/system/workspace', title: '工作空间', icon: OfficeBuilding, planned: true },
+      { path: '/system/trash', title: '回收站', icon: Delete, planned: true },
+      { path: '/system/announcements', title: '公告管理', icon: Notification, planned: true }
+    ]
+  },
+  {
+    key: 'support',
+    title: '帮助与文档',
+    icon: QuestionFilled,
+    items: [
+      { path: '/support/help', title: '使用指南', icon: QuestionFilled, planned: true },
+      { path: '/support/changelog', title: '更新日志', icon: List, planned: true }
+    ]
+  }
+]
+
+/** 扁平化的菜单项，用于激活态匹配与路由一致性校验 */
+export const menuItems: MenuItem[] = menuGroups.flatMap((g) => g.items)

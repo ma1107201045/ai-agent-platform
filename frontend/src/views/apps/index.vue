@@ -4,11 +4,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChatDotRound, Delete, Edit, EditPen, Files, MagicStick, Plus, Promotion, Search } from '@element-plus/icons-vue'
 import { appApi } from '@/api/app'
-import type { AgentApp, AppType } from '@/api/types'
+import type { App, AppType } from '@/api/types'
 
 const router = useRouter()
 const loading = ref(false)
-const list = ref<AgentApp[]>([])
+const list = ref<App[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(12)
@@ -198,15 +198,15 @@ async function confirmCreate() {
   }
 }
 
-function edit(row: AgentApp) {
+function edit(row: App) {
   router.push(`/apps/${row.id}/edit`)
 }
 
-function chat(row: AgentApp) {
+function chat(row: App) {
   router.push(`/apps/${row.id}/chat`)
 }
 
-function publish(row: AgentApp) {
+function publish(row: App) {
   // chatflow / workflow 需要有已保存的草稿工作流才能发布；agent 直接发布空 DSL 由运行时按配置执行
   if (row.type !== 'agent' && !row.workflowJson) {
     ElMessageBox.confirm('该应用还没有可发布的工作流，请先到编辑器编排并保存草稿。', '暂无可发布内容', {
@@ -234,7 +234,7 @@ function publish(row: AgentApp) {
     .catch(() => {})
 }
 
-function remove(row: AgentApp) {
+function remove(row: App) {
   ElMessageBox.confirm(`确认删除「${row.name}」？该操作不可恢复。`, '删除确认', {
     confirmButtonText: '删除',
     cancelButtonText: '取消',
@@ -248,7 +248,7 @@ function remove(row: AgentApp) {
     .catch(() => {})
 }
 
-const gradientOf = (row: AgentApp) => {
+const gradientOf = (row: App) => {
   const c = coverColors[row.type] || coverColors.chatflow
   return `linear-gradient(135deg, ${c[0]} 0%, ${c[1]} 100%)`
 }

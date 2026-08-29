@@ -3,10 +3,10 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, EditPen, Plus, VideoPlay } from '@element-plus/icons-vue'
 import { toolApi } from '@/api/tool'
-import type { AgentTool } from '@/api/types'
+import type { AppTool } from '@/api/types'
 
 const loading = ref(false)
-const list = ref<AgentTool[]>([])
+const list = ref<AppTool[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(10)
@@ -14,11 +14,11 @@ const size = ref(10)
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const saving = ref(false)
-const form = ref<Partial<AgentTool>>({})
+const form = ref<Partial<AppTool>>({})
 const headersText = ref('')
 
 const testDialogVisible = ref(false)
-const testTool = ref<AgentTool | null>(null)
+const testTool = ref<AppTool | null>(null)
 const testArgs = ref('')
 const testResult = ref('')
 const testing = ref(false)
@@ -44,7 +44,7 @@ function openCreate() {
   dialogVisible.value = true
 }
 
-function openEdit(tool: AgentTool) {
+function openEdit(tool: AppTool) {
   dialogTitle.value = '编辑工具'
   form.value = { ...tool }
   headersText.value = tool.headers || ''
@@ -87,7 +87,7 @@ function save() {
   }
 }
 
-async function remove(tool: AgentTool) {
+async function remove(tool: AppTool) {
   try {
     await ElMessageBox.confirm(`确认删除工具「${tool.name}」？`, '删除确认', {
       type: 'error', confirmButtonText: '删除', cancelButtonText: '取消'
@@ -100,7 +100,7 @@ async function remove(tool: AgentTool) {
   load()
 }
 
-function openTest(tool: AgentTool) {
+function openTest(tool: AppTool) {
   testTool.value = tool
   testArgs.value = ''
   testResult.value = ''

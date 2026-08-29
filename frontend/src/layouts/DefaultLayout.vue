@@ -2,63 +2,16 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  Aim,
   ArrowDown,
-  Avatar,
   Bell,
-  Box,
-  ChatDotRound,
-  Clock,
-  Collection,
-  CollectionTag,
-  CreditCard,
-  Connection,
-  CopyDocument,
-  Cpu,
-  DataAnalysis,
-  DataBoard,
-  DataLine,
-  Delete,
-  Document,
-  Folder,
-  EditPen,
-  Files,
-  FolderOpened,
   Fold,
-  Grid,
-  Histogram,
-  Key,
-  Link,
-  List,
   Lock,
-  MagicStick,
-  Management,
   Monitor,
-  Notebook,
-  Notification,
-  Odometer,
-  OfficeBuilding,
-  Operation,
-  Picture,
-  Platform,
-  Promotion,
-  QuestionFilled,
-  Reading,
   Search,
-  SemiSelect,
-  Setting,
-  Share,
-  Shop,
-  ShoppingCart,
-  Umbrella,
-  SwitchButton,
-  Timer,
-  Tools,
-  TrendCharts,
-  User,
-  WarningFilled
+  SwitchButton
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { DEFAULT_HOME, menuGroups, menuItems } from '@/config/menu'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,129 +19,13 @@ const userStore = useUserStore()
 
 const collapsed = ref(false)
 
-/** 侧边栏菜单：一级分类 + 二级页面；planned 标记的为规划中的模块（指向建设中占位页） */
-const menuGroups = [
-  {
-    key: 'workbench',
-    title: '工作台',
-    icon: Odometer,
-    items: [
-      { path: '/dashboard', title: '工作台概览', icon: Odometer },
-      { path: '/notifications', title: '通知中心', icon: Bell, planned: true }
-    ]
-  },
-  {
-    key: 'agents',
-    title: '智能体',
-    icon: MagicStick,
-    items: [
-      { path: '/apps', title: '应用管理', icon: Grid },
-      { path: '/apps/templates', title: '应用模板', icon: CopyDocument, planned: true },
-      { path: '/apps/marketplace', title: '应用市场', icon: Shop, planned: true },
-      { path: '/apps/multi-agent', title: '多智能体编排', icon: Avatar, planned: true },
-      { path: '/apps/prompts', title: '提示词库', icon: Collection, planned: true },
-      { path: '/apps/schedules', title: '定时任务', icon: Timer, planned: true },
-      { path: '/apps/guardrails', title: '内容安全', icon: Umbrella, planned: true }
-    ]
-  },
-  {
-    key: 'knowledge',
-    title: '数据',
-    icon: Files,
-    items: [
-      { path: '/knowledge', title: '知识库', icon: FolderOpened },
-      { path: '/apps/memory', title: '记忆管理', icon: Notebook, planned: true },
-      { path: '/apps/storage', title: '数据存储', icon: Folder, planned: true },
-      { path: '/knowledge/assets', title: '素材管理', icon: Picture, planned: true }
-    ]
-  },
-  {
-    key: 'tools',
-    title: '工具',
-    icon: Tools,
-    items: [
-      { path: '/tools', title: '工具管理', icon: Operation },
-      { path: '/tools/marketplace', title: '插件市场', icon: ShoppingCart, planned: true },
-      { path: '/tools/integrations', title: '数据集成', icon: Link, planned: true }
-    ]
-  },
-  {
-    key: 'publish',
-    title: '发布',
-    icon: Promotion,
-    items: [
-      { path: '/publish', title: '发布管理', icon: Share },
-      { path: '/publish/channels', title: '渠道管理', icon: Platform, planned: true },
-      { path: '/publish/api-keys', title: 'API 密钥', icon: Key, planned: true },
-      { path: '/publish/docs', title: 'API 文档', icon: Reading, planned: true },
-      { path: '/publish/versions', title: '版本历史', icon: Clock, planned: true }
-    ]
-  },
-  {
-    key: 'observe',
-    title: '观测',
-    icon: DataLine,
-    items: [
-      { path: '/ops', title: '运行监控', icon: TrendCharts },
-      { path: '/conversations', title: '对话记录', icon: ChatDotRound },
-      { path: '/conversations/label', title: '对话标注', icon: CollectionTag, planned: true },
-      { path: '/ops/usage', title: '用量统计', icon: Histogram, planned: true },
-      { path: '/ops/billing', title: '费用账单', icon: CreditCard, planned: true },
-      { path: '/ops/alerts', title: '告警管理', icon: WarningFilled, planned: true }
-    ]
-  },
-  {
-    key: 'eval',
-    title: '评测',
-    icon: Aim,
-    items: [
-      { path: '/eval', title: '评测中心', icon: DataAnalysis, planned: true },
-      { path: '/eval/datasets', title: '评测数据集', icon: DataBoard, planned: true },
-      { path: '/eval/experiments', title: '对比实验', icon: SemiSelect, planned: true }
-    ]
-  },
-  {
-    key: 'model',
-    title: '模型',
-    icon: Cpu,
-    items: [
-      { path: '/models', title: '供应商管理', icon: Management },
-      { path: '/models/playground', title: '模型广场', icon: Box, planned: true },
-      { path: '/models/finetune', title: '模型微调', icon: EditPen, planned: true },
-      { path: '/models/gateway', title: '模型网关', icon: Connection, planned: true }
-    ]
-  },
-  {
-    key: 'system',
-    title: '系统管理',
-    icon: Setting,
-    items: [
-      { path: '/users', title: '团队与权限', icon: User },
-      { path: '/users/audit', title: '操作日志', icon: Document, planned: true },
-      { path: '/workspace', title: '工作空间', icon: OfficeBuilding, planned: true },
-      { path: '/trash', title: '回收站', icon: Delete, planned: true },
-      { path: '/system/announcements', title: '公告管理', icon: Notification, planned: true }
-    ]
-  },
-  {
-    key: 'help',
-    title: '帮助与文档',
-    icon: QuestionFilled,
-    items: [
-      { path: '/help', title: '使用指南', icon: QuestionFilled, planned: true },
-      { path: '/changelog', title: '更新日志', icon: List, planned: true }
-    ]
-  }
-]
-
-/** 高亮匹配：精确命中优先，其次一级路径前缀命中（如 /apps/1/edit 高亮应用管理） */
+/** 高亮匹配：精确命中优先，其次子路径前缀命中（如 /apps/1/edit 高亮“智能体”） */
 const activeMenu = computed(() => {
   const p = route.path
-  const allPaths = menuGroups.flatMap((g) => g.items.map((i) => i.path))
   return (
-    allPaths.find((path) => p === path) ||
-    allPaths.find((path) => p.startsWith(path + '/')) ||
-    '/dashboard'
+    menuItems.find((item) => p === item.path)?.path ||
+    menuItems.find((item) => p.startsWith(item.path + '/'))?.path ||
+    DEFAULT_HOME
   )
 })
 
@@ -204,7 +41,7 @@ function onCommand(command: string | number | object) {
     userStore.logout()
     router.replace('/login')
   } else if (command === 'account') {
-    router.push('/users/security')
+    router.push('/system/security')
   }
 }
 
@@ -213,12 +50,26 @@ onMounted(() => {
     userStore.fetchMe().catch(() => {})
   }
 })
+
+/** 开发环境下校验：菜单项必须存在对应路由，且路径前缀与分组 key 一致 */
+if (import.meta.env.DEV) {
+  const registered = new Set(router.getRoutes().map((r) => r.path))
+  menuGroups.forEach((group) => {
+    group.items.forEach((item) => {
+      if (!registered.has(item.path)) {
+        console.warn(`[menu] 菜单「${item.title}」的 path ${item.path} 未匹配到已注册的路由`)
+      } else if (!item.path.startsWith(`/${group.key}`)) {
+        console.warn(`[menu] 菜单「${item.title}」的 path ${item.path} 与分组前缀 /${group.key} 不一致`)
+      }
+    })
+  })
+}
 </script>
 
 <template>
   <el-container class="layout">
     <el-aside :width="collapsed ? '72px' : '228px'" class="aside">
-      <div class="logo" @click="router.push('/dashboard')">
+      <div class="logo" @click="router.push(DEFAULT_HOME)">
         <div class="logo-badge">
           <el-icon :size="20"><Monitor /></el-icon>
         </div>
@@ -282,7 +133,7 @@ onMounted(() => {
             <kbd class="search-kbd">⌘K</kbd>
           </div>
           <el-tooltip content="通知中心" placement="bottom">
-            <button class="header-icon-btn" @click="router.push('/notifications')">
+            <button class="header-icon-btn" @click="router.push('/workbench/notifications')">
               <el-icon :size="17"><Bell /></el-icon>
             </button>
           </el-tooltip>
