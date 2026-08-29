@@ -5,13 +5,13 @@ import com.agent.platform.dao.entity.ChatConversation;
 import com.agent.platform.dao.entity.ChatMessage;
 import com.agent.platform.dao.mapper.ChatConversationMapper;
 import com.agent.platform.dao.mapper.ChatMessageMapper;
-import com.agent.platform.workflow.RunResult;
-import com.agent.platform.workflow.WorkflowEngine;
-import com.agent.platform.workflow.WorkflowGraph;
 import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
+import com.agent.platform.workflow.RunResult;
+import com.agent.platform.workflow.WorkflowEngine;
+import com.agent.platform.workflow.WorkflowGraph;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -254,7 +254,7 @@ public class ConversationService {
         }
         try {
             WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
-            return workflowEngine.run(graph, content, conv.getAppId());
+            return workflowEngine.run(graph, content);
         } catch (BizException e) {
             throw e;
         } catch (Exception e) {

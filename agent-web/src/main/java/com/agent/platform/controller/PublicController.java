@@ -75,7 +75,7 @@ public class PublicController {
             try {
                 String dsl = appService.getPublishedWorkflow(id);
                 WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
-                RunResult result = workflowEngine.run(graph, last.content(), id);
+                RunResult result = workflowEngine.run(graph, last.content());
                 answer = result.getAnswer();
                 detail = result.getTrace();
             } catch (BizException e) {
