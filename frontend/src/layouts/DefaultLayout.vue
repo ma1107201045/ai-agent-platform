@@ -97,15 +97,7 @@ if (import.meta.env.DEV) {
               <el-icon class="item-icon" :size="16"><component :is="item.icon" /></el-icon>
               <template #title>
                 <span class="menu-item-title">{{ item.title }}</span>
-                <el-tag
-                  v-if="item.planned"
-                  size="small"
-                  type="info"
-                  effect="plain"
-                  class="menu-item-tag"
-                >
-                  规划
-                </el-tag>
+                <span v-if="item.planned" class="planned-badge">规划</span>
               </template>
             </el-menu-item>
           </el-sub-menu>
@@ -184,8 +176,7 @@ if (import.meta.env.DEV) {
 
 /* ---------- 侧边栏 ---------- */
 .aside {
-  background: var(--bg-aside);
-  backdrop-filter: blur(12px);
+  background: var(--bg-card);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -206,103 +197,105 @@ if (import.meta.env.DEV) {
 .logo-badge {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: var(--brand-gradient);
+  border-radius: 8px;
+  background: var(--brand-1);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(91, 108, 255, 0.4);
   flex-shrink: 0;
 }
 .logo-text {
   font-size: 17px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
 .menu-wrap {
   flex: 1;
-  padding: 6px 10px 16px;
+  padding: 8px 12px 20px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 .menu {
   border-right: none;
   background: transparent;
-  --el-menu-item-height: 38px;
+  --el-menu-item-height: 36px;
 }
 
-/* ---------- 一级分类：分组标题风格 ---------- */
+/* ---------- 一级分类：分组标题（克制简洁） ---------- */
 .menu :deep(.el-sub-menu) {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 .menu :deep(.el-sub-menu:first-child) {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .menu :deep(.el-sub-menu__title) {
-  height: 30px;
+  height: 36px;
   margin: 0;
-  padding: 0 10px !important;
-  border-radius: 8px;
-  font-size: 11.5px;
+  padding: 0 8px !important;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 1.5px;
-  color: var(--text-tertiary);
-  transition: color 0.2s ease;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  gap: 6px;
+  transition: color 0.15s ease;
 }
 .menu :deep(.el-sub-menu__title .group-icon) {
   font-size: 14px;
-  margin-right: 6px;
-  color: var(--text-tertiary);
-  transition: color 0.2s ease;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
 }
 .menu :deep(.el-sub-menu__icon-arrow) {
   display: none;
 }
 .menu :deep(.el-sub-menu__title:hover) {
   background: transparent;
-  color: var(--brand-1);
+  color: var(--text-secondary);
 }
 .menu :deep(.el-sub-menu__title:hover .group-icon) {
-  color: var(--brand-1);
+  color: var(--text-secondary);
 }
 .menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-  color: var(--brand-1);
+  color: var(--text-secondary);
 }
 .menu :deep(.el-sub-menu.is-active > .el-sub-menu__title .group-icon) {
-  color: var(--brand-1);
+  color: var(--text-secondary);
+}
+/* 折叠态：分组标题仅保留图标 */
+.menu.el-menu--collapse :deep(.el-sub-menu__title) {
+  padding: 0 !important;
+  justify-content: center;
 }
 
-/* ---------- 二级菜单项 ---------- */
+/* ---------- 二级菜单项（克制简洁） ---------- */
 .menu :deep(.el-sub-menu .el-menu-item) {
   min-width: 0;
-  height: 38px;
-  margin: 2px 0;
-  padding-left: 22px !important;
-  border-radius: 8px;
-  font-size: 13px;
+  height: 36px;
+  margin: 1px 0;
+  padding-left: 20px !important;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
   color: var(--text-secondary);
-  transition: all 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .menu :deep(.el-sub-menu .el-menu-item .item-icon) {
   margin-right: 8px;
-  color: var(--text-tertiary);
-  transition: color 0.18s ease;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
 }
 .menu :deep(.el-sub-menu .el-menu-item:hover) {
-  background: var(--brand-gradient-soft);
-  color: var(--brand-1);
+  background: var(--fill-light);
+  color: var(--text-primary);
 }
 .menu :deep(.el-sub-menu .el-menu-item:hover .item-icon) {
-  color: var(--brand-1);
+  color: var(--text-primary);
 }
 .menu :deep(.el-sub-menu .el-menu-item.is-active) {
-  background: linear-gradient(135deg, rgba(91, 108, 255, 0.1), rgba(139, 92, 246, 0.1));
+  background: var(--fill-light);
   color: var(--brand-1);
   font-weight: 600;
 }
@@ -320,8 +313,8 @@ if (import.meta.env.DEV) {
   transform: translateY(-50%);
   width: 3px;
   height: 16px;
-  border-radius: 3px;
-  background: var(--brand-gradient);
+  border-radius: 2px;
+  background: var(--brand-1);
 }
 
 .menu-item-title {
@@ -331,11 +324,16 @@ if (import.meta.env.DEV) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.menu-item-tag {
+.planned-badge {
   flex-shrink: 0;
   margin-left: 8px;
-  transform: scale(0.85);
-  transform-origin: center right;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  background: var(--fill-light);
 }
 
 .aside-footer {
@@ -363,8 +361,7 @@ if (import.meta.env.DEV) {
 /* ---------- 顶栏 ---------- */
 .header {
   height: 64px;
-  background: var(--bg-header);
-  backdrop-filter: blur(12px);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -462,7 +459,7 @@ if (import.meta.env.DEV) {
 .avatar-ring {
   padding: 2px;
   border-radius: 50%;
-  background: var(--brand-gradient);
+  border: 1px solid var(--border-color);
 }
 .avatar {
   background: var(--bg-card);

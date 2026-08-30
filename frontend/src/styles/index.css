@@ -42,7 +42,7 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --shadow-card: 0 1px 2px rgba(31, 36, 55, 0.04), 0 4px 12px rgba(31, 36, 55, 0.06);
-  --shadow-card-hover: 0 6px 16px rgba(31, 36, 55, 0.08), 0 12px 32px rgba(91, 108, 255, 0.12);
+  --shadow-card-hover: 0 6px 16px rgba(31, 36, 55, 0.1), 0 12px 24px rgba(31, 36, 55, 0.12);
   --shadow-pop: 0 12px 32px rgba(31, 36, 55, 0.14);
 
   /* Element Plus 主题覆盖 */
@@ -90,7 +90,7 @@ html.dark {
   --text-tertiary: #737a94;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.32);
-  --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.45), 0 12px 32px rgba(91, 108, 255, 0.16);
+  --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.5), 0 12px 28px rgba(0, 0, 0, 0.42);
   --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
 
   /* Element Plus 暗色主色同步 */
@@ -195,26 +195,22 @@ body,
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 .hover-card:hover {
-  transform: translateY(-4px);
+  border-color: rgba(91, 108, 255, 0.45);
   box-shadow: var(--shadow-card-hover);
-  border-color: rgba(91, 108, 255, 0.35);
 }
 
 /* ---------- 渐变按钮 ---------- */
 .btn-gradient {
   border: none !important;
-  background: var(--brand-gradient) !important;
+  background: var(--brand-1) !important;
   color: #fff !important;
-  box-shadow: 0 4px 12px rgba(91, 108, 255, 0.32);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  transition: background-color 0.18s ease, opacity 0.18s ease;
 }
 .btn-gradient:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(91, 108, 255, 0.42);
-  filter: brightness(1.05);
+  background: var(--el-color-primary-dark-2) !important;
 }
 .btn-gradient:active {
-  transform: translateY(0) scale(0.98);
+  opacity: 0.9;
 }
 
 /* ---------- 页面切换过渡 ---------- */

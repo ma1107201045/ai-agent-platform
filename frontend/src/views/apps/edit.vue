@@ -1,29 +1,54 @@
 <script setup lang="ts">
-import { computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import {type Component, computed, markRaw, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {onBeforeRouteLeave, useRoute, useRouter} from 'vue-router'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
-  Aim, ArrowLeft, CircleCheck, Clock, Close, CopyDocument, Cpu, Delete, Document,
-  Expand, Files, Fold, Link as LinkIcon, MagicStick, Notebook, Promotion, QuestionFilled,
-  Rank, RefreshLeft, RefreshRight, Share, VideoPlay
+  Aim,
+  ArrowLeft,
+  CircleCheck,
+  Clock,
+  Close,
+  CopyDocument,
+  Cpu,
+  Delete,
+  Document,
+  Expand,
+  Files,
+  Fold,
+  Link as LinkIcon,
+  MagicStick,
+  Notebook,
+  Promotion,
+  QuestionFilled,
+  Rank,
+  RefreshLeft,
+  RefreshRight,
+  Share,
+  VideoPlay
 } from '@element-plus/icons-vue'
-import { VueFlow, useVueFlow, Handle, Position } from '@vue-flow/core'
-import { Background } from '@vue-flow/background'
-import { Controls } from '@vue-flow/controls'
-import { MiniMap } from '@vue-flow/minimap'
+import {Handle, Position, useVueFlow, VueFlow} from '@vue-flow/core'
+import {Background} from '@vue-flow/background'
+import {Controls} from '@vue-flow/controls'
+import {MiniMap} from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
-import { appApi } from '@/api/app'
-import { knowledgeApi } from '@/api/knowledge'
-import { modelApi } from '@/api/model'
-import { toolApi } from '@/api/tool'
-import type { AppVersion, AppTool, ChatModelInfo, KnowledgeDataset, RunResult, TraceItem, WorkflowNodeType } from '@/api/types'
-import type { VarItem } from '@/utils/flow'
-import {
-  NODE_TYPE_META, branchHandlesOf, dslToFlow, defaultConfig, flowToDsl, genNodeId
-} from '@/utils/flow'
+import {appApi} from '@/api/app'
+import {knowledgeApi} from '@/api/knowledge'
+import {modelApi} from '@/api/model'
+import {toolApi} from '@/api/tool'
+import type {
+  AppTool,
+  AppVersion,
+  ChatModelInfo,
+  KnowledgeDataset,
+  RunResult,
+  TraceItem,
+  WorkflowNodeType
+} from '@/api/types'
+import type {VarItem} from '@/utils/flow'
+import {branchHandlesOf, defaultConfig, dslToFlow, flowToDsl, genNodeId, NODE_TYPE_META} from '@/utils/flow'
 import NodeConfigPanel from './components/NodeConfigPanel.vue'
-import { useThemeStore } from '@/stores/theme'
+import {useThemeStore} from '@/stores/theme'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,10 +58,11 @@ const themeStore = useThemeStore()
 /** 画布网格点颜色跟随主题 */
 const gridColor = computed(() => (themeStore.isDark ? '#333a52' : '#d5dbe3'))
 
+
 // ---------- 画布 ----------
 const nodes = ref<Array<any>>([])
 const edges = ref<Array<any>>([])
-const { addNodes, removeNodes, onConnect, setCenter, fitView, getNodes, getEdges } = useVueFlow()
+const {addNodes, removeNodes, onConnect, setCenter, fitView, getNodes, getEdges} = useVueFlow()
 
 // ---------- 历史（撤销/重做） ----------
 const MAX_HISTORY = 50
@@ -115,7 +141,7 @@ function pasteClipboard() {
     return {
       id,
       type: 'flow-node',
-      position: { x: baseX + i * 40, y: baseY + i * 40 },
+      position: {x: baseX + i * 40, y: baseY + i * 40},
       data
     }
   })
@@ -140,6 +166,21 @@ function pasteClipboard() {
   ElMessage.success(`已粘贴 ${newNodes.length} 个节点`)
 }
 
+// ---------- 左侧操作栏「编辑」组 ----------
+/** 编辑组按钮配置：统一 tooltip / 禁用逻辑 / 点击动作 */
+const editTools: Array<{ key: string; icon: Component; tip: string; disabled: () => boolean; action: () => void }> = [
+  {key: 'undo', icon: RefreshLeft, tip: '撤销 (Ctrl+Z)', disabled: () => historyIndex.value <= 0, action: undo},
+  {
+    key: 'redo',
+    icon: RefreshRight,
+    tip: '重做 (Ctrl+Shift+Z)',
+    disabled: () => historyIndex.value >= historyStack.value.length - 1,
+    action: redo
+  },
+  {key: 'copy', icon: CopyDocument, tip: '复制选中 (Ctrl+C)', disabled: () => false, action: copySelected},
+  {key: 'paste', icon: Files, tip: '粘贴 (Ctrl+V)', disabled: () => false, action: pasteClipboard}
+]
+
 // ---------- 数据 ----------
 const appName = ref('')
 const appType = ref('chatflow')
@@ -161,9 +202,9 @@ const configCollapsed = ref(false)
 
 /** 左侧节点面板分组（按功能归类，不影响拖拽与数据模型） */
 const paletteGroups: Array<{ title: string; types: WorkflowNodeType[] }> = [
-  { title: '流程控制', types: ['start', 'end', 'condition'] },
-  { title: '处理节点', types: ['llm', 'agent', 'template', 'code'] },
-  { title: '外部数据', types: ['http', 'knowledge'] }
+  {title: '流程控制', types: ['start', 'end', 'condition']},
+  {title: '处理节点', types: ['llm', 'agent', 'template', 'code']},
+  {title: '外部数据', types: ['http', 'knowledge']}
 ]
 
 /** 确保画布存在开始/结束节点（空画布进入 / 被删光后恢复） */
@@ -176,20 +217,20 @@ function ensureStartEnd() {
     nodes.value.push({
       id,
       type: 'flow-node',
-      position: { x, y },
-      data: { label: NODE_TYPE_META[type].label, nodeType: type, config: defaultConfig(type) }
+      position: {x, y},
+      data: {label: NODE_TYPE_META[type].label, nodeType: type, config: defaultConfig(type)}
     })
     return id
   }
   const bothEmpty = !hasStart && !hasEnd
   const startId = hasStart
-    ? nodes.value.find((n) => n.data.nodeType === 'start')!.id
-    : add('start', 120, 260)
+      ? nodes.value.find((n) => n.data.nodeType === 'start')!.id
+      : add('start', 120, 260)
   const endId = hasEnd
-    ? nodes.value.find((n) => n.data.nodeType === 'end')!.id
-    : add('end', 460, 260)
+      ? nodes.value.find((n) => n.data.nodeType === 'end')!.id
+      : add('end', 460, 260)
   if (bothEmpty) {
-    edges.value.push({ id: genNodeId('edge'), source: startId, target: endId })
+    edges.value.push({id: genNodeId('edge'), source: startId, target: endId})
   }
   snapshot()
 }
@@ -205,7 +246,7 @@ function openAddMenu(e: MouseEvent, sourceId: string, handle: string | null) {
   let y = e.clientY
   if (x > window.innerWidth - 250) x = window.innerWidth - 250
   if (y > window.innerHeight - 340) y = Math.max(8, window.innerHeight - 340)
-  addMenuFor.value = { x, y, sourceId, handle }
+  addMenuFor.value = {x, y, sourceId, handle}
 }
 
 function closeAddMenu() {
@@ -241,7 +282,7 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
   nodes.value.push({
     id: newId,
     type: 'flow-node',
-    position: { x, y },
+    position: {x, y},
     data: {
       label: NODE_TYPE_META[type].label,
       nodeType: type,
@@ -254,9 +295,9 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
   // source 唯一出边直连 end → 替换为 source→new→end；否则新节点平连 end
   if (srcOuts.length === 1 && directEnd.length === 1 && endNode) {
     edges.value = edges.value.filter((e) => e.id !== directEnd[0].id)
-    edges.value.push({ id: genNodeId('edge'), source: newId, target: endNode.id })
+    edges.value.push({id: genNodeId('edge'), source: newId, target: endNode.id})
   } else if (endNode) {
-    edges.value.push({ id: genNodeId('edge'), source: newId, target: endNode.id })
+    edges.value.push({id: genNodeId('edge'), source: newId, target: endNode.id})
   }
   edges.value.push({
     id: genNodeId('edge'),
@@ -273,13 +314,13 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
   if (newNode) {
     editBaseline = JSON.stringify(newNode.data)
     nextTick(() => {
-      setCenter(newNode.position.x + NODE_W / 2, newNode.position.y + 40, { zoom: 0.9 })
+      setCenter(newNode.position.x + NODE_W / 2, newNode.position.y + 40, {zoom: 0.9})
     })
   }
 }
 
 const selectedNode = computed(() =>
-  nodes.value.find((n) => n.id === selectedNodeId.value) ?? null
+    nodes.value.find((n) => n.id === selectedNodeId.value) ?? null
 )
 const selectedData = computed(() => selectedNode.value?.data ?? null)
 /**
@@ -292,7 +333,7 @@ watch(selectedData, (d, old) => {
   if (d !== old) panelVersion.value++
 })
 const hasSelection = computed(
-  () => getNodes.value.some((n) => n.selected) || getEdges.value.some((e) => e.selected)
+    () => getNodes.value.some((n) => n.selected) || getEdges.value.some((e) => e.selected)
 )
 const selectedEdge = computed(() => edges.value.find((e) => e.id === selectedEdgeId.value) ?? null)
 const selectedEdgeEnds = computed(() => {
@@ -309,63 +350,66 @@ const selectedEdgeEnds = computed(() => {
   }
 })
 const selectedCount = computed(() => getNodes.value.filter((n) => n.selected).length)
+
 interface ShortcutItem {
   keys: string
   desc: string
 }
+
 interface ShortcutGroup {
   title: string
   items: ShortcutItem[]
 }
+
 const shortcutGroups: ShortcutGroup[] = [
   {
     title: '撤销 / 重做',
     items: [
-      { keys: 'Ctrl + Z', desc: '撤销上一步画布操作，最多回退 50 步' },
-      { keys: 'Ctrl + Shift + Z', desc: '重做被撤销的操作' },
-      { keys: 'Ctrl + Y', desc: '重做（与 Ctrl + Shift + Z 等效）' }
+      {keys: 'Ctrl + Z', desc: '撤销上一步画布操作，最多回退 50 步'},
+      {keys: 'Ctrl + Shift + Z', desc: '重做被撤销的操作'},
+      {keys: 'Ctrl + Y', desc: '重做（与 Ctrl + Shift + Z 等效）'}
     ]
   },
   {
     title: '复制 / 删除',
     items: [
-      { keys: 'Ctrl + C', desc: '复制选中节点（含节点配置，支持框选 / Ctrl 多选）' },
-      { keys: 'Ctrl + V', desc: '粘贴到画布左上角，逐个错位 40px，并自动重建它们之间的连线' },
-      { keys: 'Delete / Backspace', desc: '删除选中节点或连线；删节点会一并移除其所有连线' }
+      {keys: 'Ctrl + C', desc: '复制选中节点（含节点配置，支持框选 / Ctrl 多选）'},
+      {keys: 'Ctrl + V', desc: '粘贴到画布左上角，逐个错位 40px，并自动重建它们之间的连线'},
+      {keys: 'Delete / Backspace', desc: '删除选中节点或连线；删节点会一并移除其所有连线'}
     ]
   },
   {
     title: '选中节点',
     items: [
-      { keys: '单击节点', desc: '选中节点，并在右侧打开该节点的配置面板' },
-      { keys: 'Ctrl / Cmd + 点击', desc: '在已选节点上追加或取消选中，实现多选' },
-      { keys: 'Shift + 拖拽空白', desc: '框选多个节点，可批量移动 / 复制 / 删除' },
-      { keys: '单击画布空白', desc: '取消选中，收起右侧配置面板' }
+      {keys: '单击节点', desc: '选中节点，并在右侧打开该节点的配置面板'},
+      {keys: 'Ctrl / Cmd + 点击', desc: '在已选节点上追加或取消选中，实现多选'},
+      {keys: 'Shift + 拖拽空白', desc: '框选多个节点，可批量移动 / 复制 / 删除'},
+      {keys: '单击画布空白', desc: '取消选中，收起右侧配置面板'}
     ]
   },
   {
     title: '画布与连线',
     items: [
-      { keys: '拖拽节点', desc: '移动节点位置，松手后可用 Ctrl + Z 撤销' },
-      { keys: '拖拽画布空白', desc: '平移画布；按住 Shift 拖拽则框选多节点' },
-      { keys: '滚轮 / 触控板双指', desc: '缩放画布，缩放范围 20% ~ 200%' },
-      { keys: '双击画布空白', desc: '放大一级' },
-      { keys: '拖拽节点右侧圆点', desc: '从出点拉出连线，接到目标节点左侧入点' },
-      { keys: '点击节点「+」', desc: '快速插入下一个节点并自动连线（结束节点无「+」）' },
-      { keys: '单击连线', desc: '选中连线，按 Delete 删除' }
+      {keys: '拖拽节点', desc: '移动节点位置，松手后可用 Ctrl + Z 撤销'},
+      {keys: '拖拽画布空白', desc: '平移画布；按住 Shift 拖拽则框选多节点'},
+      {keys: '滚轮 / 触控板双指', desc: '缩放画布，缩放范围 20% ~ 200%'},
+      {keys: '双击画布空白', desc: '放大一级'},
+      {keys: '拖拽节点右侧圆点', desc: '从出点拉出连线，接到目标节点左侧入点'},
+      {keys: '点击节点「+」', desc: '快速插入下一个节点并自动连线（结束节点无「+」）'},
+      {keys: '单击连线', desc: '选中连线，按 Delete 删除'}
     ]
   },
   {
     title: '布局工具（左侧栏）',
     items: [
-      { keys: '选中 ≥ 2 个节点', desc: '左 / 水平居中 / 右 / 顶 / 垂直居中 / 底对齐' },
-      { keys: '选中 ≥ 3 个节点', desc: '水平 / 垂直等距分布，保持首尾节点不动' },
-      { keys: '自动布局', desc: '一键按流程层级重排全部节点' }
+      {keys: '选中 ≥ 2 个节点', desc: '左 / 水平居中 / 右 / 顶 / 垂直居中 / 底对齐'},
+      {keys: '选中 ≥ 3 个节点', desc: '水平 / 垂直等距分布，保持首尾节点不动'},
+      {keys: '自动布局', desc: '一键按流程层级重排全部节点'}
     ]
   }
 ]
 const shortcutNote =
-  '说明：快捷键在输入框 / 文本域聚焦时不生效；撤销重做只覆盖画布结构（节点与连线的增删改移），右侧表单配置修改不会进入历史栈。'
+    '说明：快捷键在输入框 / 文本域聚焦时不生效；撤销重做只覆盖画布结构（节点与连线的增删改移），右侧表单配置修改不会进入历史栈。'
 
 // ---------- 未保存修改追踪 ----------
 const dirty = ref(false)
@@ -373,19 +417,20 @@ const hydrated = ref(false)
 let editBaseline = '' // 当前选中节点的内容基线（区分编辑与切换选中）
 
 watch(
-  [nodes, edges, boundToolIds, boundDatasetIds, welcomeMessage, openingQuestionsText],
-  () => {
-    if (hydrated.value) dirty.value = true
-  },
-  { deep: true }
+    [nodes, edges, boundToolIds, boundDatasetIds, welcomeMessage, openingQuestionsText],
+    () => {
+      if (hydrated.value) dirty.value = true
+    },
+    {deep: true}
 )
 watch(selectedData, (val) => {
   if (!hydrated.value) return
   if (JSON.stringify(val ?? null) !== editBaseline) dirty.value = true
-}, { deep: true })
+}, {deep: true})
 
 // 动态图标组件缓存
 const iconMap: Record<string, any> = {}
+
 function iconOf(name: string) {
   if (!iconMap[name]) {
     const map: Record<string, any> = {
@@ -434,35 +479,21 @@ async function loadApp() {
       openingQuestionsText.value = ''
     }
   }
-  const { nodes: ns, edges: es } = dslToFlow(app.workflowJson)
+  const {nodes: ns, edges: es} = dslToFlow(app.workflowJson)
   nodes.value = ns
   edges.value = es
   syncBranchEdges()
   if (ns.length === 0) {
     // Dify 式：空画布预置 开始/结束 节点并直连
-    const startId = genNodeId()
-    const endId = genNodeId()
-    nodes.value.push({
-      id: startId,
-      type: 'flow-node',
-      position: { x: 120, y: 260 },
-      data: { label: '开始', nodeType: 'start', config: {} }
-    })
-    nodes.value.push({
-      id: endId,
-      type: 'flow-node',
-      position: { x: 460, y: 260 },
-      data: { label: '结束', nodeType: 'end', config: {} }
-    })
-    edges.value.push({ id: genNodeId('edge'), source: startId, target: endId })
+    ensureStartEnd()
   }
   nextTick(() => {
     hydrated.value = true
     dirty.value = false
     if (ns.length === 0) {
-      setCenter(290, 300, { zoom: 0.85 })
+      setCenter(290, 300, {zoom: 0.85})
     } else {
-      fitView({ padding: 0.2, duration: 300 })
+      fitView({padding: 0.2, duration: 300})
     }
   })
 }
@@ -486,14 +517,14 @@ async function loadTools() {
 
 async function loadDatasets() {
   try {
-    datasets.value = (await knowledgeApi.datasetPage({ size: 100 })).records
+    datasets.value = (await knowledgeApi.datasetPage({size: 100})).records
   } catch {
     datasets.value = []
   }
 }
 
 // ---------- 节点操作 ----------
-function onNodeClick({ node }: any) {
+function onNodeClick({node}: any) {
   selectedNodeId.value = node.id
   selectedEdgeId.value = null
   // 同步更新内容基线：避免 watch(selectedData) 把"切换选中"误判为"编辑"
@@ -505,7 +536,7 @@ function onPaneClick() {
   selectedEdgeId.value = null
 }
 
-function onEdgeClick({ edge }: any) {
+function onEdgeClick({edge}: any) {
   selectedEdgeId.value = edge.id
   selectedNodeId.value = null
 }
@@ -531,11 +562,11 @@ onConnect((params: any) => {
     return
   }
   const dup = edges.value.some(
-    (e) =>
-      e.source === params.source &&
-      e.target === params.target &&
-      e.sourceHandle === params.sourceHandle &&
-      e.targetHandle === params.targetHandle
+      (e) =>
+          e.source === params.source &&
+          e.target === params.target &&
+          e.sourceHandle === params.sourceHandle &&
+          e.targetHandle === params.targetHandle
   )
   if (dup) {
     ElMessage.warning('已存在相同的连线')
@@ -584,7 +615,7 @@ function branchStyleOf(sourceId: string, handle: string) {
       padding: '1px 6px'
     },
     labelShowBg: false,
-    labelBgStyle: { fill: 'transparent' }
+    labelBgStyle: {fill: 'transparent'}
   }
 }
 
@@ -602,8 +633,8 @@ function syncBranchEdges() {
 
 // 主题切换后刷新分支标签的底色
 watch(
-  () => themeStore.isDark,
-  () => syncBranchEdges()
+    () => themeStore.isDark,
+    () => syncBranchEdges()
 )
 
 function removeSelected() {
@@ -613,7 +644,7 @@ function removeSelected() {
   if (selNodes.length > 0) {
     removeNodes(selNodes)
     edges.value = edges.value.filter(
-      (e) => !selNodes.includes(e.source) && !selNodes.includes(e.target)
+        (e) => !selNodes.includes(e.source) && !selNodes.includes(e.target)
     )
   }
   if (selEdges.length > 0) {
@@ -667,45 +698,43 @@ function nodeWarnings(data: any): NodeWarning[] {
   const num = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0))
   switch (data?.nodeType) {
     case 'llm':
-      if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
-      else if (!str(cfg.userPrompt).trim()) {
-        list.push({ severity: 'warn', text: '用户提示词为空，模型将收不到用户输入' })
-      }
-      break
     case 'agent':
-      if (!cfg.modelId) list.push({ severity: 'error', text: '未配置模型' })
+      if (!cfg.modelId) list.push({severity: 'error', text: '未配置模型'})
       else if (!str(cfg.userPrompt).trim()) {
-        list.push({ severity: 'warn', text: '用户提示词为空，Agent 将收不到任务输入' })
+        list.push({
+          severity: 'warn',
+          text: data.nodeType === 'agent' ? '用户提示词为空，Agent 将收不到任务输入' : '用户提示词为空，模型将收不到用户输入'
+        })
       }
       break
     case 'http':
-      if (!str(cfg.url).trim()) list.push({ severity: 'error', text: '未配置请求地址' })
+      if (!str(cfg.url).trim()) list.push({severity: 'error', text: '未配置请求地址'})
       else if (cfg.bodyType && cfg.bodyType !== 'none' && !str(cfg.bodyTemplate).trim()) {
-        list.push({ severity: 'warn', text: `已选请求体类型 ${cfg.bodyType}，但未填写请求体模板` })
+        list.push({severity: 'warn', text: `已选请求体类型 ${cfg.bodyType}，但未填写请求体模板`})
       }
       break
     case 'code':
-      if (!str(cfg.code).trim()) list.push({ severity: 'error', text: '未配置代码脚本' })
+      if (!str(cfg.code).trim()) list.push({severity: 'error', text: '未配置代码脚本'})
       break
     case 'condition': {
       const branches = Array.isArray(cfg.branches) ? cfg.branches : []
       if (branches.length > 0) {
         const empty = branches.filter((b: any) => !str(b?.expression).trim()).length
         if (empty === branches.length) {
-          list.push({ severity: 'warn', text: '所有分支条件均为空，将命中第一条分支' })
+          list.push({severity: 'warn', text: '所有分支条件均为空，将命中第一条分支'})
         }
       } else if (!str(cfg.expression).trim()) {
-        list.push({ severity: 'warn', text: '未配置判断条件，默认走「是」分支' })
+        list.push({severity: 'warn', text: '未配置判断条件，默认走「是」分支'})
       }
       break
     }
     case 'template':
-      if (!str(cfg.template).trim()) list.push({ severity: 'error', text: '未配置模板内容' })
+      if (!str(cfg.template).trim()) list.push({severity: 'error', text: '未配置模板内容'})
       break
     case 'knowledge':
-      if (!cfg.datasetId) list.push({ severity: 'error', text: '未选择数据集' })
+      if (!cfg.datasetId) list.push({severity: 'error', text: '未选择数据集'})
       else if (num(cfg.scoreThreshold) > 0.95) {
-        list.push({ severity: 'warn', text: '相似度阈值过高，可能召回不到内容' })
+        list.push({severity: 'warn', text: '相似度阈值过高，可能召回不到内容'})
       }
       break
   }
@@ -721,7 +750,7 @@ function validateWorkflow(): Array<{ node: any; text: string }> {
   const errors: Array<{ node: any; text: string }> = []
   for (const n of nodes.value) {
     for (const w of nodeWarnings(n.data)) {
-      if (w.severity === 'error') errors.push({ node: n, text: `「${n.data?.label || '未命名'}」${w.text}` })
+      if (w.severity === 'error') errors.push({node: n, text: `「${n.data?.label || '未命名'}」${w.text}`})
     }
   }
   return errors
@@ -778,6 +807,9 @@ function checkStructure(): string[] {
 type AlignMode = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
 type DistributeMode = 'horizontal' | 'vertical'
 
+/** 多选手势引导文案（对齐 / 分布未选中足够节点时的提示） */
+const SELECT_HINT = '请先选中至少 2 个节点：按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中'
+
 /**
  * 读取 vue-flow 内部 store 的选中节点（包围盒，尺寸未就绪时用默认值）。
  * 注意：不读 v-model 父数组的 n.selected——vue-flow 框选后 selected 回写不可靠，
@@ -785,14 +817,14 @@ type DistributeMode = 'horizontal' | 'vertical'
  */
 function selectedBoxes() {
   return getNodes.value
-    .filter((n) => n.selected)
-    .map((n) => ({
-      n,
-      x: n.position.x,
-      y: n.position.y,
-      w: n.dimensions?.width || 210,
-      h: n.dimensions?.height || 64
-    }))
+      .filter((n) => n.selected)
+      .map((n) => ({
+        n,
+        x: n.position.x,
+        y: n.position.y,
+        w: n.dimensions?.width || 210,
+        h: n.dimensions?.height || 64
+      }))
 }
 
 /**
@@ -818,7 +850,7 @@ function applyNodePositions(next: Record<string, Partial<{ x: number; y: number 
       moved.push(n.id)
     }
   })
-  nodes.value = current.map((n) => ({ ...n }))
+  nodes.value = current.map((n) => ({...n}))
   snapshot()
   ElMessage.success(`${msg}（已移动 ${moved.length} 个节点）`)
 }
@@ -827,7 +859,7 @@ function applyNodePositions(next: Record<string, Partial<{ x: number; y: number 
 function alignNodes(mode: AlignMode) {
   const boxes = selectedBoxes()
   if (boxes.length < 2) {
-    ElMessage.warning('请先选中至少 2 个节点：按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中')
+    ElMessage.warning(SELECT_HINT)
     return
   }
   const minX = Math.min(...boxes.map((b) => b.x))
@@ -840,12 +872,24 @@ function alignNodes(mode: AlignMode) {
   const next: Record<string, Partial<{ x: number; y: number }>> = {}
   for (const b of boxes) {
     switch (mode) {
-      case 'left': next[b.n.id] = { x: minX }; break
-      case 'hcenter': next[b.n.id] = { x: avgCX - b.w / 2 }; break
-      case 'right': next[b.n.id] = { x: maxX - b.w }; break
-      case 'top': next[b.n.id] = { y: minY }; break
-      case 'vcenter': next[b.n.id] = { y: avgCY - b.h / 2 }; break
-      case 'bottom': next[b.n.id] = { y: maxY - b.h }; break
+      case 'left':
+        next[b.n.id] = {x: minX};
+        break
+      case 'hcenter':
+        next[b.n.id] = {x: avgCX - b.w / 2};
+        break
+      case 'right':
+        next[b.n.id] = {x: maxX - b.w};
+        break
+      case 'top':
+        next[b.n.id] = {y: minY};
+        break
+      case 'vcenter':
+        next[b.n.id] = {y: avgCY - b.h / 2};
+        break
+      case 'bottom':
+        next[b.n.id] = {y: maxY - b.h};
+        break
     }
   }
   applyNodePositions(next, '对齐完成')
@@ -855,30 +899,21 @@ function alignNodes(mode: AlignMode) {
 function distributeNodes(mode: DistributeMode) {
   const boxes = selectedBoxes()
   if (boxes.length < 2) {
-    ElMessage.warning('请先选中至少 2 个节点：按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中')
+    ElMessage.warning(SELECT_HINT)
     return
   }
+  const isX = mode === 'horizontal'
+  const axis = isX ? 'x' : 'y'
+  const size = isX ? 'w' : 'h'
+  const sorted = [...boxes].sort((a, b) => a[axis] - b[axis])
+  const total = sorted.reduce((s, b) => s + b[size], 0)
+  const span = sorted[sorted.length - 1][axis] + sorted[sorted.length - 1][size] - sorted[0][axis]
+  const gap = (span - total) / (sorted.length - 1)
   const next: Record<string, Partial<{ x: number; y: number }>> = {}
-  if (mode === 'horizontal') {
-    const sorted = [...boxes].sort((a, b) => a.x - b.x)
-    const totalW = sorted.reduce((s, b) => s + b.w, 0)
-    const span = sorted[sorted.length - 1].x + sorted[sorted.length - 1].w - sorted[0].x
-    const gap = (span - totalW) / (sorted.length - 1)
-    let x = sorted[0].x
-    for (const b of sorted) {
-      next[b.n.id] = { x }
-      x += b.w + gap
-    }
-  } else {
-    const sorted = [...boxes].sort((a, b) => a.y - b.y)
-    const totalH = sorted.reduce((s, b) => s + b.h, 0)
-    const span = sorted[sorted.length - 1].y + sorted[sorted.length - 1].h - sorted[0].y
-    const gap = (span - totalH) / (sorted.length - 1)
-    let y = sorted[0].y
-    for (const b of sorted) {
-      next[b.n.id] = { y }
-      y += b.h + gap
-    }
+  let pos = sorted[0][axis]
+  for (const b of sorted) {
+    next[b.n.id] = isX ? {x: pos} : {y: pos}
+    pos += b[size] + gap
   }
   applyNodePositions(next, '分布完成')
 }
@@ -926,7 +961,7 @@ function autoLayout() {
     const ids = layers[d]
     const x = MARGIN + d * (W + GAP_X)
     ids.forEach((id, i) => {
-      next[id] = { x: Math.round(x), y: Math.round(MARGIN + i * (H + GAP_Y)) }
+      next[id] = {x: Math.round(x), y: Math.round(MARGIN + i * (H + GAP_Y))}
     })
   }
   applyNodePositions(next, '已按流程层级完成自动布局')
@@ -942,11 +977,11 @@ async function saveDraft() {
         datasetIds: JSON.stringify(boundDatasetIds.value),
         welcomeMessage: welcomeMessage.value,
         openingQuestions: JSON.stringify(
-          openingQuestionsText.value.split('\n').map((q) => q.trim()).filter(Boolean)
+            openingQuestionsText.value.split('\n').map((q) => q.trim()).filter(Boolean)
         )
       })
     } else {
-      await appApi.update(appId, { workflowJson: flowToDsl(nodes.value, edges.value) })
+      await appApi.update(appId, {workflowJson: flowToDsl(nodes.value, edges.value)})
     }
     ElMessage.success('草稿已保存')
     dirty.value = false
@@ -966,9 +1001,9 @@ async function publish() {
     const allWarnings = [...structure, ...errors.map((e) => e.text)]
     if (allWarnings.length > 0) {
       const proceed = await ElMessageBox.confirm(
-        `发布前检查到以下问题：\n${allWarnings.join('\n')}\n\n仍要继续发布吗？`,
-        '发布前检查',
-        { confirmButtonText: '仍要发布', cancelButtonText: '去完善', type: 'warning' }
+          `发布前检查到以下问题：\n${allWarnings.join('\n')}\n\n仍要继续发布吗？`,
+          '发布前检查',
+          {confirmButtonText: '仍要发布', cancelButtonText: '去完善', type: 'warning'}
       ).catch(() => false)
       if (!proceed) return
     }
@@ -981,8 +1016,8 @@ async function publish() {
   publishing.value = true
   try {
     const workflowJson =
-      appType.value === 'agent' ? JSON.stringify({ nodes: [], edges: [] }) : flowToDsl(nodes.value, edges.value)
-    await appApi.publish(appId, { workflowJson, promptConfig: '' })
+        appType.value === 'agent' ? JSON.stringify({nodes: [], edges: []}) : flowToDsl(nodes.value, edges.value)
+    await appApi.publish(appId, {workflowJson, promptConfig: ''})
     ElMessage.success('发布成功')
   } finally {
     publishing.value = false
@@ -1018,9 +1053,9 @@ async function openVersions() {
 
 async function rollbackTo(version: AppVersion) {
   await ElMessageBox.confirm(
-    `将把 v${version.version} 的工作流恢复到当前画布（草稿），不会自动发布，确认回滚？`,
-    '回滚确认',
-    { confirmButtonText: '回滚', cancelButtonText: '取消', type: 'warning' }
+      `将把 v${version.version} 的工作流恢复到当前画布（草稿），不会自动发布，确认回滚？`,
+      '回滚确认',
+      {confirmButtonText: '回滚', cancelButtonText: '取消', type: 'warning'}
   )
   rollingBack.value = true
   try {
@@ -1105,7 +1140,7 @@ function applyTraceToCanvas(trace: TraceItem[]) {
   for (const e of edges.value) {
     const on = executed.has(e.id)
     e.class = on ? 'executed-edge' : ''
-    e.style = on ? { stroke: '#67c23a', strokeWidth: 2.5 } : undefined
+    e.style = on ? {stroke: '#67c23a', strokeWidth: 2.5} : undefined
   }
 }
 
@@ -1136,15 +1171,15 @@ const OUTPUT_NODE_TYPES = new Set(['llm', 'agent', 'http', 'code', 'template', '
 function varItemsFor(nodeId: string): VarItem[] {
   const isCode = selectedData.value?.nodeType === 'code'
   const wrap = (k: string) => (isCode ? k : `{{${k}}}`)
-  const items: VarItem[] = [{ text: wrap('input'), desc: '用户输入' }]
-  if (isCode) items.push({ text: 'outputs', desc: '全部节点输出集合' })
+  const items: VarItem[] = [{text: wrap('input'), desc: '用户输入'}]
+  if (isCode) items.push({text: 'outputs', desc: '全部节点输出集合'})
   // 开始节点定义的流程变量（全局可见）
   for (const n of nodes.value) {
     if (n.data?.nodeType !== 'start') continue
     const vars = n.data?.config?.variables
     if (!Array.isArray(vars)) continue
     for (const v of vars) {
-      if (v?.name) items.push({ text: wrap(String(v.name)), desc: '开始节点流程变量' })
+      if (v?.name) items.push({text: wrap(String(v.name)), desc: '开始节点流程变量'})
     }
   }
   for (const id of upstreamNodeIds(nodeId)) {
@@ -1152,9 +1187,9 @@ function varItemsFor(nodeId: string): VarItem[] {
     if (!OUTPUT_NODE_TYPES.has(n?.data?.nodeType)) continue
     const alias = n?.data?.config?.outputVar
     const label = n?.data?.label || id
-    items.push({ text: wrap(id), desc: `节点「${label}」的输出` })
+    items.push({text: wrap(id), desc: `节点「${label}」的输出`})
     if (alias && !isCode) {
-      items.push({ text: `{{${alias}}}`, desc: `节点「${label}」的输出变量别名` })
+      items.push({text: `{{${alias}}}`, desc: `节点「${label}」的输出变量别名`})
     }
   }
   return items
@@ -1165,7 +1200,7 @@ function highlightNode(nodeId: string) {
   const node = nodes.value.find((n) => n.id === nodeId)
   if (!node) return
   highlightedNodeId.value = nodeId
-  setCenter(node.position.x, node.position.y, { zoom: 0.9 })
+  setCenter(node.position.x, node.position.y, {zoom: 0.9})
 }
 
 async function runDebug() {
@@ -1192,7 +1227,7 @@ async function runDebug() {
   try {
     await saveDraft() // 先保存草稿，确保后端运行的是当前画布内容
     clearRunState()
-    const result = await appApi.run(appId, [{ role: 'user', content: text }])
+    const result = await appApi.run(appId, [{role: 'user', content: text}])
     runResult.value = result
     applyTraceToCanvas(result.trace)
     const failed = result.trace.find((t) => t.status === 'error')
@@ -1251,11 +1286,14 @@ onUnmounted(() => {
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <el-button link @click="router.push('/apps')">
-        <el-icon><ArrowLeft /></el-icon>返回
+        <el-icon>
+          <ArrowLeft/>
+        </el-icon>
+        返回
       </el-button>
       <span class="app-name">
         {{ appName }}
-        <span v-if="dirty" class="dirty-dot" title="有未保存的修改" />
+        <span v-if="dirty" class="dirty-dot" title="有未保存的修改"/>
         <el-tag size="small" :type="appType === 'agent' ? 'success' : 'info'">
           {{ appType === 'agent' ? '智能体' : '编排' }}
         </el-tag>
@@ -1266,12 +1304,18 @@ onUnmounted(() => {
           {{ debugVisible ? '收起调试' : '运行调试' }}
         </el-button>
         <el-button :icon="Promotion" plain @click="goChat">对话调试</el-button>
-        <el-button v-if="appType !== 'agent'" :icon="Clock" plain @click="openVersions">历史版本</el-button>
+        <el-tooltip content="历史版本" placement="bottom">
+          <el-button
+              v-if="appType !== 'agent'"
+              :icon="Clock"
+              text
+              circle
+              class="toolbar-icon-btn"
+              @click="openVersions"
+          />
+        </el-tooltip>
         <el-button :icon="CopyDocument" :loading="saving" plain @click="saveDraft">保存草稿</el-button>
         <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
-        <el-button :icon="Delete" type="danger" plain :disabled="!hasSelection" @click="removeSelected">
-          删除
-        </el-button>
       </div>
     </div>
 
@@ -1280,52 +1324,46 @@ onUnmounted(() => {
       <aside class="op-rail">
         <!-- 编辑 -->
         <div class="op-group">
-          <el-tooltip content="撤销 (Ctrl+Z)" placement="right">
+          <el-tooltip v-for="t in editTools" :key="t.key" :content="t.tip" placement="right">
             <span class="op-wrap">
-              <el-button class="op-btn" text circle :disabled="historyIndex <= 0" @click="undo">
-                <el-icon :size="16"><RefreshLeft /></el-icon>
-              </el-button>
-            </span>
-          </el-tooltip>
-          <el-tooltip content="重做 (Ctrl+Shift+Z)" placement="right">
-            <span class="op-wrap">
-              <el-button
-                class="op-btn"
-                text
-                circle
-                :disabled="historyIndex >= historyStack.length - 1"
-                @click="redo"
-              >
-                <el-icon :size="16"><RefreshRight /></el-icon>
-              </el-button>
-            </span>
-          </el-tooltip>
-          <el-tooltip content="复制选中 (Ctrl+C)" placement="right">
-            <span class="op-wrap">
-              <el-button class="op-btn" text circle @click="copySelected">
-                <el-icon :size="16"><CopyDocument /></el-icon>
-              </el-button>
-            </span>
-          </el-tooltip>
-          <el-tooltip content="粘贴 (Ctrl+V)" placement="right">
-            <span class="op-wrap">
-              <el-button class="op-btn" text circle @click="pasteClipboard">
-                <el-icon :size="16"><Files /></el-icon>
+              <el-button class="op-btn" text circle :disabled="t.disabled()" @click="t.action">
+                <el-icon :size="16"><component :is="t.icon"/></el-icon>
               </el-button>
             </span>
           </el-tooltip>
         </div>
 
-        <div class="op-divider" />
+        <div class="op-divider"/>
+
+        <!-- 删除 -->
+        <div class="op-group">
+          <el-tooltip content="删除选中 (Delete)" placement="right">
+            <span class="op-wrap">
+              <el-button
+                  class="op-btn op-btn-danger"
+                  text
+                  circle
+                  type="danger"
+                  :disabled="!hasSelection"
+                  @click="removeSelected"
+              >
+                <el-icon :size="16"><Delete/></el-icon>
+              </el-button>
+            </span>
+          </el-tooltip>
+        </div>
+
+        <div class="op-divider"/>
 
         <!-- 布局 -->
         <div class="op-group">
-          <el-popover placement="right-start" :width="176" trigger="click" :show-arrow="false" popper-class="layout-popover">
+          <el-popover placement="right-start" :width="176" trigger="click" :show-arrow="false"
+                      popper-class="layout-popover">
             <template #reference>
               <el-tooltip :content="`对齐选中节点（已选 ${selectedCount} 个，至少 2 个）`" placement="right">
                 <span class="op-wrap">
                   <el-button class="op-btn" text circle :disabled="selectedCount < 2">
-                    <el-icon :size="16"><Aim /></el-icon>
+                    <el-icon :size="16"><Aim/></el-icon>
                   </el-button>
                 </span>
               </el-tooltip>
@@ -1340,12 +1378,13 @@ onUnmounted(() => {
               <div class="layout-menu-item" @click="alignNodes('bottom')">底对齐</div>
             </div>
           </el-popover>
-          <el-popover placement="right-start" :width="176" trigger="click" :show-arrow="false" popper-class="layout-popover">
+          <el-popover placement="right-start" :width="176" trigger="click" :show-arrow="false"
+                      popper-class="layout-popover">
             <template #reference>
               <el-tooltip :content="`均匀分布选中节点（已选 ${selectedCount} 个，至少 2 个）`" placement="right">
                 <span class="op-wrap">
                   <el-button class="op-btn" text circle :disabled="selectedCount < 2">
-                    <el-icon :size="16"><Rank /></el-icon>
+                    <el-icon :size="16"><Rank/></el-icon>
                   </el-button>
                 </span>
               </el-tooltip>
@@ -1359,20 +1398,20 @@ onUnmounted(() => {
           <el-tooltip content="自动布局全部节点" placement="right">
             <span class="op-wrap">
               <el-button class="op-btn" text circle @click="autoLayout">
-                <el-icon :size="16"><MagicStick /></el-icon>
+                <el-icon :size="16"><MagicStick/></el-icon>
               </el-button>
             </span>
           </el-tooltip>
         </div>
 
-        <div class="op-divider" />
+        <div class="op-divider"/>
 
         <el-popover placement="right-end" :width="420" trigger="hover" popper-class="shortcut-popover">
           <template #reference>
             <el-tooltip content="快捷键" placement="right">
               <span class="op-wrap">
                 <el-button class="op-btn" text circle>
-                  <el-icon :size="16"><QuestionFilled /></el-icon>
+                  <el-icon :size="16"><QuestionFilled/></el-icon>
                 </el-button>
               </span>
             </el-tooltip>
@@ -1390,424 +1429,425 @@ onUnmounted(() => {
         </el-popover>
       </aside>
 
-    <!-- 智能体应用：工具/知识库绑定配置 -->
-    <div v-if="appType === 'agent'" class="agent-config">
-      <el-card shadow="never" class="agent-card">
-        <template #header>
-          <div class="agent-card-head">
-            <span>绑定工具</span>
-            <el-button link type="primary" @click="router.push('/tools')">前往工具管理</el-button>
-          </div>
-        </template>
-        <p class="agent-tip">
-          智能体会根据对话内容自主决定调用哪些工具。请从可用工具中选择本应用可以使用的工具。
-        </p>
-        <el-checkbox-group v-model="boundToolIds" class="tool-check-list">
-          <el-checkbox v-for="t in allTools" :key="t.id" :value="t.id" class="tool-check">
-            <div class="tool-check-body">
-              <div class="tool-check-name">
-                <code class="tool-code">{{ t.name }}</code>
-                <el-tag size="small" :type="t.type === 'http' ? 'warning' : 'info'" effect="plain">
-                  {{ t.type === 'http' ? 'HTTP' : '代码' }}
-                </el-tag>
+      <!-- 智能体应用：工具/知识库绑定配置 -->
+      <div v-if="appType === 'agent'" class="agent-config">
+        <el-card shadow="never" class="agent-card">
+          <template #header>
+            <div class="agent-card-head">
+              <span>绑定工具</span>
+              <el-button link type="primary" @click="router.push('/tools')">前往工具管理</el-button>
+            </div>
+          </template>
+          <p class="agent-tip">
+            智能体会根据对话内容自主决定调用哪些工具。请从可用工具中选择本应用可以使用的工具。
+          </p>
+          <el-checkbox-group v-model="boundToolIds" class="tool-check-list">
+            <el-checkbox v-for="t in allTools" :key="t.id" :value="t.id" class="tool-check">
+              <div class="tool-check-body">
+                <div class="tool-check-name">
+                  <code class="tool-code">{{ t.name }}</code>
+                  <el-tag size="small" :type="t.type === 'http' ? 'warning' : 'info'" effect="plain">
+                    {{ t.type === 'http' ? 'HTTP' : '代码' }}
+                  </el-tag>
+                </div>
+                <div class="tool-check-desc">{{ t.description }}</div>
               </div>
-              <div class="tool-check-desc">{{ t.description }}</div>
-            </div>
-          </el-checkbox>
-        </el-checkbox-group>
-        <el-empty
-          v-if="allTools.length === 0"
-          description="暂无可用工具，请先在「工具管理」中创建"
-          :image-size="60"
-        />
-      </el-card>
+            </el-checkbox>
+          </el-checkbox-group>
+          <el-empty
+              v-if="allTools.length === 0"
+              description="暂无可用工具，请先在「工具管理」中创建"
+              :image-size="60"
+          />
+        </el-card>
 
-      <el-card shadow="never" class="agent-card">
-        <template #header>
-          <div class="agent-card-head">
-            <span>绑定知识库</span>
-            <el-button link type="primary" @click="router.push('/data/knowledge')">前往知识库管理</el-button>
-          </div>
-        </template>
-        <p class="agent-tip">
-          智能体会基于用户提问检索绑定数据集中的内容，并将命中的资料作为上下文辅助回答（RAG）。
-        </p>
-        <el-checkbox-group v-model="boundDatasetIds" class="tool-check-list">
-          <el-checkbox v-for="d in datasets" :key="d.id" :value="d.id" class="tool-check">
-            <div class="tool-check-body">
-              <div class="tool-check-name">
-                <code class="tool-code">{{ d.name }}</code>
-                <el-tag size="small" type="success" effect="plain">知识库</el-tag>
+        <el-card shadow="never" class="agent-card">
+          <template #header>
+            <div class="agent-card-head">
+              <span>绑定知识库</span>
+              <el-button link type="primary" @click="router.push('/data/knowledge')">前往知识库管理</el-button>
+            </div>
+          </template>
+          <p class="agent-tip">
+            智能体会基于用户提问检索绑定数据集中的内容，并将命中的资料作为上下文辅助回答（RAG）。
+          </p>
+          <el-checkbox-group v-model="boundDatasetIds" class="tool-check-list">
+            <el-checkbox v-for="d in datasets" :key="d.id" :value="d.id" class="tool-check">
+              <div class="tool-check-body">
+                <div class="tool-check-name">
+                  <code class="tool-code">{{ d.name }}</code>
+                  <el-tag size="small" type="success" effect="plain">知识库</el-tag>
+                </div>
+                <div class="tool-check-desc">{{ d.description || '暂无描述' }}</div>
               </div>
-              <div class="tool-check-desc">{{ d.description || '暂无描述' }}</div>
+            </el-checkbox>
+          </el-checkbox-group>
+          <el-empty
+              v-if="datasets.length === 0"
+              description="暂无数据集，请先在「知识库」中创建"
+              :image-size="60"
+          />
+        </el-card>
+
+        <el-card shadow="never" class="agent-card">
+          <template #header>
+            <div class="agent-card-head">
+              <span>应用设置</span>
             </div>
-          </el-checkbox>
-        </el-checkbox-group>
-        <el-empty
-          v-if="datasets.length === 0"
-          description="暂无数据集，请先在「知识库」中创建"
-          :image-size="60"
-        />
-      </el-card>
+          </template>
+          <el-form label-position="top" size="small">
+            <el-form-item label="开场白">
+              <el-input
+                  v-model="welcomeMessage"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="对话开始时的欢迎语，留空则使用默认文案"
+              />
+            </el-form-item>
+            <el-form-item label="推荐问题">
+              <el-input
+                  v-model="openingQuestionsText"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="每行一个推荐问题，展示在聊天页欢迎区，点击即可提问"
+              />
+            </el-form-item>
+          </el-form>
+        </el-card>
 
-      <el-card shadow="never" class="agent-card">
-        <template #header>
-          <div class="agent-card-head">
-            <span>应用设置</span>
-          </div>
-        </template>
-        <el-form label-position="top" size="small">
-          <el-form-item label="开场白">
-            <el-input
-              v-model="welcomeMessage"
-              type="textarea"
-              :rows="3"
-              placeholder="对话开始时的欢迎语，留空则使用默认文案"
-            />
-          </el-form-item>
-          <el-form-item label="推荐问题">
-            <el-input
-              v-model="openingQuestionsText"
-              type="textarea"
-              :rows="4"
-              placeholder="每行一个推荐问题，展示在聊天页欢迎区，点击即可提问"
-            />
-          </el-form-item>
-        </el-form>
-      </el-card>
-
-      <div class="agent-actions">
-        <el-button :icon="CopyDocument" :loading="saving" @click="saveDraft">保存配置</el-button>
-        <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
-      </div>
-    </div>
-
-    <template v-else>
-    <div class="editor-body">
-      <!-- 中间画布 -->
-      <div class="canvas-wrap">
-        <div v-if="hydrated && nodes.length === 0" class="canvas-empty">
-          <el-empty description="画布是空的，点击开始节点「+」添加流程节点" :image-size="88">
-            <div class="canvas-empty-actions">
-              <el-button type="primary" plain size="small" @click="ensureStartEnd">
-                恢复 开始/结束 节点
-              </el-button>
-            </div>
-          </el-empty>
-          <div class="canvas-empty-tips">
-            <span>· 开始/结束定义流程边界</span>
-            <span>· 点击节点右侧「+」快速插入并连线</span>
-            <span>· 条件分支 + 并行出边实现复杂流程</span>
-            <span>· 拖拽空白平移画布，按住 Shift 拖拽可框选多节点，按住 Ctrl 点击可追加选中</span>
-          </div>
+        <div class="agent-actions">
+          <el-button :icon="CopyDocument" :loading="saving" @click="saveDraft">保存配置</el-button>
+          <el-button :icon="CircleCheck" class="btn-gradient" :loading="publishing" @click="publish">发布</el-button>
         </div>
-        <!-- 多选键注意：vue-flow 用 event.key 匹配按键，Ctrl 键的 key 是 'Control'、Cmd 键的 key 是 'Meta'；传 'Ctrl' 永远匹配不上 -->
-        <VueFlow
-          v-model:nodes="nodes"
-          v-model:edges="edges"
-          :default-viewport="{ zoom: 0.85 }"
-          :min-zoom="0.2"
-          :max-zoom="2"
-          :selection-key-code="'Shift'"
-          :multi-selection-key-code="['Meta', 'Control']"
-          :edges-updatable="false"
-          class="flow"
-          @node-click="onNodeClick"
-          @pane-click="onPaneClick"
-          @edge-click="onEdgeClick"
-          @node-drag-stop="onNodeDragStop"
-        >
-          <template #node-flow-node="{ data, selected, id }">
-            <div
-              class="flow-node"
-              :class="[data.nodeType, { selected }, nodeRunClass(data), { 'run-highlight': id === highlightedNodeId }]"
-              :style="data.nodeType === 'condition' ? { minHeight: `${52 + branchHandlesOf(data).length * 26}px` } : undefined"
-            >
-              <span v-if="data.runStatus === 'success'" class="run-badge run-badge-success">✓</span>
-              <span v-else-if="data.runStatus === 'error'" class="run-badge run-badge-error">!</span>
-              <span
-                v-else-if="!data.runStatus && nodeWarnings(data).length"
-                class="node-warn-badge"
-                :class="{ warn: !hasNodeError(data) }"
-                :title="nodeWarnings(data).map((w) => w.text).join('；')"
-                >⚠</span
-              >
-              <div class="node-head">
-                <div class="node-icon" :style="{ background: metaOf(data.nodeType).gradient }">
-                  <el-icon :size="16" color="#fff">
-                    <component :is="iconOf(metaOf(data.nodeType).icon)" />
-                  </el-icon>
+      </div>
+
+      <template v-else>
+        <div class="editor-body">
+          <!-- 中间画布 -->
+          <div class="canvas-wrap">
+            <div v-if="hydrated && nodes.length === 0" class="canvas-empty">
+              <el-empty description="画布是空的，点击开始节点「+」添加流程节点" :image-size="88">
+                <div class="canvas-empty-actions">
+                  <el-button type="primary" plain size="small" @click="ensureStartEnd">
+                    恢复 开始/结束 节点
+                  </el-button>
                 </div>
-                <div class="node-head-text">
-                  <span class="node-title">{{ data.label }}</span>
-                  <span class="node-desc">{{ metaOf(data.nodeType).desc }}</span>
-                </div>
-                <el-tooltip v-if="data.remark" :content="data.remark" placement="top" :show-after="200">
-                  <span class="node-remark"><el-icon :size="12"><Notebook /></el-icon></span>
-                </el-tooltip>
+              </el-empty>
+              <div class="canvas-empty-tips">
+                <span>· 开始/结束定义流程边界</span>
+                <span>· 点击节点右侧「+」快速插入并连线</span>
+                <span>· 条件分支 + 并行出边实现复杂流程</span>
+                <span>· 拖拽空白平移画布，按住 Shift 拖拽可框选多节点，按住 Ctrl 点击可追加选中</span>
               </div>
-              <span v-if="data.runCost !== undefined" class="run-cost">{{ data.runCost }}ms</span>
-              <div v-if="data.runError" class="run-error-msg" :title="data.runError">{{ data.runError }}</div>
-              <Handle type="target" :position="Position.Left" class="node-handle"></Handle>
-              <!-- 条件分支：多分支模式下按分支配置动态渲染出点 -->
-              <template v-if="data.nodeType === 'condition'">
-                <template v-for="(h, i) in branchHandlesOf(data)" :key="h.key">
+            </div>
+            <!-- 多选键注意：vue-flow 用 event.key 匹配按键，Ctrl 键的 key 是 'Control'、Cmd 键的 key 是 'Meta'；传 'Ctrl' 永远匹配不上 -->
+            <VueFlow
+                v-model:nodes="nodes"
+                v-model:edges="edges"
+                :default-viewport="{ zoom: 0.85 }"
+                :min-zoom="0.2"
+                :max-zoom="2"
+                :selection-key-code="'Shift'"
+                :multi-selection-key-code="['Meta', 'Control']"
+                :edges-updatable="false"
+                class="flow"
+                @node-click="onNodeClick"
+                @pane-click="onPaneClick"
+                @edge-click="onEdgeClick"
+                @node-drag-stop="onNodeDragStop"
+            >
+              <template #node-flow-node="{ data, selected, id }">
+                <div
+                    class="flow-node"
+                    :class="[data.nodeType, { selected }, nodeRunClass(data), { 'run-highlight': id === highlightedNodeId }]"
+                    :style="data.nodeType === 'condition' ? { minHeight: `${52 + branchHandlesOf(data).length * 26}px` } : undefined"
+                >
+                  <span v-if="data.runStatus === 'success'" class="run-badge run-badge-success">✓</span>
+                  <span v-else-if="data.runStatus === 'error'" class="run-badge run-badge-error">!</span>
                   <span
-                    class="branch-tag"
-                    :style="{
+                      v-else-if="!data.runStatus && nodeWarnings(data).length"
+                      class="node-warn-badge"
+                      :class="{ warn: !hasNodeError(data) }"
+                      :title="nodeWarnings(data).map((w) => w.text).join('；')"
+                  >⚠</span
+                  >
+                  <div class="node-head">
+                    <div class="node-icon" :style="{ background: metaOf(data.nodeType).color }">
+                      <el-icon :size="16" color="#fff">
+                        <component :is="iconOf(metaOf(data.nodeType).icon)"/>
+                      </el-icon>
+                    </div>
+                    <div class="node-head-text">
+                      <span class="node-title">{{ data.label }}</span>
+                      <span class="node-desc">{{ metaOf(data.nodeType).desc }}</span>
+                    </div>
+                    <el-tooltip v-if="data.remark" :content="data.remark" placement="top" :show-after="200">
+                      <span class="node-remark"><el-icon :size="12"><Notebook/></el-icon></span>
+                    </el-tooltip>
+                  </div>
+                  <span v-if="data.runCost !== undefined" class="run-cost">{{ data.runCost }}ms</span>
+                  <div v-if="data.runError" class="run-error-msg" :title="data.runError">{{ data.runError }}</div>
+                  <Handle type="target" :position="Position.Left" class="node-handle"></Handle>
+                  <!-- 条件分支：多分支模式下按分支配置动态渲染出点 -->
+                  <template v-if="data.nodeType === 'condition'">
+                    <template v-for="(h, i) in branchHandlesOf(data)" :key="h.key">
+                  <span
+                      class="branch-tag"
+                      :style="{
                       top: `calc(${(i + 1) / (branchHandlesOf(data).length + 1) * 100}% - 8px)`,
                       color: h.color,
                       borderColor: h.color,
                       background: `${h.color}1f`
                     }"
-                    >{{ h.label }}</span
+                  >{{ h.label }}</span
                   >
-                  <Handle
-                    type="source"
-                    :position="Position.Right"
-                    :id="h.key"
-                    class="node-handle handle-branch"
-                    :style="{
+                      <Handle
+                          type="source"
+                          :position="Position.Right"
+                          :id="h.key"
+                          class="node-handle handle-branch"
+                          :style="{
                       top: `${(i + 1) / (branchHandlesOf(data).length + 1) * 100}%`,
                       borderColor: h.color,
                       background: h.color
                     }"
-                  ></Handle>
-                  <span
-                    class="node-add-btn add-btn-branch"
-                    :style="{ top: `${(i + 1) / (branchHandlesOf(data).length + 1) * 100}%` }"
-                    :title="`在「${h.label}」分支后添加节点`"
-                    @click.stop="openAddMenu($event, id, h.key)"
-                    @mousedown.stop
-                  >+</span>
-                </template>
+                      ></Handle>
+                      <span
+                          class="node-add-btn add-btn-branch"
+                          :style="{ top: `${(i + 1) / (branchHandlesOf(data).length + 1) * 100}%` }"
+                          :title="`在「${h.label}」分支后添加节点`"
+                          @click.stop="openAddMenu($event, id, h.key)"
+                          @mousedown.stop
+                      >+</span>
+                    </template>
+                  </template>
+                  <template v-else>
+                    <Handle type="source" :position="Position.Right" class="node-handle"></Handle>
+                    <span
+                        v-if="data.nodeType !== 'end'"
+                        class="node-add-btn"
+                        title="添加节点"
+                        @click.stop="openAddMenu($event, id, null)"
+                        @mousedown.stop
+                    >+</span>
+                  </template>
+                </div>
+              </template>
+              <Background :gap="24" :pattern-color="gridColor" :line-width="1"/>
+              <Controls position="bottom-left" class="flow-controls"/>
+              <MiniMap
+                  pannable
+                  zoomable
+                  position="bottom-right"
+                  class="minimap"
+                  :node-color="miniMapNodeColor"
+              />
+            </VueFlow>
+
+            <!-- 节点右侧「+」弹出的节点选择浮层（Dify 式） -->
+            <div
+                v-if="addMenuFor"
+                class="add-node-menu"
+                :style="{ left: addMenuFor.x + 'px', top: addMenuFor.y + 'px' }"
+                @click.stop
+            >
+              <div class="add-node-menu-title">添加节点</div>
+              <div v-for="g in paletteGroups" :key="g.title" class="add-node-group">
+                <div class="add-node-group-title">{{ g.title }}</div>
+                <div
+                    v-for="t in g.types"
+                    :key="t"
+                    class="add-node-item"
+                    :class="{ disabled: t === 'start' }"
+                    @click="t !== 'start' && onAddNodeClick(t)"
+                >
+                  <div class="add-node-item-icon" :style="{ background: metaOf(t).color }">
+                    <el-icon :size="12" color="#fff">
+                      <component :is="iconOf(metaOf(t).icon)"/>
+                    </el-icon>
+                  </div>
+                  <div class="add-node-item-text">
+                    <div class="add-node-item-label">{{ metaOf(t).label }}</div>
+                    <div class="add-node-item-desc">{{ metaOf(t).desc }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧配置面板 -->
+          <aside class="config-panel" :class="{ collapsed: configCollapsed }">
+            <div class="panel-head config-panel-head">
+              <h4>{{ selectedData ? '节点配置' : selectedEdgeEnds ? '连线信息' : '配置' }}</h4>
+              <el-button
+                  text
+                  circle
+                  size="small"
+                  class="panel-fold-btn"
+                  :icon="configCollapsed ? Expand : Fold"
+                  :title="configCollapsed ? '展开配置面板' : '折叠配置面板'"
+                  @click="configCollapsed = !configCollapsed"
+              />
+            </div>
+            <template v-if="!configCollapsed">
+              <template v-if="selectedData">
+                <NodeConfigPanel
+                    :key="selectedNodeId + ':' + panelVersion"
+                    :node="selectedNode"
+                    :edges="edges"
+                    :chat-models="chatModels"
+                    :rerank-models="rerankModels"
+                    :datasets="datasets"
+                    :tools="allTools"
+                    :vars="varItemsFor(selectedNodeId || '')"
+                />
+              </template>
+              <template v-else-if="selectedEdgeEnds">
+                <div class="edge-info">
+                  <div class="edge-route">
+                    <div class="edge-end">
+                      <div
+                          class="node-icon"
+                          :style="{ background: metaOf(selectedEdgeEnds.srcType).color }"
+                      >
+                        <el-icon :size="14" color="#fff">
+                          <component :is="iconOf(metaOf(selectedEdgeEnds.srcType).icon)"/>
+                        </el-icon>
+                      </div>
+                      <span class="edge-end-label">{{ selectedEdgeEnds.srcLabel }}</span>
+                    </div>
+                    <span class="edge-arrow">→</span>
+                    <div class="edge-end">
+                      <div
+                          class="node-icon"
+                          :style="{ background: metaOf(selectedEdgeEnds.tgtType).color }"
+                      >
+                        <el-icon :size="14" color="#fff">
+                          <component :is="iconOf(metaOf(selectedEdgeEnds.tgtType).icon)"/>
+                        </el-icon>
+                      </div>
+                      <span class="edge-end-label">{{ selectedEdgeEnds.tgtLabel }}</span>
+                    </div>
+                  </div>
+                  <div v-if="selectedEdgeEnds.branch" class="edge-branch">
+                    <el-tag :type="selectedEdgeEnds.branch === '是' ? 'success' : 'danger'" size="small" effect="light">
+                      条件分支：{{ selectedEdgeEnds.branch }}
+                    </el-tag>
+                    <span class="edge-branch-tip">表达式为真走「是」，为假走「否」</span>
+                  </div>
+                  <el-form label-position="top" size="small" class="edge-label-form">
+                    <el-form-item label="连线标签">
+                      <el-input
+                          v-model="selectedEdge.label"
+                          placeholder="留空显示默认（条件分支显示 是/否）"
+                          clearable
+                      />
+                    </el-form-item>
+                  </el-form>
+                  <p class="edge-tip">数据沿此连线流转，上一节点的输出会作为下一节点的输入。</p>
+                  <el-button type="danger" plain :icon="Delete" @click="removeSelected">删除该连线</el-button>
+                </div>
               </template>
               <template v-else>
-                <Handle type="source" :position="Position.Right" class="node-handle"></Handle>
-                <span
-                  v-if="data.nodeType !== 'end'"
-                  class="node-add-btn"
-                  title="添加节点"
-                  @click.stop="openAddMenu($event, id, null)"
-                  @mousedown.stop
-                >+</span>
+                <el-empty description="选中节点后在此配置" :image-size="80"/>
               </template>
-            </div>
-          </template>
-          <Background :gap="24" :pattern-color="gridColor" :line-width="1" />
-          <Controls position="bottom-left" class="flow-controls" />
-          <MiniMap
-            pannable
-            zoomable
-            position="bottom-right"
-            class="minimap"
-            :node-color="miniMapNodeColor"
-          />
-        </VueFlow>
-
-        <!-- 节点右侧「+」弹出的节点选择浮层（Dify 式） -->
-        <div
-          v-if="addMenuFor"
-          class="add-node-menu"
-          :style="{ left: addMenuFor.x + 'px', top: addMenuFor.y + 'px' }"
-          @click.stop
-        >
-          <div class="add-node-menu-title">添加节点</div>
-          <div v-for="g in paletteGroups" :key="g.title" class="add-node-group">
-            <div class="add-node-group-title">{{ g.title }}</div>
-            <div
-              v-for="t in g.types"
-              :key="t"
-              class="add-node-item"
-              :class="{ disabled: t === 'start' }"
-              @click="t !== 'start' && onAddNodeClick(t)"
-            >
-              <div class="add-node-item-icon" :style="{ background: metaOf(t).gradient }">
-                <el-icon :size="12" color="#fff">
-                  <component :is="iconOf(metaOf(t).icon)" />
-                </el-icon>
-              </div>
-              <div class="add-node-item-text">
-                <div class="add-node-item-label">{{ metaOf(t).label }}</div>
-                <div class="add-node-item-desc">{{ metaOf(t).desc }}</div>
-              </div>
-            </div>
-          </div>
+            </template>
+            <div v-else class="config-collapsed-tip" title="展开配置面板">配置</div>
+          </aside>
         </div>
-      </div>
-
-      <!-- 右侧配置面板 -->
-      <aside class="config-panel" :class="{ collapsed: configCollapsed }">
-        <div class="panel-head config-panel-head">
-          <h4>{{ selectedData ? '节点配置' : selectedEdgeEnds ? '连线信息' : '配置' }}</h4>
-          <el-button
-            text
-            circle
-            size="small"
-            class="panel-fold-btn"
-            :icon="configCollapsed ? Expand : Fold"
-            :title="configCollapsed ? '展开配置面板' : '折叠配置面板'"
-            @click="configCollapsed = !configCollapsed"
-          />
-        </div>
-        <template v-if="!configCollapsed">
-        <template v-if="selectedData">
-          <NodeConfigPanel
-            :key="selectedNodeId + ':' + panelVersion"
-            :node="selectedNode"
-            :edges="edges"
-            :chat-models="chatModels"
-            :rerank-models="rerankModels"
-            :datasets="datasets"
-            :tools="allTools"
-            :vars="varItemsFor(selectedNodeId || '')"
-          />
-        </template>
-        <template v-else-if="selectedEdgeEnds">
-          <h4>连线信息</h4>
-          <div class="edge-info">
-            <div class="edge-route">
-              <div class="edge-end">
-                <div
-                  class="node-icon"
-                  :style="{ background: metaOf(selectedEdgeEnds.srcType).gradient }"
-                >
-                  <el-icon :size="14" color="#fff">
-                    <component :is="iconOf(metaOf(selectedEdgeEnds.srcType).icon)" />
-                  </el-icon>
-                </div>
-                <span class="edge-end-label">{{ selectedEdgeEnds.srcLabel }}</span>
-              </div>
-              <span class="edge-arrow">→</span>
-              <div class="edge-end">
-                <div
-                  class="node-icon"
-                  :style="{ background: metaOf(selectedEdgeEnds.tgtType).gradient }"
-                >
-                  <el-icon :size="14" color="#fff">
-                    <component :is="iconOf(metaOf(selectedEdgeEnds.tgtType).icon)" />
-                  </el-icon>
-                </div>
-                <span class="edge-end-label">{{ selectedEdgeEnds.tgtLabel }}</span>
-              </div>
-            </div>
-            <div v-if="selectedEdgeEnds.branch" class="edge-branch">
-              <el-tag :type="selectedEdgeEnds.branch === '是' ? 'success' : 'danger'" size="small" effect="light">
-                条件分支：{{ selectedEdgeEnds.branch }}
-              </el-tag>
-              <span class="edge-branch-tip">表达式为真走「是」，为假走「否」</span>
-            </div>
-            <el-form label-position="top" size="small" class="edge-label-form">
-              <el-form-item label="连线标签">
-                <el-input
-                  v-model="selectedEdge.label"
-                  placeholder="留空显示默认（条件分支显示 是/否）"
-                  clearable
-                />
-              </el-form-item>
-            </el-form>
-            <p class="edge-tip">数据沿此连线流转，上一节点的输出会作为下一节点的输入。</p>
-            <el-button type="danger" plain :icon="Delete" @click="removeSelected">删除该连线</el-button>
-          </div>
-        </template>
-        <template v-else>
-          <el-empty description="选中节点后在此配置" :image-size="80" />
-        </template>
-        </template>
-        <div v-else class="config-collapsed-tip" title="展开配置面板">配置</div>
-      </aside>
-    </div>
-    </template>
+      </template>
     </div>
 
     <template v-if="appType !== 'agent'">
-    <!-- 运行调试面板 -->
-    <div v-if="debugVisible" class="debug-panel">
-      <div class="debug-head">
-        <div class="debug-title">
-          <el-icon><VideoPlay /></el-icon>
-          运行调试
-        </div>
-        <div class="debug-head-actions">
-          <el-button size="small" type="primary" :icon="VideoPlay" :loading="running" @click="runDebug">
-            运行
-          </el-button>
-          <el-button size="small" text :icon="Close" @click="debugVisible = false">收起</el-button>
-        </div>
-      </div>
-      <div class="debug-body">
-        <div class="debug-input-area">
-          <el-input
-            v-model="debugInput"
-            type="textarea"
-            :rows="2"
-            resize="none"
-            placeholder="输入测试消息后点击「运行」，将按当前画布执行并实时标注节点状态"
-            @keydown.enter.exact.prevent="runDebug"
-          />
-        </div>
-        <div class="debug-result-area">
-          <template v-if="runResult">
-            <div class="debug-answer">
-              <span class="debug-answer-label">最终回答</span>
-              <div class="debug-answer-text">{{ runResult.answer }}</div>
-            </div>
-            <div class="debug-trace-head">
-              <span>执行轨迹（点击定位节点）</span>
-              <el-tag v-if="lastRunFailed" size="small" type="danger" effect="light">运行失败</el-tag>
-              <el-tag v-else size="small" type="success" effect="light">运行成功</el-tag>
-            </div>
-            <div class="debug-trace-list">
-              <div
-                v-for="(t, i) in runResult.trace"
-                :key="i"
-                class="debug-trace-item"
-                :class="{ active: t.nodeId === highlightedNodeId }"
-                @click="highlightNode(t.nodeId)"
-              >
-                <span class="dt-index">{{ i + 1 }}</span>
-                <el-tag size="small" :type="nodeStatusColor[t.status] || 'info'" effect="light">
-                  {{ t.status }}
-                </el-tag>
-                <span class="dt-label" :title="t.label">{{ t.label }}</span>
-                <span class="dt-cost">{{ t.costMs }}ms</span>
-                <span v-if="t.error" class="dt-error" :title="t.error">⚠ {{ t.error }}</span>
-              </div>
-            </div>
-          </template>
-          <el-empty v-else description="输入测试消息后点击「运行」，结果将在此展示" :image-size="52" />
-        </div>
-      </div>
-    </div>
-
-    <!-- 版本历史弹窗 -->
-    <el-dialog v-model="versionsVisible" title="历史版本" width="560px">
-      <div v-loading="loadingVersions" min-height="120">
-        <el-empty
-          v-if="!loadingVersions && versions.length === 0"
-          description="暂无发布版本，点击「发布」生成版本快照"
-          :image-size="70"
-        />
-        <div v-else class="version-list">
-          <div v-for="v in versions" :key="v.id" class="version-item">
-            <div class="version-info">
-              <div class="version-head">
-                <span class="version-no">v{{ v.version }}</span>
-                <el-tag v-if="v.isPublished === 1" size="small" type="success" effect="light">当前线上</el-tag>
-                <el-tag v-else size="small" type="info" effect="plain">历史</el-tag>
-              </div>
-              <div class="version-time">{{ formatTime(v.createTime) }} · {{ v.createdBy || '未知' }}</div>
-            </div>
-            <el-button size="small" :disabled="rollingBack" @click="rollbackTo(v)">
-              回滚到该版本
+      <!-- 运行调试面板 -->
+      <div v-if="debugVisible" class="debug-panel">
+        <div class="debug-head">
+          <div class="debug-title">
+            <el-icon>
+              <VideoPlay/>
+            </el-icon>
+            运行调试
+          </div>
+          <div class="debug-head-actions">
+            <el-button size="small" type="primary" :icon="VideoPlay" :loading="running" @click="runDebug">
+              运行
             </el-button>
+            <el-button size="small" text :icon="Close" @click="debugVisible = false">收起</el-button>
+          </div>
+        </div>
+        <div class="debug-body">
+          <div class="debug-input-area">
+            <el-input
+                v-model="debugInput"
+                type="textarea"
+                :rows="2"
+                resize="none"
+                placeholder="输入测试消息后点击「运行」，将按当前画布执行并实时标注节点状态"
+                @keydown.enter.exact.prevent="runDebug"
+            />
+          </div>
+          <div class="debug-result-area">
+            <template v-if="runResult">
+              <div class="debug-answer">
+                <span class="debug-answer-label">最终回答</span>
+                <div class="debug-answer-text">{{ runResult.answer }}</div>
+              </div>
+              <div class="debug-trace-head">
+                <span>执行轨迹（点击定位节点）</span>
+                <el-tag v-if="lastRunFailed" size="small" type="danger" effect="light">运行失败</el-tag>
+                <el-tag v-else size="small" type="success" effect="light">运行成功</el-tag>
+              </div>
+              <div class="debug-trace-list">
+                <div
+                    v-for="(t, i) in runResult.trace"
+                    :key="i"
+                    class="debug-trace-item"
+                    :class="{ active: t.nodeId === highlightedNodeId }"
+                    @click="highlightNode(t.nodeId)"
+                >
+                  <span class="dt-index">{{ i + 1 }}</span>
+                  <el-tag size="small" :type="nodeStatusColor[t.status] || 'info'" effect="light">
+                    {{ t.status }}
+                  </el-tag>
+                  <span class="dt-label" :title="t.label">{{ t.label }}</span>
+                  <span class="dt-cost">{{ t.costMs }}ms</span>
+                  <span v-if="t.error" class="dt-error" :title="t.error">⚠ {{ t.error }}</span>
+                </div>
+              </div>
+            </template>
+            <el-empty v-else description="输入测试消息后点击「运行」，结果将在此展示" :image-size="52"/>
           </div>
         </div>
       </div>
-      <template #footer>
-        <el-button @click="versionsVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+
+      <!-- 版本历史弹窗 -->
+      <el-dialog v-model="versionsVisible" title="历史版本" width="560px">
+        <div v-loading="loadingVersions" min-height="120">
+          <el-empty
+              v-if="!loadingVersions && versions.length === 0"
+              description="暂无发布版本，点击「发布」生成版本快照"
+              :image-size="70"
+          />
+          <div v-else class="version-list">
+            <div v-for="v in versions" :key="v.id" class="version-item">
+              <div class="version-info">
+                <div class="version-head">
+                  <span class="version-no">v{{ v.version }}</span>
+                  <el-tag v-if="v.isPublished === 1" size="small" type="success" effect="light">当前线上</el-tag>
+                  <el-tag v-else size="small" type="info" effect="plain">历史</el-tag>
+                </div>
+                <div class="version-time">{{ formatTime(v.createTime) }} · {{ v.createdBy || '未知' }}</div>
+              </div>
+              <el-button size="small" :disabled="rollingBack" @click="rollbackTo(v)">
+                回滚到该版本
+              </el-button>
+            </div>
+          </div>
+        </div>
+        <template #footer>
+          <el-button @click="versionsVisible = false">关闭</el-button>
+        </template>
+      </el-dialog>
     </template>
   </div>
 </template>
@@ -1819,17 +1859,18 @@ onUnmounted(() => {
   flex-direction: column;
   background: var(--bg-page);
 }
+
 .toolbar {
   height: 52px;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 0 16px;
-  background: var(--bg-header);
-  backdrop-filter: blur(10px);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
+
 .app-name {
   font-size: 15px;
   font-weight: 600;
@@ -1837,19 +1878,28 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
 }
+
 .dirty-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #f56c6c;
-  box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.18);
   flex-shrink: 0;
 }
+
 .toolbar-actions {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.toolbar-icon-btn {
+  color: var(--text-secondary);
+}
+.toolbar-icon-btn:hover {
+  color: var(--brand-1);
+  background: var(--fill-light);
 }
 
 .editor-main {
@@ -1872,12 +1922,14 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
 }
+
 .op-group {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+
 /* el-tooltip / el-dropdown / el-popover 各自插入的包裹层 display 不同
    （inline-flex / inline-block），收缩宽度与默认对齐方式不一致，
    会把按钮挤到不同水平位置。统一撑满并居中，保证整列对齐。 */
@@ -1892,12 +1944,14 @@ onUnmounted(() => {
   justify-content: center;
   flex-shrink: 0;
 }
+
 /* 对齐/均匀分布的自定义弹出菜单 */
 .layout-menu {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+
 .layout-menu-tip {
   padding: 4px 10px;
   margin-bottom: 4px;
@@ -1905,6 +1959,7 @@ onUnmounted(() => {
   color: var(--text-secondary);
   border-bottom: 1px dashed var(--border-color);
 }
+
 .layout-menu-item {
   padding: 7px 12px;
   font-size: 13px;
@@ -1914,20 +1969,24 @@ onUnmounted(() => {
   transition: background 0.15s ease;
   white-space: nowrap;
 }
+
 .layout-menu-item:hover {
   background: var(--el-color-primary-light-9);
   color: var(--brand-1);
 }
+
 .op-divider {
   width: 60%;
   height: 1px;
   flex-shrink: 0;
   background: var(--el-border-color-lighter);
 }
+
 /* disabled 按钮不触发鼠标事件，tooltip 需外层 span 承接 hover */
 .op-wrap {
   cursor: inherit;
 }
+
 /* 纯图标方形按钮，竖向排列 */
 .op-btn {
   width: 32px;
@@ -1941,19 +2000,28 @@ onUnmounted(() => {
   color: var(--text-secondary);
   transition: all 0.15s ease;
 }
+
 .op-btn:hover:not(:disabled) {
   background: var(--el-color-primary-light-9);
   color: var(--brand-1);
 }
+
 .op-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
   background: transparent;
   color: var(--text-secondary);
 }
+
+.op-btn-danger:hover:not(:disabled) {
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
+}
+
 .op-btn .el-icon {
   margin: 0;
 }
+
 .editor-body {
   flex: 1;
   display: flex;
@@ -1967,25 +2035,31 @@ onUnmounted(() => {
   color: var(--text-secondary);
   font-weight: 600;
 }
+
 .panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
 .panel-fold-btn {
   color: var(--text-tertiary);
 }
+
 .panel-fold-btn:hover {
   color: var(--brand-1);
 }
+
 .config-panel.collapsed .panel-head {
   justify-content: center;
   margin-bottom: 10px;
 }
+
 .config-panel.collapsed .panel-head h4 {
   display: none;
 }
+
 .config-collapsed-tip {
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -1999,6 +2073,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .config-collapsed-tip:hover {
   color: var(--brand-1);
   border-color: var(--brand-1);
@@ -2013,23 +2088,28 @@ onUnmounted(() => {
   background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
   background-size: 22px 22px;
 }
+
 .flow {
   width: 100%;
   height: 100%;
 }
+
 .flow :deep(.vue-flow__edge-path) {
   stroke: var(--flow-edge);
   stroke-width: 1.5;
 }
+
 .flow :deep(.vue-flow__edge.selected .vue-flow__edge-path),
 .flow :deep(.vue-flow__edge:hover .vue-flow__edge-path) {
   stroke: #2970ff;
   stroke-width: 2;
 }
+
 .flow :deep(.vue-flow__edge.animated .vue-flow__edge-path) {
   stroke-dasharray: 6 4;
   animation: vue-flow-dashdraw 0.6s linear infinite;
 }
+
 .canvas-empty {
   position: absolute;
   inset: 0;
@@ -2041,9 +2121,11 @@ onUnmounted(() => {
   gap: 10px;
   pointer-events: none;
 }
+
 .canvas-empty :deep(.el-empty) {
   pointer-events: auto;
 }
+
 .canvas-empty-tips {
   display: flex;
   flex-direction: column;
@@ -2054,47 +2136,51 @@ onUnmounted(() => {
   line-height: 1.7;
 }
 
-/* 节点卡片（Dify 式：渐变圆形图标 + 标题/描述，选中蓝框） */
+/* 节点卡片（简约：纯色圆角图标 + 标题/描述，选中蓝框） */
 .flow-node {
   position: relative;
   width: 210px;
   padding: 12px 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(31, 36, 55, 0.05);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
+
 .flow-node:hover {
   border-color: #2970ff;
-  box-shadow: 0 4px 14px rgba(41, 112, 255, 0.16);
 }
+
 .flow-node.selected {
   border-color: #2970ff;
-  box-shadow: 0 0 0 2px rgba(41, 112, 255, 0.32), 0 4px 14px rgba(41, 112, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(41, 112, 255, 0.28);
 }
+
 .node-head {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
 .node-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: #fff;
-  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.12);
 }
+
 .node-head-text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
+
 .node-title {
   font-size: 13px;
   font-weight: 600;
@@ -2103,6 +2189,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .node-desc {
   margin-top: 1px;
   font-size: 11px;
@@ -2111,48 +2198,51 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .node-handle {
-  width: 10px !important;
-  height: 10px !important;
+  width: 9px !important;
+  height: 9px !important;
   background: #2970ff !important;
   border: 2px solid var(--bg-card) !important;
-  box-shadow: 0 0 0 1px rgba(41, 112, 255, 0.45);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
+
 .flow-node:hover .node-handle {
-  transform: scale(1.3);
-  box-shadow: 0 0 0 2px rgba(41, 112, 255, 0.5);
+  transform: scale(1.25);
 }
+
 .node-add-btn {
   position: absolute;
   right: -28px;
   top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--bg-card);
-  border: 1.5px solid var(--brand-1);
+  border: 1px solid var(--brand-1);
   color: var(--brand-1);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 19px;
+  line-height: 18px;
   text-align: center;
   cursor: pointer;
   opacity: 0;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 6;
   user-select: none;
 }
+
 .flow-node:hover .node-add-btn {
   opacity: 1;
 }
+
 .node-add-btn:hover {
   background: var(--brand-1);
   color: #fff;
-  transform: translateY(-50%) scale(1.15);
+  transform: translateY(-50%) scale(1.1);
 }
+
 /* 分支手柄的纵向位置与配色由节点内联样式按分支数量动态计算 */
 .flow-node.condition .handle-branch {
   width: 9px !important;
@@ -2161,6 +2251,7 @@ onUnmounted(() => {
   min-height: 9px;
   border-width: 1.5px;
 }
+
 .branch-tag {
   position: absolute;
   right: -22px;
@@ -2176,9 +2267,11 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .flow-controls {
   --vue-flow-controls-border-radius: 10px;
 }
+
 .minimap {
   right: 12px;
   bottom: 12px;
@@ -2187,15 +2280,18 @@ onUnmounted(() => {
   box-shadow: var(--shadow-card);
   border: 1px solid var(--border-color);
 }
+
 .minimap :deep(.vue-flow__minimap-mask) {
   fill: var(--fill-lighter);
   stroke: var(--border-color);
   stroke-width: 1;
 }
+
 .minimap :deep(.vue-flow__minimap-node) {
   rx: 4px;
   ry: 4px;
 }
+
 .add-node-menu {
   position: fixed;
   z-index: 3000;
@@ -2208,20 +2304,24 @@ onUnmounted(() => {
   box-shadow: var(--shadow-pop);
   padding: 8px;
 }
+
 .add-node-menu-title {
   font-size: 12px;
   color: var(--text-tertiary);
   font-weight: 600;
   padding: 2px 6px 8px;
 }
+
 .add-node-group {
   margin-bottom: 6px;
 }
+
 .add-node-group-title {
   font-size: 11px;
   color: var(--text-tertiary);
   padding: 2px 6px 4px;
 }
+
 .add-node-item {
   display: flex;
   align-items: center;
@@ -2231,32 +2331,37 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background 0.15s ease;
 }
+
 .add-node-item:hover {
   background: var(--el-color-primary-light-9);
 }
+
 .add-node-item.disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
 .add-node-item-icon {
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: #fff;
-  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
+
 .add-node-item-text {
   min-width: 0;
 }
+
 .add-node-item-label {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
+
 .add-node-item-desc {
   font-size: 11px;
   color: var(--text-tertiary);
@@ -2274,11 +2379,13 @@ onUnmounted(() => {
   overflow-y: auto;
   transition: width 0.2s ease, padding 0.2s ease;
 }
+
 .config-panel.collapsed {
   width: 42px;
   padding: 16px 5px;
   overflow: visible;
 }
+
 .config-node-head {
   display: flex;
   align-items: center;
@@ -2289,13 +2396,16 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
   border-radius: 10px;
 }
+
 .config-node-head-text {
   min-width: 0;
 }
+
 .config-node-type {
   font-size: 11px;
   color: var(--text-tertiary);
 }
+
 .config-node-name {
   font-size: 13px;
   font-weight: 600;
@@ -2304,14 +2414,17 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .config-panel :deep(.el-form-item) {
   margin-bottom: 14px;
 }
+
 .config-panel :deep(.el-form-item__label) {
   font-size: 12.5px;
   color: var(--text-secondary);
   font-weight: 500;
 }
+
 .config-panel :deep(.el-divider__text) {
   font-size: 12px;
   color: var(--brand-1);
@@ -2326,34 +2439,38 @@ onUnmounted(() => {
   padding: 28px;
   display: flex;
   justify-content: center;
-  background-image: radial-gradient(rgba(139, 92, 246, 0.06) 1px, transparent 1px);
-  background-size: 22px 22px;
 }
+
 .agent-card {
   width: 680px;
   height: fit-content;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
+
 .agent-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-weight: 600;
 }
+
 .agent-tip {
   margin: 0 0 16px;
   font-size: 13px;
   color: var(--text-secondary);
-  background: var(--brand-gradient-soft);
-  border-radius: 10px;
+  background: var(--fill-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 10px 14px;
 }
+
 .tool-check-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 .tool-check {
   width: 100%;
   height: auto;
@@ -2364,21 +2481,25 @@ onUnmounted(() => {
   transition: all 0.2s ease;
   white-space: normal;
 }
+
 .tool-check:hover {
   border-color: var(--brand-3);
   background: var(--fill-lighter);
 }
+
 .tool-check-body {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-left: 4px;
 }
+
 .tool-check-name {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .tool-code {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 12.5px;
@@ -2387,11 +2508,13 @@ onUnmounted(() => {
   padding: 2px 6px;
   border-radius: 4px;
 }
+
 .tool-check-desc {
   font-size: 12px;
   color: var(--text-tertiary);
   line-height: 1.5;
 }
+
 .agent-actions {
   margin-top: 18px;
   display: flex;
@@ -2399,31 +2522,27 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-/* ---------- 节点运行状态 ---------- */
+/* ---------- 节点运行状态（静态描边，克制动效） ---------- */
 .flow-node.run-success {
   border-color: #67c23a;
-  box-shadow: 0 0 0 3px rgba(103, 194, 58, 0.16), var(--shadow-card);
+  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.18);
 }
+
 .flow-node.run-error {
   border-color: #f56c6c;
-  box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.16), var(--shadow-card);
-  animation: node-error-pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.22);
 }
+
 .flow-node.run-skipped {
-  opacity: 0.45;
-  filter: grayscale(0.6);
+  opacity: 0.5;
+  filter: grayscale(0.5);
 }
+
 .flow-node.run-highlight {
-  animation: node-highlight-pulse 0.9s ease-in-out infinite;
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 2px rgba(91, 108, 255, 0.25);
 }
-@keyframes node-error-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(245, 108, 108, 0.18), var(--shadow-card); }
-  50% { box-shadow: 0 0 0 7px rgba(245, 108, 108, 0.3), var(--shadow-card); }
-}
-@keyframes node-highlight-pulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(91, 108, 255, 0.22), var(--shadow-card-hover); }
-  50% { box-shadow: 0 0 0 9px rgba(91, 108, 255, 0.34), var(--shadow-card-hover); }
-}
+
 .run-badge {
   position: absolute;
   top: -7px;
@@ -2440,12 +2559,15 @@ onUnmounted(() => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   z-index: 2;
 }
+
 .run-badge-success {
   background: #67c23a;
 }
+
 .run-badge-error {
   background: #f56c6c;
 }
+
 .node-warn-badge {
   position: absolute;
   top: -7px;
@@ -2462,9 +2584,11 @@ onUnmounted(() => {
   z-index: 2;
   cursor: help;
 }
+
 .node-warn-badge.warn {
   background: #e6a23c;
 }
+
 .node-remark {
   display: inline-flex;
   align-items: center;
@@ -2472,19 +2596,23 @@ onUnmounted(() => {
   cursor: help;
   flex: none;
 }
+
 .edge-branch {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 10px;
 }
+
 .edge-branch-tip {
   font-size: 12px;
   color: var(--text-tertiary);
 }
+
 .edge-label-form {
   margin-bottom: 4px;
 }
+
 .var-chips {
   margin-top: 6px;
   display: flex;
@@ -2492,10 +2620,12 @@ onUnmounted(() => {
   gap: 4px;
   align-items: center;
 }
+
 .var-chips-title {
   font-size: 11px;
   color: var(--text-tertiary, #8f9bb3);
 }
+
 .var-chip {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 11px;
@@ -2507,11 +2637,13 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.15s ease;
 }
+
 .var-chip:hover {
   background: #5b6cff;
   color: #fff;
   border-color: #5b6cff;
 }
+
 .shortcut-list {
   display: flex;
   flex-direction: column;
@@ -2519,11 +2651,13 @@ onUnmounted(() => {
   max-height: 60vh;
   overflow-y: auto;
 }
+
 .shortcut-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+
 .shortcut-group-title {
   font-size: 12px;
   font-weight: 600;
@@ -2531,12 +2665,14 @@ onUnmounted(() => {
   padding-bottom: 4px;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
+
 .shortcut-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   font-size: 12px;
 }
+
 .shortcut-keys {
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 11px;
@@ -2548,10 +2684,12 @@ onUnmounted(() => {
   max-width: 45%;
   white-space: nowrap;
 }
+
 .shortcut-desc {
   color: var(--text-secondary, #6b7280);
   line-height: 1.5;
 }
+
 .shortcut-note {
   font-size: 11px;
   line-height: 1.6;
@@ -2559,11 +2697,13 @@ onUnmounted(() => {
   padding-top: 6px;
   border-top: 1px dashed var(--el-border-color-lighter);
 }
+
 .edge-info {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
+
 .edge-route {
   display: flex;
   align-items: center;
@@ -2573,6 +2713,7 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 12px;
 }
+
 .edge-end {
   display: flex;
   flex-direction: column;
@@ -2581,16 +2722,17 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
 }
+
 .edge-end .node-icon {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   color: #fff;
-  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.12);
   align-items: center;
   justify-content: center;
 }
+
 .edge-end-label {
   font-size: 12px;
   color: var(--text-secondary, #6b7280);
@@ -2599,17 +2741,20 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .edge-arrow {
   font-size: 16px;
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
+
 .edge-tip {
   font-size: 12px;
   color: var(--text-tertiary, #8f9bb3);
   line-height: 1.6;
   margin: 0;
 }
+
 .run-cost {
   position: absolute;
   right: 10px;
@@ -2620,6 +2765,7 @@ onUnmounted(() => {
   padding: 1px 6px;
   border-radius: 8px;
 }
+
 .run-error-msg {
   margin-top: 8px;
   font-size: 10.5px;
@@ -2639,9 +2785,9 @@ onUnmounted(() => {
   background: var(--bg-card);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
   z-index: 5;
 }
+
 .debug-head {
   display: flex;
   align-items: center;
@@ -2649,6 +2795,7 @@ onUnmounted(() => {
   padding: 8px 14px;
   border-bottom: 1px solid var(--border-color);
 }
+
 .debug-title {
   display: flex;
   align-items: center;
@@ -2657,10 +2804,12 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--brand-1);
 }
+
 .debug-head-actions {
   display: flex;
   gap: 6px;
 }
+
 .debug-body {
   display: flex;
   gap: 16px;
@@ -2668,26 +2817,32 @@ onUnmounted(() => {
   min-height: 118px;
   max-height: 240px;
 }
+
 .debug-input-area {
   width: 300px;
   flex-shrink: 0;
 }
+
 .debug-result-area {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
 }
+
 .debug-answer {
-  background: var(--brand-gradient-soft);
-  border-radius: 10px;
+  background: var(--fill-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 10px;
 }
+
 .debug-answer-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--brand-1);
+  color: var(--text-secondary);
 }
+
 .debug-answer-text {
   margin-top: 6px;
   font-size: 13px;
@@ -2695,6 +2850,7 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
 .debug-trace-head {
   display: flex;
   align-items: center;
@@ -2703,11 +2859,13 @@ onUnmounted(() => {
   color: var(--text-secondary);
   margin-bottom: 6px;
 }
+
 .debug-trace-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+
 .debug-trace-item {
   display: flex;
   align-items: center;
@@ -2719,32 +2877,37 @@ onUnmounted(() => {
   transition: all 0.15s ease;
   font-size: 12px;
 }
+
 .debug-trace-item:hover {
   border-color: var(--brand-3);
   background: var(--fill-lighter);
 }
+
 .debug-trace-item.active {
   border-color: var(--brand-1);
   background: var(--el-color-primary-light-9);
-  box-shadow: 0 0 0 2px rgba(91, 108, 255, 0.15);
 }
+
 .dt-index {
   width: 16px;
   text-align: center;
   color: var(--text-tertiary);
   font-size: 11px;
 }
+
 .dt-label {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .dt-cost {
   color: var(--text-tertiary);
   font-size: 11px;
   flex-shrink: 0;
 }
+
 .dt-error {
   color: #f56c6c;
   overflow: hidden;
@@ -2758,6 +2921,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
 }
+
 .version-item {
   display: flex;
   align-items: center;
@@ -2768,23 +2932,28 @@ onUnmounted(() => {
   border-radius: 10px;
   transition: all 0.15s ease;
 }
+
 .version-item:hover {
   border-color: var(--brand-3);
   background: var(--fill-lighter);
 }
+
 .version-info {
   min-width: 0;
 }
+
 .version-head {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .version-no {
   font-weight: 700;
   font-size: 13px;
   color: var(--brand-1);
 }
+
 .version-time {
   margin-top: 3px;
   font-size: 12px;
