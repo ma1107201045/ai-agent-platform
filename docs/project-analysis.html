@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 智能体平台 · 项目现状分析报告</title>
+<style>
+  :root{
+    --ink:#1f2328; --ink-2:#4a5058; --ink-3:#767d86;
+    --line:#e5e8eb; --line-2:#d4d9df;
+    --bg:#ffffff; --bg-soft:#f7f8fa;
+    --blue:#185FA5; --blue-soft:#E6F1FB;
+    --red:#A32D2D; --red-soft:#FCEBEB;
+    --amber:#854F0B; --amber-soft:#FAEEDA;
+    --green:#3B6D11; --green-soft:#EAF3DE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.75;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:48px 32px 80px;}
+  header{border-bottom:1px solid var(--line); padding-bottom:24px; margin-bottom:32px;}
+  .eyebrow{font-size:12px; letter-spacing:.08em; color:var(--ink-3); text-transform:uppercase; margin:0 0 8px;}
+  h1{font-size:26px; font-weight:600; margin:0 0 8px; letter-spacing:-.01em;}
+  .sub{color:var(--ink-2); margin:0; font-size:14px;}
+  h2{font-size:18px; font-weight:600; margin:40px 0 14px; padding-top:8px;}
+  h2 .num{color:var(--ink-3); font-weight:400; margin-right:10px; font-variant-numeric:tabular-nums;}
+  h3{font-size:14px; font-weight:600; margin:22px 0 8px;}
+  p{margin:0 0 12px; color:var(--ink-2);}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px;
+       background:var(--bg-soft); border:1px solid var(--line); border-radius:4px; padding:1px 5px; color:var(--ink);}
+  .metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin:24px 0 8px;}
+  .metric{background:var(--bg-soft); border-radius:8px; padding:14px 16px;}
+  .metric .label{font-size:12px; color:var(--ink-3); margin-bottom:4px;}
+  .metric .value{font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.02em;}
+  .metric .value small{font-size:13px; font-weight:400; color:var(--ink-3); margin-left:3px;}
+  table{width:100%; border-collapse:collapse; margin:14px 0 18px; font-size:13px;}
+  th{text-align:left; font-weight:600; color:var(--ink-2); border-bottom:1px solid var(--line-2);
+     padding:8px 10px 8px 0; font-size:12px; letter-spacing:.02em;}
+  td{padding:9px 10px 9px 0; border-bottom:1px solid var(--line); vertical-align:top; color:var(--ink-2);}
+  td:first-child{color:var(--ink); font-weight:500;}
+  .num-cell{font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .bar{display:inline-block; height:6px; border-radius:3px; background:var(--blue); vertical-align:middle; margin-right:8px;}
+  .bar.front{background:#85B7EB;}
+  .tag{display:inline-block; font-size:11.5px; padding:1px 7px; border-radius:10px; font-weight:500; white-space:nowrap;}
+  .t-ok{background:var(--green-soft); color:var(--green);}
+  .t-part{background:var(--amber-soft); color:var(--amber);}
+  .t-risk{background:var(--red-soft); color:var(--red);}
+  .t-new{background:var(--blue-soft); color:var(--blue);}
+  .callout{border-left:3px solid var(--line-2); background:var(--bg-soft); padding:12px 16px; margin:14px 0; border-radius:0 6px 6px 0;}
+  .callout.danger{border-left-color:var(--red); background:var(--red-soft);}
+  .callout.warn{border-left-color:var(--amber); background:var(--amber-soft);}
+  .callout.good{border-left-color:var(--green); background:var(--green-soft);}
+  .callout p:last-child{margin-bottom:0;}
+  .callout strong{color:var(--ink);}
+  ul{margin:8px 0 14px; padding-left:20px; color:var(--ink-2);}
+  li{margin-bottom:6px;}
+  li strong{color:var(--ink); font-weight:600;}
+  .find{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11.5px; color:var(--ink-3);}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-3);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:28px;}
+  @media(max-width:680px){ .grid2{grid-template-columns:1fr;} .wrap{padding:28px 18px 60px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">项目现状分析</p>
+  <h1>AI 智能体平台（ai-agent-platform）</h1>
+  <p class="sub">可视化工作流编排 + RAG 知识库 + 自主智能体的企业级应用平台 · 分析日期 2026-09-01</p>
+</header>
+
+<div class="metrics">
+  <div class="metric"><div class="label">代码总量</div><div class="value">19 300<small>行</small></div></div>
+  <div class="metric"><div class="label">后端 Java</div><div class="value">6 901<small>行 / 98 文件</small></div></div>
+  <div class="metric"><div class="label">前端 Vue/TS</div><div class="value">12 399<small>行 / 38 文件</small></div></div>
+  <div class="metric"><div class="label">数据表</div><div class="value">13<small>张</small></div></div>
+  <div class="metric"><div class="label">Maven 模块</div><div class="value">6<small>个</small></div></div>
+  <div class="metric"><div class="label">单元测试</div><div class="value">0<small>个</small></div></div>
+</div>
+
+<h2><span class="num">01</span>一句话结论</h2>
+<div class="callout good">
+  <p><strong>这是一个架构设计合格、功能骨架完整、但尚未做好生产准备的中期项目。</strong>后端分层清晰、工作流引擎设计相当成熟（DAG 并行调度、环检测、节点级容错一应俱全），知识库 RAG 是真实可用的全链路实现而非演示桩。主要短板集中在三处：<strong>安全体系基本空白</strong>（MVEL 无沙箱 + 免鉴权接口 = 匿名远程代码执行）、<strong>零测试覆盖</strong>、以及<strong>前端单文件过度膨胀</strong>。当前状态适合作为内部 PoC 继续演进，不建议直接对外部署。</p>
+</div>
+
+<h2><span class="num">02</span>技术栈</h2>
+<table>
+  <tr><th style="width:120px">层次</th><th>选型</th></tr>
+  <tr><td>前端</td><td>Vue 3.5（<code>&lt;script setup&gt;</code> + TS strict）· Vite 5.4 · Element Plus · Pinia · Vue Router 4 · Axios · @vue-flow/core 1.48（工作流画布）· pnpm</td></tr>
+  <tr><td>后端</td><td>Java 21 · Spring Boot 3.2.5 · MyBatis-Plus 3.5.5 · Springdoc OpenAPI · JJWT 0.12.5 · Lombok</td></tr>
+  <tr><td>数据与检索</td><td>MySQL 8 · MyBatis-Plus 逻辑删/分页 · 向量以 JSON 数组存 <code>longtext</code>，余弦相似度内存计算</td></tr>
+  <tr><td>AI 能力</td><td>自研 LLM SPI（目前仅 OpenAI 兼容协议，靠 baseUrl 兼容 DeepSeek 等）· PDFBox 2.0.31 · Apache POI 5.2.5 · MVEL 2.5.2 表达式引擎</td></tr>
+</table>
+
+<h2><span class="num">03</span>模块划分与代码规模</h2>
+<table>
+  <tr><th>模块</th><th>职责</th><th class="num-cell">行数</th><th style="width:150px">占比</th></tr>
+  <tr><td>agent-workflow</td><td>DAG 工作流引擎 + 9 种节点处理器 + SPI 扩展点</td><td class="num-cell">2 115</td><td><span class="bar" style="width:101px"></span></td></tr>
+  <tr><td>agent-service</td><td>业务层：应用/会话/知识库/模型/用户/Agent 循环</td><td class="num-cell">2 012</td><td><span class="bar" style="width:96px"></span></td></tr>
+  <tr><td>agent-web</td><td>启动类、7 个 Controller、拦截器与配置</td><td class="num-cell">1 045</td><td><span class="bar" style="width:50px"></span></td></tr>
+  <tr><td>agent-llm</td><td>LLM/Embedding/Rerank 三接口 SPI + OpenAI 兼容实现</td><td class="num-cell">804</td><td><span class="bar" style="width:38px"></span></td></tr>
+  <tr><td>agent-dao</td><td>12 个实体 + 12 个 Mapper（MyBatis-Plus）</td><td class="num-cell">649</td><td><span class="bar" style="width:31px"></span></td></tr>
+  <tr><td>agent-common</td><td>统一 Result、全局异常、JWT 工具、用户上下文</td><td class="num-cell">276</td><td><span class="bar" style="width:13px"></span></td></tr>
+  <tr><td>前端 .vue</td><td>20 个页面/组件</td><td class="num-cell">10 490</td><td><span class="bar front" style="width:120px"></span></td></tr>
+  <tr><td>前端 .ts</td><td>18 个：API 层、store、路由、工具</td><td class="num-cell">1 909</td><td><span class="bar front" style="width:91px"></span></td></tr>
+</table>
+<div class="callout warn">
+  <p><strong>结构性问题：</strong>前端代码量是后端的 1.8 倍，其中 <code>views/apps/edit.vue</code> 单个文件 <strong>2 962 行</strong>（占前端总量 28%），一个文件内塞进了画布渲染、节点配置面板、图校验、调试运行、版本管理全部逻辑。这是可维护性的首要风险点，后续任何改动都容易引发回归。</p>
+</div>
+
+<h2><span class="num">04</span>功能完成度矩阵</h2>
+<table>
+  <tr><th style="width:130px">功能域</th><th style="width:90px">状态</th><th>说明</th></tr>
+  <tr><td>工作流引擎</td><td><span class="tag t-ok">成熟</span></td><td>DAG 拓扑排序 + 并行 fork/join + Kahn 环检测 + 可达性分析；节点级支持重试（退避 300ms×n）、超时、<code>onError</code> 三策略（fail/continue/fallback）、输出变量别名</td></tr>
+  <tr><td>节点类型</td><td><span class="tag t-ok">完整</span></td><td>9 种全部真实实现：start / end / llm / agent / condition / code / http / template / knowledge。通过 <code>NodeHandler</code> SPI 注册，<strong>新增节点类型无需改动引擎</strong></td></tr>
+  <tr><td>知识库 RAG</td><td><span class="tag t-ok">可用</span></td><td>支持 txt/md/pdf/docx 解析；滑动窗口分块；真实调用 Embedding 模型向量化；余弦相似度排序；可选 rerank 精排</td></tr>
+  <tr><td>自主智能体</td><td><span class="tag t-ok">可用</span></td><td>ReAct 循环（规划-调用-观察），最多 6 轮迭代，支持 function calling 工具调度 + 知识库上下文注入</td></tr>
+  <tr><td>应用编排画布</td><td><span class="tag t-ok">完整</span></td><td>@vue-flow 实现：拖拽/连线/缩放/框选/复制粘贴/<strong>撤销重做</strong>/对齐分布/自动布局；右侧配置面板；调试运行 + 执行轨迹高亮</td></tr>
+  <tr><td>版本与发布</td><td><span class="tag t-ok">完整</span></td><td>草稿 DSL 与发布快照分离，版本号递增，支持回滚</td></tr>
+  <tr><td>对话能力</td><td><span class="tag t-part">部分</span></td><td>direct 模式走 SSE 流式；<strong>workflow / agent 模式强制非流式</strong>，长流程会长时间白屏等待</td></tr>
+  <tr><td>用户与权限</td><td><span class="tag t-risk">缺失</span></td><td>登录/注册可用，但<strong>无角色体系</strong>（<code>sys_user</code> 表无 role 字段），无租户隔离，前端用户页仅增删改</td></tr>
+  <tr><td>LLM 协议覆盖</td><td><span class="tag t-part">单一</span></td><td>工厂仅注册 OpenAI 兼容 Provider，Anthropic / 国产非兼容协议需自行扩展</td></tr>
+  <tr><td>测试</td><td><span class="tag t-risk">零</span></td><td>全仓库无 <code>src/test</code> 目录，<code>spring-boot-starter-test</code> 已引入但无一个用例</td></tr>
+  <tr><td>菜单占位</td><td><span class="tag t-part">32 项</span></td><td>菜单共 41 项，其中 32 项指向 <code>placeholder/index.vue</code> 空页面，<strong>占可见菜单 78%</strong></td></tr>
+</table>
+
+<h2><span class="num">05</span>架构亮点</h2>
+<ul>
+  <li><strong>工作流引擎设计水准超出一般项目。</strong>引擎只管调度（依赖解析、并行控制、分支释放、执行策略、轨迹归集），节点语义全部下沉到 <code>NodeHandler</code>，靠 Spring 自动注册。排他分支用 <code>selectedHandle</code> 精确释放、未选中分支整链标记 skipped，join 节点靠 <code>normalHits</code> 判断是否至少有一个上游正常完成——这套语义相当严谨。</li>
+  <li><strong>依赖方向单向且干净。</strong>web → service → workflow/dao/llm → common，<code>agent-workflow</code> 通过 <code>spi</code> 包（AgentRunner / ModelProvider / KnowledgeProvider）反向依赖业务实现，避免了引擎直接耦合 service 层。</li>
+  <li><strong>知识库是真做，不是演示。</strong>PDFBox 解析 PDF、POI 解析 docx（段落+表格）、UTF-8 失败回退 GBK、分批 16 条向量化、真实余弦相似度——整条链路都落地了。</li>
+  <li><strong>前端类型质量好。</strong><code>tsconfig</code> 开 strict + noUnusedLocals/Parameters，<code>vue-tsc --noEmit</code> 零错误；主题三态（light/dark/auto）含系统偏好监听；画布支持撤销重做这类高成本交互。</li>
+  <li><strong>SQL 脚本幂等且注释完整。</strong>13 张表全部带中文注释，脚本可重复执行、自动补齐缺失列。</li>
+</ul>
+
+<h2><span class="num">06</span>风险清单</h2>
+
+<h3>P0 · 阻断上线，必须修复</h3>
+<table>
+  <tr><th style="width:150px">风险</th><th>位置与说明</th></tr>
+  <tr><td>匿名远程代码执行</td><td><span class="tag t-risk">高危</span> MVEL 表达式<strong>没有任何沙箱</strong>——无类白名单、无 ClassLoader 隔离、无 SecurityManager、无超时。<span class="find">AppToolService.java:231 · CodeNodeHandler.java:43 · ConditionNodeHandler.java:98</span><br>更严重的是 <code>/api/portal/**</code> 免鉴权放行（<span class="find">WebConfig.java:19-25</span>），匿名用户可直接驱动 Agent 触发 MVEL 执行，形成完整 RCE 链。</td></tr>
+  <tr><td>凭据硬编码</td><td><span class="tag t-risk">高危</span> JWT 密钥明文写在配置里且自带 <code>change-me-in-production</code> 字样，数据库密码同为明文，均已提交进 Git。<span class="find">application.yml:11, 30</span></td></tr>
+  <tr><td>横向越权（IDOR）</td><td><span class="tag t-risk">高危</span> 全部资源按主键直查，查询侧<strong>零处</strong>校验归属：任意登录用户可读写删除他人的应用、知识库、工具、模型配置。<span class="find">AppService.java:49 · KnowledgeService.java:66 · AppToolService.java:51 · ModelService.java:42</span><br>唯一做对的是会话模块 <span class="find">ChatConversationService.java:63-70</span>。</td></tr>
+  <tr><td>无权限模型</td><td><span class="tag t-risk">高危</span> 无 RBAC，任意登录用户可列举/删除/修改全部用户密码，可读取并篡改模型供应商的 <code>apiKey</code>。<span class="find">SysUserController.java:22-49 · ModelController.java:39-61</span></td></tr>
+  <tr><td>租户隔离形同虚设</td><td><span class="tag t-risk">高危</span> <code>tenant_id</code> 仅在创建时写死默认值 1，查询侧完全不过滤。多租户是设计意图（每张表都有该字段），但实际未生效。<span class="find">AppService.java:66 · KnowledgeService.java:77 · ModelService.java:56</span></td></tr>
+</table>
+
+<h3>P1 · 影响可用性，尽快处理</h3>
+<table>
+  <tr><th style="width:150px">风险</th><th>位置与说明</th></tr>
+  <tr><td>知识库检索不可扩展</td><td>每次检索<strong>把数据集全部分块加载进内存</strong>再暴力排序，O(n) 全表扫描，无向量索引（无 pgvector / Milvus / 近似检索）。数据量上千条后延迟会急剧恶化。<span class="find">KnowledgeService.java:307-318</span></td></tr>
+  <tr><td>SSRF</td><td>HTTP 工具与 HTTP 节点的 URL 完全用户可控，无协议白名单、无内网段拦截、无重定向限制，可探测 <code>169.254.169.254</code> 云元数据服务。<span class="find">HttpNodeHandler.java:68 · AppToolService.java:182</span></td></tr>
+  <tr><td>密码校验降级</td><td>存储值非 BCrypt 格式时直接回退到明文字符串比对。<span class="find">SysAuthService.java:62-65</span></td></tr>
+  <tr><td>零测试覆盖</td><td>工作流引擎这类并发调度逻辑（并行 fork/join、环检测、错误传播）没有任何测试保护，重构风险极高。</td></tr>
+  <tr><td>长流程体验断层</td><td>workflow / agent 模式强制非流式，多节点流程会让前端长时间无反馈。</td></tr>
+  <tr><td>模型无连通性校验</td><td>供应商 baseUrl / apiKey 配错只能在运行时报错，无保存前测试能力。<span class="find">ModelService</span></td></tr>
+</table>
+
+<h3>P2 · 工程与体验债</h3>
+<ul>
+  <li><strong>前端巨型文件</strong>：<code>apps/edit.vue</code> 2 962 行，建议按「画布 / 配置面板 / 图操作 / 调试」拆分 composable 与子组件。</li>
+  <li><strong>统计 Bug</strong>：仪表盘用当前页 records 过滤已发布数，结果恒为 0 或 1。<span class="find">dashboard/index.vue:34</span></li>
+  <li><strong>手写 Markdown 解析器</strong>（347 行，无 marked/markdown-it 依赖），且公开对话页完全不渲染 Markdown，纯文本输出。</li>
+  <li><strong>33 条占位路由</strong>占可见菜单 78%，产品完整度观感受影响，建议按需隐藏。</li>
+  <li><strong>遗留痕迹</strong>：主题 storage key 为 <code>agentforge-theme-mode</code>，与项目名及 token key <code>agent_platform_token</code> 前缀不一致，疑似改名残留；<code>@vue-flow/node-toolbar</code> 已安装但未使用。</li>
+  <li><strong>无 404 兜底路由</strong>，前端鉴权仅判断 token 有无。</li>
+  <li><strong>上传无内容校验</strong>：仅按扩展名分派解析器，20MB 上限，PDF/Office 解析无资源隔离。</li>
+  <li><strong>LLM 工厂无缓存</strong>：每次调用 new 实例 + new HttpClient。</li>
+  <li><strong>死代码</strong>：分块逻辑中 <code>if (cut - i &lt; 0)</code> 恒为假。<span class="find">KnowledgeService.java:377</span></li>
+</ul>
+
+<h2><span class="num">07</span>改进建议（按优先级）</h2>
+
+<h3>第一阶段 · 安全止血（1 周内）</h3>
+<ul>
+  <li><strong>给 MVEL 上锁</strong>：引入类白名单 + 自定义 ClassLoader 隔离 + 单表达式超时中断；或直接把 <code>code</code> 类型工具替换为受限的表达式求值（如 Aviator、SpringEL with <code>SimpleEvaluationContext</code>）。</li>
+  <li><strong>收紧公开接口</strong>：<code>/api/portal/**</code> 增加应用级发布状态校验 + 限流，禁止匿名用户触发任意工具执行。</li>
+  <li><strong>密钥外置</strong>：JWT secret 与 DB 密码改走环境变量，轮换已泄露的密钥，并把 <code>application.yml</code> 加入 .gitignore 模板化。</li>
+  <li><strong>补归属校验</strong>：在 Service 层统一封装「按 id 查询并校验 userId/tenantId」的受保护查询方法，替换四处直查。</li>
+  <li><strong>最小权限模型</strong>：<code>sys_user</code> 增 role 字段，Controller 增加管理员校验，模型 apiKey 返回时脱敏。</li>
+</ul>
+
+<h3>第二阶段 · 补齐基本盘（2-4 周）</h3>
+<ul>
+  <li><strong>补测试</strong>：优先覆盖 WorkflowEngine（环检测、并行 join、分支跳过、错误传播）、AgentRunner 的工具调用循环、知识库分块与检索——这三处是系统核心且最易回归。</li>
+  <li><strong>引入向量检索</strong>：数据量达到千级分块前切换到 Milvus / pgvector，或至少加一层内存缓存避免每次全量反序列化。</li>
+  <li><strong>workflow 模式流式化</strong>：让引擎支持节点完成事件推送（SSE），前端逐节点渲染轨迹，彻底解决长流程白屏。</li>
+  <li><strong>HTTP 出站管控</strong>：加协议白名单（仅 https）、内网段黑名单、禁止跟随重定向。</li>
+  <li><strong>模型连通性测试</strong>：供应商保存前发起一次轻量调用验证。</li>
+</ul>
+
+<h3>第三阶段 · 结构与体验（1-2 月）</h3>
+<ul>
+  <li><strong>拆分 edit.vue</strong>：抽出 <code>useFlowCanvas</code> / <code>useFlowHistory</code> / <code>useFlowDebug</code> 三个 composable，配置面板按节点类型拆分子组件。</li>
+  <li><strong>Markdown 换成熟库</strong>：marked / markdown-it + DOMPurify，公开对话页同步接入。</li>
+  <li><strong>收敛占位菜单</strong>：把 32 个占位项改为「敬请期待」禁用态或直接从菜单移除。</li>
+  <li><strong>扩展 LLM SPI</strong>：按需补充 Anthropic / 国产模型 Provider，工厂加缓存复用 HttpClient。</li>
+  <li><strong>补齐审计</strong>：发布操作当前硬编码 operatorId=1L，应从 UserContext 取真实用户。<span class="find">AppController.java:73</span></li>
+</ul>
+
+<footer>
+  分析基于 D:\workspace\ai-agent-platform 于 2026-09-01 的静态代码审查（master 分支），共扫描 98 个 Java 文件、38 个前端文件、13 张数据表。<br>
+  行号引用格式为「文件:行号」，对应分析时的代码状态。
+</footer>
+
+</div>
+</body>
+</html>
