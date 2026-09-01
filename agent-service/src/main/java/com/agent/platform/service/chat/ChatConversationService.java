@@ -10,7 +10,6 @@ import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
-import com.agent.platform.service.app.AppService;
 import com.agent.platform.service.model.ModelService;
 import com.agent.platform.workflow.RunResult;
 import com.agent.platform.workflow.WorkflowEngine;
@@ -41,9 +40,8 @@ public class ChatConversationService {
 
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
-    private final AppService appService;
+    private final AppAgentService appAgentService;
     private final ModelService modelService;
-    private final AppAgentService agentService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
 
@@ -70,7 +68,7 @@ public class ChatConversationService {
     }
 
     public ChatConversation create(Long appId, Long userId, Long tenantId, String title, String mode, Long modelId) {
-        appService.getById(appId);
+        appAgentService.getById(appId);
         ChatConversation conv = new ChatConversation();
         conv.setTenantId(tenantId == null ? 1L : tenantId);
         conv.setUserId(userId);
@@ -114,8 +112,8 @@ public class ChatConversationService {
     // ---------- 统计 ----------
 
     /** 应用会话统计：会话数 + 消息数（用于对外访问/运营数据展示） */
-    public AppStats stats(Long appId) {
-        appService.getById(appId);
+    public AppAgentStats stats(Long appId) {
+        appAgentService.getById(appId);
         List<Long> convIds = conversationMapper.selectList(new LambdaQueryWrapper<ChatConversation>()
                         .select(ChatConversation::getId)
                         .eq(ChatConversation::getAppId, appId)
@@ -130,12 +128,12 @@ public class ChatConversationService {
                     .eq(ChatMessage::getStatus, 1)
                     .in(ChatMessage::getConversationId, convIds));
         }
-        return new AppStats(conversationCount, messageCount);
+        return new AppAgentStats(conversationCount, messageCount);
     }
 
     /** 批量统计多个应用的会话/消息数，避免逐个查询造成 N+1 */
-    public Map<Long, AppStats> statsBatch(List<Long> appIds) {
-        Map<Long, AppStats> result = new HashMap<>();
+    public Map<Long, AppAgentStats> statsBatch(List<Long> appIds) {
+        Map<Long, AppAgentStats> result = new HashMap<>();
         if (appIds == null || appIds.isEmpty()) {
             return result;
         }
@@ -167,7 +165,7 @@ public class ChatConversationService {
             }
         }
         for (Long appId : appIds) {
-            result.put(appId, new AppStats(
+            result.put(appId, new AppAgentStats(
                     convCount.getOrDefault(appId, 0L),
                     msgCount.getOrDefault(appId, 0L)));
         }
@@ -199,7 +197,7 @@ public class ChatConversationService {
             List<ChatMessage> history = messages(conversationId, userId);
             List<com.agent.platform.llm.model.ChatMessage> llmHistory = toLlmMessages(history);
             llmHistory.add(com.agent.platform.llm.model.ChatMessage.user(content));
-            AppAgentService.AgentResult result = agentService.chat(conv.getAppId(), mid, null, llmHistory, null);
+            AppAgentService.AgentResult result = appAgentService.chat(conv.getAppId(), mid, null, llmHistory, null);
             answer = result.getAnswer();
             traceJson = toJson(result.getSteps());
         } else {
@@ -251,7 +249,7 @@ public class ChatConversationService {
 
     /** 运行应用工作流，返回执行结果与轨迹 */
     private RunResult runWorkflow(ChatConversation conv, String content) {
-        String dsl = appService.getRunWorkflow(conv.getAppId());
+        String dsl = appAgentService.getRunWorkflow(conv.getAppId());
         if (dsl == null || dsl.isBlank()) {
             throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
         }
@@ -319,7 +317,7 @@ public class ChatConversationService {
     /** 应用会话统计结果 */
     @Data
     @AllArgsConstructor
-    public static class AppStats {
+    public static class AppAgentStats {
         private Long conversationCount;
         private Long messageCount;
     }

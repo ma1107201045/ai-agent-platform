@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ChatDotRound, DataAnalysis, MagicStick, Promotion } from '@element-plus/icons-vue'
-import { appApi } from '@/api/app'
+import { appAgentApi } from '@/api/app-agent'
 import { conversationApi } from '@/api/conversation'
 import type {
-  App,
+  AppAgent,
   AgentStep,
-  AppStats,
+  AppAgentStats,
   ChatConversation,
   ChatMessageRecord,
   TraceItem
@@ -16,8 +16,8 @@ const tab = ref('overview')
 
 /* ---------- 数据看板 ---------- */
 const loadingApps = ref(false)
-const apps = ref<App[]>([])
-const stats = ref<Record<number, AppStats>>({})
+const apps = ref<AppAgent[]>([])
+const stats = ref<Record<number, AppAgentStats>>({})
 
 const totalApps = computed(() => apps.value.length)
 const publishedApps = computed(() => apps.value.filter((a) => a.status === 1).length)
@@ -31,10 +31,10 @@ const totalMessages = computed(() =>
 async function loadOverview() {
   loadingApps.value = true
   try {
-    const data = await appApi.page({ page: 1, size: 100 })
+    const data = await appAgentApi.page({ page: 1, size: 100 })
     apps.value = data.records
     if (apps.value.length) {
-      stats.value = await appApi.batchStats(apps.value.map((a) => a.id))
+      stats.value = await appAgentApi.batchStats(apps.value.map((a) => a.id))
     }
   } finally {
     loadingApps.value = false

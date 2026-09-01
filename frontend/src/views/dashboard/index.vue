@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Connection, Cpu, Files, MagicStick, Right } from '@element-plus/icons-vue'
-import { appApi } from '@/api/app'
+import { appAgentApi } from '@/api/app-agent'
 import { modelApi } from '@/api/model'
 import { knowledgeApi } from '@/api/knowledge'
 
@@ -17,7 +17,7 @@ const stats = ref([
 ])
 
 const quickActions = [
-  { title: '创建智能体应用', desc: '对话流 / 工作流 / 智能体', icon: MagicStick, path: '/apps', color: '#5b6cff' },
+  { title: '创建智能体应用', desc: '对话流 / 工作流 / 智能体', icon: MagicStick, path: '/app-agents', color: '#5b6cff' },
   { title: '导入知识库', desc: '文档切块、向量化、RAG 检索', icon: Files, path: '/data/knowledge', color: '#8b5cf6' },
   { title: '接入模型', desc: '配置 DeepSeek 等供应商', icon: Cpu, path: '/models', color: '#0ea5e9' }
 ]
@@ -25,7 +25,7 @@ const quickActions = [
 onMounted(async () => {
   try {
     const [appRes, dsRes, pvRes] = await Promise.all([
-      appApi.page({ page: 1, size: 1 }),
+      appAgentApi.page({ page: 1, size: 1 }),
       knowledgeApi.datasetPage({ page: 1, size: 1 }),
       modelApi.providerPage({ page: 1, size: 1 })
     ])
@@ -52,7 +52,7 @@ onMounted(async () => {
         <h1>你好，欢迎回来 👋</h1>
         <p>开始构建你的下一个 AI 智能体，从灵感走向生产。</p>
       </div>
-      <el-button class="btn-gradient welcome-btn" @click="router.push('/apps')">
+      <el-button class="btn-gradient welcome-btn" @click="router.push('/app-agents')">
         创建应用
       </el-button>
     </div>

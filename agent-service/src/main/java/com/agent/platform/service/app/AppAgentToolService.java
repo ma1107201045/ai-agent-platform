@@ -26,11 +26,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Agent 工具服务：注册表 CRUD + 工具执行（HTTP / 代码）
+ * Agent 工具（AppAgentTool）服务：注册表 CRUD + 工具执行（HTTP / 代码）。
+ *
+ * <p>命名遵循「表名 → 实体 → Mapper → Service」对齐规则：
+ * 表 app_agent_tool → 实体 AppAgentTool → Mapper AppAgentToolMapper → 本类 AppAgentToolService。
  */
 @Service
 @RequiredArgsConstructor
-public class AppToolService {
+public class AppAgentToolService {
 
     private final AppAgentToolMapper toolMapper;
     private final ObjectMapper objectMapper;
@@ -172,7 +175,7 @@ public class AppToolService {
             if ("GET".equals(method) && !args.isEmpty()) {
                 StringBuilder qs = new StringBuilder();
                 for (Map.Entry<String, Object> e : args.entrySet()) {
-                    if (qs.length() > 0) qs.append('&');
+                    if (!qs.isEmpty()) qs.append('&');
                     qs.append(e.getKey()).append('=')
                             .append(java.net.URLEncoder.encode(String.valueOf(e.getValue()), StandardCharsets.UTF_8));
                 }

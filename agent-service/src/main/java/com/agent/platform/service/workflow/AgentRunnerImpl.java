@@ -4,7 +4,6 @@ import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentTool;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.service.app.AppAgentService;
-import com.agent.platform.service.app.AppService;
 import com.agent.platform.workflow.spi.AgentRunner;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,8 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AgentRunnerImpl implements AgentRunner {
 
-    private final AppAgentService agentService;
-    private final AppService appService;
+    private final AppAgentService appAgentService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -34,7 +32,7 @@ public class AgentRunnerImpl implements AgentRunner {
         if (task == null || task.modelId() == null) {
             throw new IllegalArgumentException("Agent 任务缺少模型配置");
         }
-        AppAgent app = task.appId() == null ? null : appService.getById(task.appId());
+        AppAgent app = task.appId() == null ? null : appAgentService.getById(task.appId());
 
         List<Long> toolIds = nullIfEmpty(task.toolIds());
         if (toolIds == null && app != null) {
@@ -45,11 +43,11 @@ public class AgentRunnerImpl implements AgentRunner {
             datasetIdsJson = app.getDatasetIds();
         }
 
-        List<AppAgentTool> tools = agentService.loadTools(toJsonArray(toolIds));
+        List<AppAgentTool> tools = appAgentService.loadTools(toJsonArray(toolIds));
         List<ChatMessage> history = List.of(ChatMessage.user(
                 task.userMessage() == null ? "" : task.userMessage()));
 
-        AppAgentService.AgentResult result = agentService.chat(
+        AppAgentService.AgentResult result = appAgentService.chat(
                 task.modelId(), task.systemPrompt(), tools, datasetIdsJson, history, task.maxIterations());
 
         List<AgentStep> steps = result.getSteps() == null ? List.of()

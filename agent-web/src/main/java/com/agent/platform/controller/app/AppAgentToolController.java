@@ -2,7 +2,7 @@ package com.agent.platform.controller.app;
 
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.app.AppAgentTool;
-import com.agent.platform.service.app.AppToolService;
+import com.agent.platform.service.app.AppAgentToolService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -11,14 +11,21 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Agent 工具管理接口
+ * Agent 工具（AppAgentTool）管理接口。
+ *
+ * <p>命名遵循「表名 → 实体 → Mapper → Service → Controller → URL」对齐规则：
+ * <pre>
+ *   表 app_agent_tool → 实体 AppAgentTool → Mapper AppAgentToolMapper
+ *                    → Service AppAgentToolService → 本类 AppAgentToolController
+ *                    → URL /api/app-agent-tools（kebab-case 复数）
+ * </pre>
  */
 @RestController
-@RequestMapping("/api/app/tools")
+@RequestMapping("/api/app/agent-tools")
 @RequiredArgsConstructor
-public class AppToolController {
+public class AppAgentToolController {
 
-    private final AppToolService toolService;
+    private final AppAgentToolService toolService;
 
     @GetMapping
     public Result<Page<AppAgentTool>> page(@RequestParam(defaultValue = "1") long page,

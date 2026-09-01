@@ -2,11 +2,11 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, EditPen, Plus, VideoPlay } from '@element-plus/icons-vue'
-import { toolApi } from '@/api/tool'
-import type { AppTool } from '@/api/types'
+import { appAgentToolApi } from '@/api/app-agent-tool'
+import type { AppAgentTool } from '@/api/types'
 
 const loading = ref(false)
-const list = ref<AppTool[]>([])
+const list = ref<AppAgentTool[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(10)
@@ -14,11 +14,11 @@ const size = ref(10)
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const saving = ref(false)
-const form = ref<Partial<AppTool>>({})
+const form = ref<Partial<AppAgentTool>>({})
 const headersText = ref('')
 
 const testDialogVisible = ref(false)
-const testTool = ref<AppTool | null>(null)
+const testTool = ref<AppAgentTool | null>(null)
 const testArgs = ref('')
 const testResult = ref('')
 const testing = ref(false)
@@ -29,7 +29,7 @@ const authLabels: Record<string, string> = { none: '无', bearer: 'Bearer', basi
 async function load() {
   loading.value = true
   try {
-    const data = await toolApi.page({ page: page.value, size: size.value })
+    const data = await appAgentToolApi.page({ page: page.value, size: size.value })
     list.value = data.records
     total.value = data.total
   } finally {
@@ -44,7 +44,7 @@ function openCreate() {
   dialogVisible.value = true
 }
 
-function openEdit(tool: AppTool) {
+function openEdit(tool: AppAgentTool) {
   dialogTitle.value = '编辑工具'
   form.value = { ...tool }
   headersText.value = tool.headers || ''
@@ -74,10 +74,10 @@ function save() {
   saving.value = true
   try {
     if (form.value.id) {
-      toolApi.update(form.value.id, form.value)
+      appAgentToolApi.update(form.value.id, form.value)
       ElMessage.success('更新成功')
     } else {
-      toolApi.create(form.value)
+      appAgentToolApi.create(form.value)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -87,7 +87,7 @@ function save() {
   }
 }
 
-async function remove(tool: AppTool) {
+async function remove(tool: AppAgentTool) {
   try {
     await ElMessageBox.confirm(`确认删除工具「${tool.name}」？`, '删除确认', {
       type: 'error', confirmButtonText: '删除', cancelButtonText: '取消'
@@ -95,12 +95,12 @@ async function remove(tool: AppTool) {
   } catch {
     return
   }
-  await toolApi.remove(tool.id)
+  await appAgentToolApi.remove(tool.id)
   ElMessage.success('已删除')
   load()
 }
 
-function openTest(tool: AppTool) {
+function openTest(tool: AppAgentTool) {
   testTool.value = tool
   testArgs.value = ''
   testResult.value = ''
@@ -111,7 +111,7 @@ async function doTest() {
   if (!testTool.value) return
   testing.value = true
   try {
-    testResult.value = await toolApi.test(testTool.value.id, testArgs.value)
+    testResult.value = await appAgentToolApi.test(testTool.value.id, testArgs.value)
   } finally {
     testing.value = false
   }

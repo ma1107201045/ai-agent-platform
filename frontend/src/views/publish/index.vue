@@ -3,14 +3,14 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { CopyDocument, Promotion, Right } from '@element-plus/icons-vue'
-import { appApi } from '@/api/app'
-import type { App, AppVersion, AppStats } from '@/api/types'
+import { appAgentApi } from '@/api/app-agent'
+import type { AppAgent, AppAgentVersion, AppAgentStats } from '@/api/types'
 
 const router = useRouter()
 const loading = ref(false)
-const list = ref<App[]>([])
-const versions = ref<Record<number, AppVersion>>({})
-const stats = ref<Record<number, AppStats>>({})
+const list = ref<AppAgent[]>([])
+const versions = ref<Record<number, AppAgentVersion>>({})
+const stats = ref<Record<number, AppAgentStats>>({})
 
 const typeMeta: Record<string, { label: string; icon: string; color: string }> = {
   chatflow: { label: '对话流', icon: '💬', color: '#5b6cff' },
@@ -24,14 +24,14 @@ const coverColors: Record<string, [string, string]> = {
   agent: ['#8b5cf6', '#d946ef']
 }
 
-const gradientOf = (row: App) => {
+const gradientOf = (row: AppAgent) => {
   const c = coverColors[row.type] || coverColors.chatflow
   return `linear-gradient(135deg, ${c[0]} 0%, ${c[1]} 100%)`
 }
 
 const publicUrl = (id: number) => `${location.origin}/public/${id}`
 
-async function copyUrl(row: App) {
+async function copyUrl(row: AppAgent) {
   try {
     await navigator.clipboard.writeText(publicUrl(row.id))
     ElMessage.success('链接已复制')
@@ -52,14 +52,14 @@ function formatTime(s?: string) {
 async function load() {
   loading.value = true
   try {
-    const data = await appApi.page({ page: 1, size: 100 })
+    const data = await appAgentApi.page({ page: 1, size: 100 })
     const published = data.records.filter((a) => a.status === 1)
     list.value = published
     if (published.length) {
       const ids = published.map((a) => a.id)
       const [st, verMap] = await Promise.all([
-        appApi.batchStats(ids),
-        appApi.publishedBatch(ids).catch(() => ({}))
+        appAgentApi.batchStats(ids),
+        appAgentApi.batchPublished(ids).catch(() => ({}))
       ])
       stats.value = st
       versions.value = verMap
@@ -79,7 +79,7 @@ onMounted(load)
         <h2 class="head-title">发布与集成</h2>
         <p class="head-desc">将智能体能力嵌入现有业务流：WebApp 链接、线上版本与运行数据</p>
       </div>
-      <el-button type="primary" class="btn-gradient" @click="router.push('/apps')">
+      <el-button type="primary" class="btn-gradient" @click="router.push('/app-agents')">
         <el-icon><Right /></el-icon>&nbsp;去应用列表
       </el-button>
     </div>
@@ -128,7 +128,7 @@ onMounted(load)
           <el-icon :size="40"><Promotion /></el-icon>
         </div>
         <p>还没有已发布的应用，先去发布一个吧</p>
-        <el-button type="primary" class="btn-gradient" @click="router.push('/apps')">去发布</el-button>
+        <el-button type="primary" class="btn-gradient" @click="router.push('/app-agents')">去发布</el-button>
       </div>
     </div>
   </div>

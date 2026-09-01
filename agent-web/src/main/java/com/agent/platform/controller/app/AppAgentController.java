@@ -9,7 +9,6 @@ import com.agent.platform.workflow.WorkflowEngine;
 import com.agent.platform.workflow.WorkflowGraph;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.service.app.AppAgentService;
-import com.agent.platform.service.app.AppService;
 import com.agent.platform.service.chat.ChatConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,15 +22,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 应用管理
+ * 智能体应用（AppAgent）接口。
+ *
+ * <p>命名遵循「表名 → 实体 → Mapper → Service → Controller → URL」对齐规则：
+ * <pre>
+ *   表 app_agent → 实体 AppAgent → Mapper AppAgentMapper → Service AppAgentService
+ *              → 本类 AppAgentController → URL /api/app-agents（kebab-case 复数）
+ * </pre>
  */
 @RestController
-@RequestMapping("/api/apps")
+@RequestMapping("/api/app/agents")
 @RequiredArgsConstructor
-public class AppController {
+public class AppAgentController {
 
-    private final AppService appService;
-    private final AppAgentService agentService;
+    private final AppAgentService appAgentService;
     private final ChatConversationService conversationService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
@@ -41,70 +45,70 @@ public class AppController {
                                        @RequestParam(defaultValue = "20") long size,
                                        @RequestParam(required = false) String keyword,
                                        @RequestParam(required = false) String type) {
-        return Result.ok(appService.page(page, size, keyword, type));
+        return Result.ok(appAgentService.page(page, size, keyword, type));
     }
 
     @GetMapping("/{id}")
     public Result<AppAgent> getById(@PathVariable Long id) {
-        return Result.ok(appService.getById(id));
+        return Result.ok(appAgentService.getById(id));
     }
 
     @PostMapping
     public Result<AppAgent> create(@RequestBody AppAgent app) {
-        return Result.ok(appService.create(app));
+        return Result.ok(appAgentService.create(app));
     }
 
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody AppAgent app) {
         app.setId(id);
-        appService.update(app);
+        appAgentService.update(app);
         return Result.ok();
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        appService.delete(id);
+        appAgentService.delete(id);
         return Result.ok();
     }
 
     /** 发布（保存版本快照） */
     @PostMapping("/{id}/publish")
     public Result<AppAgentVersion> publish(@PathVariable Long id, @RequestBody PublishRequest request) {
-        return Result.ok(appService.publish(id, request.getWorkflowJson(), request.getPromptConfig(), 1L));
+        return Result.ok(appAgentService.publish(id, request.getWorkflowJson(), request.getPromptConfig(), 1L));
     }
 
     /** 获取当前发布版本 */
     @GetMapping("/{id}/published")
     public Result<AppAgentVersion> published(@PathVariable Long id) {
-        return Result.ok(appService.getPublishedVersion(id));
+        return Result.ok(appAgentService.getPublishedVersion(id));
     }
 
     /** 版本列表（按版本号倒序） */
     @GetMapping("/{id}/versions")
     public Result<List<AppAgentVersion>> versions(@PathVariable Long id) {
-        return Result.ok(appService.listVersions(id));
+        return Result.ok(appAgentService.listVersions(id));
     }
 
     /** 回滚到指定版本（恢复草稿，不自动发布） */
     @PostMapping("/{id}/versions/{versionId}/rollback")
     public Result<AppAgentVersion> rollback(@PathVariable Long id, @PathVariable Long versionId) {
-        return Result.ok(appService.rollback(id, versionId));
+        return Result.ok(appAgentService.rollback(id, versionId));
     }
 
     /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
-    @GetMapping("/stats/batch")
-    public Result<Map<Long, ChatConversationService.AppStats>> batchStats(@RequestParam String ids) {
+    @GetMapping("/batch/stats")
+    public Result<Map<Long, ChatConversationService.AppAgentStats>> batchStats(@RequestParam String ids) {
         List<Long> idList = parseIds(ids);
         return Result.ok(conversationService.statsBatch(idList));
     }
 
     /** 批量获取发布版本：ids 逗号分隔，返回 Map<appId, version> */
-    @GetMapping("/published/batch")
-    public Result<Map<Long, AppAgentVersion>> publishedBatch(@RequestParam String ids) {
+    @GetMapping("/batch/published")
+    public Result<Map<Long, AppAgentVersion>> batchPublished(@RequestParam String ids) {
         Map<Long, AppAgentVersion> map = new HashMap<>();
         for (Long id : parseIds(ids)) {
             try {
-                map.put(id, appService.getPublishedVersion(id));
+                map.put(id, appAgentService.getPublishedVersion(id));
             } catch (Exception ignored) {
                 // 未发布的应用跳过
             }
@@ -134,7 +138,7 @@ public class AppController {
     /** 运行应用工作流（按画布 DSL 执行） */
     @PostMapping("/{id}/run")
     public Result<RunResult> run(@PathVariable Long id, @RequestBody RunRequest request) {
-        String dsl = appService.getRunWorkflow(id);
+        String dsl = appAgentService.getRunWorkflow(id);
         if (dsl == null || dsl.isBlank()) {
             throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
         }
@@ -168,7 +172,7 @@ public class AppController {
         if (request.getModelId() == null) {
             throw new BizException("请选择对话模型");
         }
-        return Result.ok(agentService.chat(id, request.getModelId(), request.getSystemPrompt(),
+        return Result.ok(appAgentService.chat(id, request.getModelId(), request.getSystemPrompt(),
                 request.getMessages(), request.getMaxIterations()));
     }
 

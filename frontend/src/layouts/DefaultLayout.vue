@@ -20,7 +20,7 @@ const userStore = useUserStore()
 
 const collapsed = ref(false)
 
-/** 高亮匹配：精确命中优先，其次子路径前缀命中（如 /apps/1/edit 高亮“智能体”） */
+/** 高亮匹配：精确命中优先，其次子路径前缀命中（如 /app-agents/1/edit 高亮“智能体”） */
 const activeMenu = computed(() => {
   const p = route.path
   return (

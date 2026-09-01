@@ -7,7 +7,7 @@ import { DEFAULT_HOME } from '@/config/menu'
  * 路由规范：
  * 1. 除 /login、/public/:id 外，所有页面都挂在 DefaultLayout 下作为 children
  * 2. 一级路径前缀与侧边栏菜单分组一一对应（见 @/config/menu.ts）：
- *    /workbench 工作台 · /apps 应用 · /data 数据 · /tools 工具 · /publish 发布
+ *    /workbench 工作台 · /app-agents 应用 · /data 数据 · /tools 工具 · /publish 发布
  *    /ops 观测 · /eval 评测 · /models 模型 · /system 系统管理 · /support 帮助与文档
  * 3. 每个分组内：已上线页面在前，规划中（planned）页面居中，详情页（带动态参数、meta.hidden）在末尾
  */
@@ -59,14 +59,14 @@ const routes: RouteRecordRaw[] = [
         dependency: '需后端新增消息中心服务'
       }),
 
-      /* ---------------- 应用 /apps ---------------- */
+      /* ---------------- 应用 /app-agents ---------------- */
       {
-        path: 'apps',
+        path: 'app/agents',
         name: 'Apps',
-        component: () => import('@/views/apps/index.vue'),
+        component: () => import('@/views/app/agents/index.vue'),
         meta: { title: '智能体' }
       },
-      planned('apps/templates', 'AppTemplates', {
+      planned('app/agents-templates', 'AppTemplates', {
         title: '应用模板',
         phase: 'P2',
         desc: '从模板一键创建应用，覆盖常见业务场景，降低上手成本',
@@ -76,7 +76,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端维护模板市场数据与模板实例化接口'
       }),
-      planned('apps/marketplace', 'AppMarketplace', {
+      planned('app/agents-marketplace', 'AppMarketplace', {
         title: '应用市场',
         phase: 'P1',
         desc: '发现、分享并一键安装社区智能体，像应用商店一样获取场景能力',
@@ -87,7 +87,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端新增应用市场数据与安装接口'
       }),
-      planned('apps/multi-agent', 'MultiAgent', {
+      planned('app/agents/multi-agent', 'MultiAgent', {
         title: '多智能体编排',
         phase: 'P1',
         desc: '编排多个角色智能体协作分工，胜任复杂业务流程',
@@ -98,7 +98,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需扩展 WorkflowEngine 支持多智能体协作'
       }),
-      planned('apps/prompts', 'AppPrompts', {
+      planned('app/agents/prompts', 'AppPrompts', {
         title: '提示词库',
         phase: 'P0',
         desc: '集中管理可复用的提示词模板与版本，支撑应用编排与调试',
@@ -109,7 +109,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端新增提示词实体与版本快照'
       }),
-      planned('apps/schedules', 'AppSchedules', {
+      planned('app/agents/schedules', 'AppSchedules', {
         title: '定时任务',
         phase: 'P2',
         desc: '按时间或事件触发智能体/工作流自动执行',
@@ -120,7 +120,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端新增任务调度与触发服务'
       }),
-      planned('apps/guardrails', 'AppGuardrails', {
+      planned('app/agents/guardrails', 'AppGuardrails', {
         title: '内容安全',
         phase: 'P1',
         desc: '输入输出内容校验与敏感词过滤，保障应用合规安全',
@@ -132,15 +132,15 @@ const routes: RouteRecordRaw[] = [
         dependency: '需在模型调用链路上增加护栏拦截'
       }),
       {
-        path: 'apps/:id/edit',
+        path: 'app/agents/:id/edit',
         name: 'AppEdit',
-        component: () => import('@/views/apps/edit.vue'),
+        component: () => import('@/views/app/agents/edit.vue'),
         meta: { title: '智能体编排', hidden: true }
       },
       {
-        path: 'apps/:id/chat',
+        path: 'app/agents/:id/chat',
         name: 'AppChat',
-        component: () => import('@/views/apps/chat.vue'),
+        component: () => import('@/views/app/agents/chat.vue'),
         meta: { title: '对话调试', hidden: true }
       },
 

@@ -38,14 +38,14 @@ export interface LoginResult {
   user: UserProfile
 }
 
-export type AppType = 'chatflow' | 'workflow' | 'agent'
+export type AppAgentType = 'chatflow' | 'workflow' | 'agent'
 
-export interface App {
+export interface AppAgent {
   id: number
   tenantId: number
   name: string
   description?: string
-  type: AppType
+  type: AppAgentType
   icon?: string
   welcomeMessage?: string
   openingQuestions?: string
@@ -59,7 +59,7 @@ export interface App {
 }
 
 /** Agent 工具 */
-export interface AppTool {
+export interface AppAgentTool {
   id: number
   tenantId: number
   name: string
@@ -126,7 +126,7 @@ export interface WorkflowEdge {
 }
 
 /** 工作流 DSL */
-export interface AppWorkflow {
+export interface AppAgentWorkflow {
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
 }
@@ -225,12 +225,12 @@ export interface RunResult {
 }
 
 /** 应用会话统计 */
-export interface AppStats {
+export interface AppAgentStats {
   conversationCount: number
   messageCount: number
 }
 
-export interface AppVersion {
+export interface AppAgentVersion {
   id: number
   appId: number
   version: number

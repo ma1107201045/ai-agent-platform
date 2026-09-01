@@ -3,10 +3,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ChatDotRound, Delete, EditPen, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { appApi } from '@/api/app'
+import { appAgentApi } from '@/api/app-agent'
 import { conversationApi } from '@/api/conversation'
 import type {
-  App,
+  AppAgent,
   AgentStep,
   ChatConversation,
   ChatMessageRecord,
@@ -18,14 +18,14 @@ const router = useRouter()
 const modeLabels: Record<string, string> = { direct: '直连模型', workflow: '工作流', agent: '智能体' }
 
 /* ---------- 应用 / 模式筛选 ---------- */
-const apps = ref<App[]>([])
+const apps = ref<AppAgent[]>([])
 const appMap = computed(() => new Map(apps.value.map((a) => [a.id, a])))
 const filterAppId = ref<number | null>(null)
 const filterMode = ref('')
 
 async function loadApps() {
   try {
-    const data = await appApi.page({ page: 1, size: 100 })
+    const data = await appAgentApi.page({ page: 1, size: 100 })
     apps.value = data.records
   } catch {
     /* 忽略加载失败 */
@@ -64,7 +64,7 @@ function appName(row: ChatConversation) {
 }
 
 function continueChat(row: ChatConversation) {
-  router.push(`/apps/${row.appId}/chat?conversationId=${row.id}`)
+  router.push(`/app-agents/${row.appId}/chat?conversationId=${row.id}`)
 }
 
 /* ---------- 重命名 / 删除 ---------- */

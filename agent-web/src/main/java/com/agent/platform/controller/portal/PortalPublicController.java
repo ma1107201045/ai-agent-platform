@@ -11,7 +11,6 @@ import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
-import com.agent.platform.service.app.AppService;
 import com.agent.platform.service.model.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -30,14 +29,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PortalPublicController {
 
-    private final AppService appService;
+    private final AppAgentService appAgentService;
     private final ModelService modelService;
-    private final AppAgentService agentService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
 
     /** 公开应用信息（仅已发布） */
-    @GetMapping("/apps/{id}")
+    @GetMapping("/app-agents/{id}")
     public Result<PublicAppInfo> appInfo(@PathVariable Long id) {
         AppAgent app = requirePublished(id);
         PublicAppInfo info = new PublicAppInfo();
@@ -55,7 +53,7 @@ public class PortalPublicController {
      * 请求体 messages 为完整对话历史（最后一条必须是 user 消息，作为本次输入）。
      * workflow → 运行已发布版本 DSL；agent → 自主工具调用；chatflow → 默认模型直连。
      */
-    @PostMapping("/apps/{id}/chat")
+    @PostMapping("/app-agents/{id}/chat")
     public Result<PublicChatResult> chat(@PathVariable Long id, @RequestBody PublicChatReq req) {
         requirePublished(id);
         List<ChatMessage> messages = req.getMessages();
@@ -68,12 +66,12 @@ public class PortalPublicController {
         }
         List<ChatMessage> history = new ArrayList<>(messages.subList(0, messages.size() - 1));
 
-        AppAgent app = appService.getById(id);
+        AppAgent app = appAgentService.getById(id);
         String answer;
         Object detail = null;
         if ("workflow".equals(app.getType())) {
             try {
-                String dsl = appService.getPublishedWorkflow(id);
+                String dsl = appAgentService.getPublishedWorkflow(id);
                 WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
                 RunResult result = workflowEngine.run(graph, last.content(), id);
                 answer = result.getAnswer();
@@ -88,7 +86,7 @@ public class PortalPublicController {
             if (modelId == null) {
                 throw new BizException("尚未配置可用的对话模型");
             }
-            AppAgentService.AgentResult result = agentService.chat(id, modelId, null, history, null);
+            AppAgentService.AgentResult result = appAgentService.chat(id, modelId, null, history, null);
             answer = result.getAnswer();
             detail = result.getSteps();
         } else {
@@ -111,7 +109,7 @@ public class PortalPublicController {
     }
 
     private AppAgent requirePublished(Long id) {
-        AppAgent app = appService.getById(id);
+        AppAgent app = appAgentService.getById(id);
         if (app.getStatus() == null || app.getStatus() != 1) {
             throw new BizException("应用未发布，无法对外访问");
         }

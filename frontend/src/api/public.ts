@@ -21,9 +21,9 @@ export interface PublicChatResult {
 /** 公开访问 API（无鉴权） */
 export const publicApi = {
   getApp(id: number) {
-    return request.get<never, PublicAppInfo>(`/portal/public/apps/${id}`)
+    return request.get<never, PublicAppInfo>(`/portal/public/app-agents/${id}`)
   },
   chat(id: number, messages: { role: string; content: string }[]) {
-    return request.post<never, PublicChatResult>(`/portal/public/apps/${id}/chat`, { messages })
+    return request.post<never, PublicChatResult>(`/portal/public/app-agents/${id}/chat`, { messages })
   }
 }

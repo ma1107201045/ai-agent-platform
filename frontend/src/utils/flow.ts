@@ -1,4 +1,4 @@
-import type { AppWorkflow, WorkflowEdge, WorkflowNode, WorkflowNodeType } from '@/api/types'
+import type { AppAgentWorkflow, WorkflowEdge, WorkflowNode, WorkflowNodeType } from '@/api/types'
 
 /** 节点类型元信息（图标名对应 @element-plus/icons-vue，gradient 用于圆形渐变图标，参考 Dify 视觉） */
 export const NODE_TYPE_META: Record<
@@ -202,7 +202,7 @@ export function dslToFlow(dsl?: string | null) {
   }> = []
   if (!dsl) return { nodes, edges }
   try {
-    const parsed = JSON.parse(dsl) as AppWorkflow
+    const parsed = JSON.parse(dsl) as AppAgentWorkflow
     for (const n of parsed.nodes ?? []) {
       nodes.push({
         id: n.id,
@@ -244,7 +244,7 @@ export function flowToDsl(
     label?: string
   }>
 ): string {
-  const workflow: AppWorkflow = {
+  const workflow: AppAgentWorkflow = {
     nodes: nodes.map(
       (n): WorkflowNode => ({
         id: n.id,
