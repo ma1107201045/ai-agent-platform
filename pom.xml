@@ -59,6 +59,7 @@
                 <groupId>com.agent</groupId>
                 <artifactId>agent-dao</artifactId>
                 <version>${project.version}</version>
+                <type></type>
             </dependency>
             <dependency>
                 <groupId>com.agent</groupId>
