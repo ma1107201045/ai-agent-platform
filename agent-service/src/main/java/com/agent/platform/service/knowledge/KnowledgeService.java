@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -237,7 +238,8 @@ public class KnowledgeService {
 
     /** PDF 文本提取（PDFBox） */
     private String readPdf(MultipartFile file) throws IOException {
-        try (PDDocument doc = PDDocument.load(file.getBytes())) {
+        // 替换掉旧的 PDDocument.load(file.getBytes())
+        try (PDDocument doc = Loader.loadPDF(file.getBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             return stripper.getText(doc);
         }
