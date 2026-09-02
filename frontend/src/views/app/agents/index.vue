@@ -199,11 +199,11 @@ async function confirmCreate() {
 }
 
 function edit(row: AppAgent) {
-  router.push(`/app-agents/${row.id}/edit`)
+  router.push(`/app/agents/${row.id}/edit`)
 }
 
 function chat(row: AppAgent) {
-  router.push(`/app-agents/${row.id}/chat`)
+  router.push(`/app/agents/${row.id}/chat`)
 }
 
 function publish(row: AppAgent) {

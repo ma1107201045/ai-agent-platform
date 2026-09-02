@@ -11,6 +11,7 @@ import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
+import com.agent.platform.service.app.AppApiKeyService;
 import com.agent.platform.service.model.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -30,6 +31,7 @@ import java.util.List;
 public class PortalPublicController {
 
     private final AppAgentService appAgentService;
+    private final AppApiKeyService appApiKeyService;
     private final ModelService modelService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
@@ -49,13 +51,24 @@ public class PortalPublicController {
     }
 
     /**
-     * 公开对话（无鉴权）：
+     * 公开对话：
      * 请求体 messages 为完整对话历史（最后一条必须是 user 消息，作为本次输入）。
      * workflow → 运行已发布版本 DSL；agent → 自主工具调用；chatflow → 默认模型直连。
+     *
+     * <p>鉴权策略：默认免鉴权开放（供官网/嵌入分享）；若携带
+     * {@code Authorization: Bearer <api-key>} 或 {@code X-API-Key: <api-key>}，
+     * 则按「应用 API 密钥」校验（启用 / 未过期 / 限流），无鉴权信息时行为不变。
      */
     @PostMapping("/app-agents/{id}/chat")
-    public Result<PublicChatResult> chat(@PathVariable Long id, @RequestBody PublicChatReq req) {
-        requirePublished(id);
+    public Result<PublicChatResult> chat(@PathVariable Long id,
+                                         @RequestHeader(value = "Authorization", required = false) String authorization,
+                                         @RequestHeader(value = "X-API-Key", required = false) String apiKeyHeader,
+                                         @RequestBody PublicChatReq req) {
+        AppAgent app = requirePublished(id);
+        String presentedKey = resolveApiKey(authorization, apiKeyHeader);
+        if (presentedKey != null) {
+            appApiKeyService.authenticate(app.getId(), presentedKey);
+        }
         List<ChatMessage> messages = req.getMessages();
         if (messages == null || messages.isEmpty()) {
             throw new BizException("请输入消息");
@@ -66,7 +79,6 @@ public class PortalPublicController {
         }
         List<ChatMessage> history = new ArrayList<>(messages.subList(0, messages.size() - 1));
 
-        AppAgent app = appAgentService.getById(id);
         String answer;
         Object detail = null;
         if ("workflow".equals(app.getType())) {
@@ -114,6 +126,23 @@ public class PortalPublicController {
             throw new BizException("应用未发布，无法对外访问");
         }
         return app;
+    }
+
+    /**
+     * 从请求头解析 API Key：
+     * 优先取 {@code X-API-Key}，其次取 {@code Authorization: Bearer <key>}；均未携带返回 null（视为匿名公开访问）。
+     */
+    private String resolveApiKey(String authorization, String apiKeyHeader) {
+        if (apiKeyHeader != null && !apiKeyHeader.isBlank()) {
+            return apiKeyHeader.trim();
+        }
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            String token = authorization.substring(7).trim();
+            if (!token.isEmpty()) {
+                return token;
+            }
+        }
+        return null;
     }
 
     @Data

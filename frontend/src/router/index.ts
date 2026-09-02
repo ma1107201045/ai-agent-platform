@@ -66,6 +66,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/app/agents/index.vue'),
         meta: { title: '智能体' }
       },
+      {
+        path: 'app/prompts',
+        name: 'AppPrompts',
+        component: () => import('@/views/app/prompts/index.vue'),
+        meta: { title: '提示词库' }
+      },
       planned('app/templates', 'AppTemplates', {
         title: '应用模板',
         phase: 'P2',
@@ -97,17 +103,6 @@ const routes: RouteRecordRaw[] = [
           { name: '协作对话', detail: '可视化查看智能体间传递与决策过程' }
         ],
         dependency: '需扩展 WorkflowEngine 支持多智能体协作'
-      }),
-      planned('app/prompts', 'AppPrompts', {
-        title: '提示词库',
-        phase: 'P0',
-        desc: '集中管理可复用的提示词模板与版本，支撑应用编排与调试',
-        features: [
-          { name: '模板管理', detail: '维护系统/业务提示词模板与变量占位' },
-          { name: '版本管理', detail: '提示词迭代留痕，支持回退历史版本' },
-          { name: '调试试跑', detail: '在线调试提示词，对比不同写法效果' }
-        ],
-        dependency: '需后端新增提示词实体与版本快照'
       }),
       planned('app/schedules', 'AppSchedules', {
         title: '定时任务',
@@ -220,6 +215,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/publish/index.vue'),
         meta: { title: '发布管理' }
       },
+      {
+        path: 'publish/api-keys',
+        name: 'PublishApiKeys',
+        component: () => import('@/views/publish/api-keys/index.vue'),
+        meta: { title: 'API 密钥' }
+      },
       planned('publish/channels', 'PublishChannels', {
         title: '渠道管理',
         phase: 'P0',
@@ -230,17 +231,6 @@ const routes: RouteRecordRaw[] = [
           { name: '渠道监控', detail: '渠道级调用量与错误统计' }
         ],
         dependency: '需后端新增渠道实体与消息协议适配'
-      }),
-      planned('publish/api-keys', 'PublishApiKeys', {
-        title: 'API 密钥',
-        phase: 'P0',
-        desc: '生成与管理应用调用密钥，将智能体接入外部业务系统',
-        features: [
-          { name: '密钥管理', detail: '创建、禁用、轮换与删除 API Key' },
-          { name: '调用示例', detail: 'REST API 调用方式与多语言代码示例' },
-          { name: '配额控制', detail: '限流、过期时间与调用额度管理' }
-        ],
-        dependency: '需后端新增 API Key 表与请求鉴权'
       }),
       planned('publish/docs', 'PublishDocs', {
         title: 'API 文档',
@@ -277,6 +267,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/conversations/index.vue'),
         meta: { title: '对话记录' }
       },
+      {
+        path: 'ops/usage',
+        name: 'OpsUsage',
+        component: () => import('@/views/ops/usage/index.vue'),
+        meta: { title: '用量统计' }
+      },
       planned('ops/conversations/label', 'OpsConversationLabel', {
         title: '对话标注',
         phase: 'P1',
@@ -286,16 +282,6 @@ const routes: RouteRecordRaw[] = [
           { name: '标注数据集', detail: '按应用汇总标注样本，导出为评测/微调数据集' }
         ],
         dependency: '需在 ChatMessage 上补充反馈与标注字段'
-      }),
-      planned('ops/usage', 'OpsUsage', {
-        title: '用量统计',
-        phase: 'P0',
-        desc: '按应用、模型统计 Token 消耗与调用趋势，掌控运行成本',
-        features: [
-          { name: 'Token 统计', detail: '输入/输出 Token、按日趋势与总量统计' },
-          { name: '成本估算', detail: '结合模型单价估算调用成本' }
-        ],
-        dependency: '需在消息落库时记录 Token 并新增聚合统计接口'
       }),
       planned('ops/billing', 'OpsBilling', {
         title: '费用账单',

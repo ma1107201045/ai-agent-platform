@@ -325,12 +325,17 @@ public class AppAgentService {
 
         List<AgentStep> steps = new ArrayList<>();
         String answer = null;
+        long totalTokens = 0;
         for (int i = 0; i < maxIter; i++) {
             ChatRequest.ChatRequestBuilder builder = ChatRequest.builder().messages(messages);
             if (!tools.isEmpty()) {
                 builder.tools(appToolService.toFunctionTools(tools));
             }
             ChatResponse response = chatModel.call(builder.build());
+            // 累加每一轮（含工具调用轮次）的 Token 用量，供消息落库与用量统计
+            if (response != null && response.getUsage() != null) {
+                totalTokens += response.getUsage().totalTokens();
+            }
             List<ToolCall> toolCalls = response == null ? null : response.getToolCalls();
 
             // 无工具调用 → 对话结束
@@ -365,7 +370,7 @@ public class AppAgentService {
         if (answer == null) {
             answer = "已达到最大迭代次数（" + maxIter + "），请调整问题或检查工具配置。";
         }
-        return new AgentResult(answer, steps);
+        return new AgentResult(answer, steps, totalTokens);
     }
 
     /** 取历史中最后一条用户消息作为知识库检索查询 */
@@ -447,6 +452,8 @@ public class AppAgentService {
         private String answer;
         /** 工具调用步骤 */
         private List<AgentStep> steps;
+        /** 全流程累计 Token 用量（含工具调用轮次） */
+        private long totalTokens;
     }
 
     @Data

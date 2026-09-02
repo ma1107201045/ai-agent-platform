@@ -200,6 +200,7 @@ public class ChatConversationService {
             AppAgentService.AgentResult result = appAgentService.chat(conv.getAppId(), mid, null, llmHistory, null);
             answer = result.getAnswer();
             traceJson = toJson(result.getSteps());
+            tokens = result.getTotalTokens();
         } else {
             Long mid = modelId != null ? modelId : conv.getModelId();
             if (mid == null) {

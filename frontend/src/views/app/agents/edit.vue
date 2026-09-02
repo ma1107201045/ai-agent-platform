@@ -1025,7 +1025,7 @@ async function publish() {
 }
 
 function goChat() {
-  router.push(`/app-agents/${appId}/chat`)
+  router.push(`/app/agents/${appId}/chat`)
 }
 
 // ---------- 版本历史 ----------

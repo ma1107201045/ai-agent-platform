@@ -320,4 +320,90 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 INSERT INTO `sys_user` VALUES (1, 1, 'admin', '$2a$10$9q7nqAmKWk7KcW/peXz.Ru4OVkaJUjrrI4UElU1RRk.Z.V6rSrDgq', '管理员', NULL, NULL, 1, '2026-08-28 00:22:58', '2026-08-28 01:23:10');
 
+-- ----------------------------
+-- Table structure for app_prompt_template
+-- ----------------------------
+DROP TABLE IF EXISTS `app_prompt_template`;
+CREATE TABLE `app_prompt_template`  (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+    `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模板名称',
+    `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '模板描述',
+    `category` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'general' COMMENT '分类: general通用 system系统 business业务 custom自定义',
+    `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模板正文(支持{{var}}占位)',
+    `variables` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '变量定义(JSON数组:[{"name":"var","desc":"说明"}])',
+    `version` int NOT NULL DEFAULT 1 COMMENT '当前版本号',
+    `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+    `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+    INDEX `idx_category`(`category` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '提示词模板' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for app_prompt_version
+-- ----------------------------
+DROP TABLE IF EXISTS `app_prompt_version`;
+CREATE TABLE `app_prompt_version`  (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `template_id` bigint NOT NULL COMMENT '模板ID',
+    `version` int NOT NULL COMMENT '版本号(从1自增)',
+    `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '该版本模板正文',
+    `variables` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '该版本变量定义(JSON)',
+    `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '版本说明',
+    `created_by` bigint NULL DEFAULT NULL COMMENT '创建人',
+    `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_template_version`(`template_id` ASC, `version` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '提示词模板版本快照' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for app_api_key
+-- ----------------------------
+DROP TABLE IF EXISTS `app_api_key`;
+CREATE TABLE `app_api_key`  (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+    `app_id` bigint NOT NULL COMMENT '关联应用ID(app_agent.id)',
+    `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '密钥名称(用途标识)',
+    `key_prefix` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '密钥前缀(列表展示用)',
+    `key_hash` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '密钥SHA-256哈希(十六进制)，明文仅创建/轮换时返回一次',
+    `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+    `expires_at` datetime NULL DEFAULT NULL COMMENT '过期时间(空=永不过期)',
+    `rate_limit` int NULL DEFAULT NULL COMMENT '每分钟请求上限(空=不限)',
+    `usage_count` bigint NOT NULL DEFAULT 0 COMMENT '累计调用次数',
+    `last_used_at` datetime NULL DEFAULT NULL COMMENT '最近使用时间',
+    `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
+    `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_app`(`app_id` ASC) USING BTREE,
+    INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '应用API密钥' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of app_prompt_template
+-- ----------------------------
+INSERT INTO `app_prompt_template` (`id`, `tenant_id`, `name`, `description`, `category`, `content`, `variables`, `version`, `status`, `create_time`, `update_time`) VALUES
+(1, 1, '通用结构化助手', '为任意任务设定专业助手的系统提示词模板', 'general', '你是一个专业的智能助手，名叫{{name}}。你的任务目标是：{{task}}。请严格围绕目标展开，若信息不足请向用户澄清而不是臆测。回答要求：1. 结论先行，逻辑清晰；2. 使用用户使用的语言；3. 涉及数据或结论时给出依据。请开始。', '[{"name":"name","desc":"助手名称"},{"name":"task","desc":"任务目标"}]', 1, 1, '2026-09-01 12:00:00', '2026-09-01 12:00:00');
+INSERT INTO `app_prompt_template` (`id`, `tenant_id`, `name`, `description`, `category`, `content`, `variables`, `version`, `status`, `create_time`, `update_time`) VALUES
+(2, 1, '资深专家角色扮演', '让模型扮演指定领域的资深专家（系统内置）', 'system', '你是一位拥有{{years}}年经验的资深{{expertise}}专家。请以该角色身份回答：1. 先给出明确结论，再分条阐述依据；2. 使用准确的行业术语，必要时作通俗解释；3. 超出专业范围时坦诚说明，并给出可靠的获取建议。回答语言请与用户保持一致。', '[{"name":"years","desc":"从业年限"},{"name":"expertise","desc":"专业领域"}]', 1, 1, '2026-09-01 12:00:00', '2026-09-01 12:00:00');
+INSERT INTO `app_prompt_template` (`id`, `tenant_id`, `name`, `description`, `category`, `content`, `variables`, `version`, `status`, `create_time`, `update_time`) VALUES
+(3, 1, '智能客服应答', '基于知识库内容的在线客服应答模板', 'business', '你是{{brand}}的在线客服{{serviceName}}。请基于给定的知识内容回答：{{knowledge}}。回答原则：1. 优先引用知识库，不编造事实；2. 无法解决时引导用户留下联系方式并承诺转人工跟进；3. 语气礼貌简洁。若用户情绪激动，请先安抚情绪再处理问题。', '[{"name":"brand","desc":"品牌名称"},{"name":"serviceName","desc":"客服代号"},{"name":"knowledge","desc":"知识库内容"}]', 1, 1, '2026-09-01 12:00:00', '2026-09-01 12:00:00');
+INSERT INTO `app_prompt_template` (`id`, `tenant_id`, `name`, `description`, `category`, `content`, `variables`, `version`, `status`, `create_time`, `update_time`) VALUES
+(4, 1, '翻译润色助手', '跨语言翻译与润色的模板示例', 'custom', '你是资深翻译与润色专家。请将下方内容从{{srcLang}}翻译为{{tgtLang}}：{{input}}。要求：1. 准确传达原意与语气；2. 译文自然流畅，符合目标语言习惯；3. 保留专有名词、数字与格式；4. 如存在多义，选择最佳译法并附一句简短说明。', '[{"name":"srcLang","desc":"源语言"},{"name":"tgtLang","desc":"目标语言"},{"name":"input","desc":"待翻译内容"}]', 1, 1, '2026-09-01 12:00:00', '2026-09-01 12:00:00');
+
+-- ----------------------------
+-- Records of app_prompt_version
+-- ----------------------------
+INSERT INTO `app_prompt_version` (`template_id`, `version`, `content`, `variables`, `remark`, `created_by`, `create_time`) VALUES
+(1, 1, '你是一个专业的智能助手，名叫{{name}}。你的任务目标是：{{task}}。请严格围绕目标展开，若信息不足请向用户澄清而不是臆测。回答要求：1. 结论先行，逻辑清晰；2. 使用用户使用的语言；3. 涉及数据或结论时给出依据。请开始。', '[{"name":"name","desc":"助手名称"},{"name":"task","desc":"任务目标"}]', '初始版本', 1, '2026-09-01 12:00:00');
+INSERT INTO `app_prompt_version` (`template_id`, `version`, `content`, `variables`, `remark`, `created_by`, `create_time`) VALUES
+(2, 1, '你是一位拥有{{years}}年经验的资深{{expertise}}专家。请以该角色身份回答：1. 先给出明确结论，再分条阐述依据；2. 使用准确的行业术语，必要时作通俗解释；3. 超出专业范围时坦诚说明，并给出可靠的获取建议。回答语言请与用户保持一致。', '[{"name":"years","desc":"从业年限"},{"name":"expertise","desc":"专业领域"}]', '初始版本', 1, '2026-09-01 12:00:00');
+INSERT INTO `app_prompt_version` (`template_id`, `version`, `content`, `variables`, `remark`, `created_by`, `create_time`) VALUES
+(3, 1, '你是{{brand}}的在线客服{{serviceName}}。请基于给定的知识内容回答：{{knowledge}}。回答原则：1. 优先引用知识库，不编造事实；2. 无法解决时引导用户留下联系方式并承诺转人工跟进；3. 语气礼貌简洁。若用户情绪激动，请先安抚情绪再处理问题。', '[{"name":"brand","desc":"品牌名称"},{"name":"serviceName","desc":"客服代号"},{"name":"knowledge","desc":"知识库内容"}]', '初始版本', 1, '2026-09-01 12:00:00');
+INSERT INTO `app_prompt_version` (`template_id`, `version`, `content`, `variables`, `remark`, `created_by`, `create_time`) VALUES
+(4, 1, '你是资深翻译与润色专家。请将下方内容从{{srcLang}}翻译为{{tgtLang}}：{{input}}。要求：1. 准确传达原意与语气；2. 译文自然流畅，符合目标语言习惯；3. 保留专有名词、数字与格式；4. 如存在多义，选择最佳译法并附一句简短说明。', '[{"name":"srcLang","desc":"源语言"},{"name":"tgtLang","desc":"目标语言"},{"name":"input","desc":"待翻译内容"}]', '初始版本', 1, '2026-09-01 12:00:00');
+
 SET FOREIGN_KEY_CHECKS = 1;

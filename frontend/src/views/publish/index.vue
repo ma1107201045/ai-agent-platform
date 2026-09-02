@@ -79,7 +79,7 @@ onMounted(load)
         <h2 class="head-title">发布与集成</h2>
         <p class="head-desc">将智能体能力嵌入现有业务流：WebApp 链接、线上版本与运行数据</p>
       </div>
-      <el-button type="primary" class="btn-gradient" @click="router.push('/app-agents')">
+      <el-button type="primary" class="btn-gradient" @click="router.push('/app/agents')">
         <el-icon><Right /></el-icon>&nbsp;去应用列表
       </el-button>
     </div>
@@ -128,7 +128,7 @@ onMounted(load)
           <el-icon :size="40"><Promotion /></el-icon>
         </div>
         <p>还没有已发布的应用，先去发布一个吧</p>
-        <el-button type="primary" class="btn-gradient" @click="router.push('/app-agents')">去发布</el-button>
+        <el-button type="primary" class="btn-gradient" @click="router.push('/app/agents')">去发布</el-button>
       </div>
     </div>
   </div>

@@ -97,10 +97,10 @@ export const menuGroups: MenuGroup[] = [
     icon: MagicStick,
     items: [
       { path: '/app/agents', title: '智能体', icon: Grid },
+      { path: '/app/prompts', title: '提示词库', icon: Collection },
       { path: '/app/templates', title: '应用模板', icon: CopyDocument, planned: true },
       { path: '/app/marketplace', title: '应用市场', icon: Shop, planned: true },
       { path: '/app/multi-agent', title: '多智能体编排', icon: Avatar, planned: true },
-      { path: '/app/prompts', title: '提示词库', icon: Collection, planned: true },
       { path: '/app/schedules', title: '定时任务', icon: Timer, planned: true },
       { path: '/app/guardrails', title: '内容安全', icon: Umbrella, planned: true }
     ]
@@ -132,8 +132,8 @@ export const menuGroups: MenuGroup[] = [
     icon: Promotion,
     items: [
       { path: '/publish', title: '发布管理', icon: Share },
+      { path: '/publish/api-keys', title: 'API 密钥', icon: Key },
       { path: '/publish/channels', title: '渠道管理', icon: Platform, planned: true },
-      { path: '/publish/api-keys', title: 'API 密钥', icon: Key, planned: true },
       { path: '/publish/docs', title: 'API 文档', icon: Reading, planned: true },
       { path: '/publish/versions', title: '版本历史', icon: Clock, planned: true }
     ]
@@ -145,8 +145,8 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { path: '/ops', title: '运行监控', icon: TrendCharts },
       { path: '/ops/conversations', title: '对话记录', icon: ChatDotRound },
+      { path: '/ops/usage', title: '用量统计', icon: Histogram },
       { path: '/ops/conversations/label', title: '对话标注', icon: CollectionTag, planned: true },
-      { path: '/ops/usage', title: '用量统计', icon: Histogram, planned: true },
       { path: '/ops/billing', title: '费用账单', icon: CreditCard, planned: true },
       { path: '/ops/alerts', title: '告警管理', icon: WarningFilled, planned: true }
     ]
