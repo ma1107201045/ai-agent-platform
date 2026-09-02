@@ -406,4 +406,56 @@ INSERT INTO `app_prompt_version` (`template_id`, `version`, `content`, `variable
 INSERT INTO `app_prompt_version` (`template_id`, `version`, `content`, `variables`, `remark`, `created_by`, `create_time`) VALUES
 (4, 1, '你是资深翻译与润色专家。请将下方内容从{{srcLang}}翻译为{{tgtLang}}：{{input}}。要求：1. 准确传达原意与语气；2. 译文自然流畅，符合目标语言习惯；3. 保留专有名词、数字与格式；4. 如存在多义，选择最佳译法并附一句简短说明。', '[{"name":"srcLang","desc":"源语言"},{"name":"tgtLang","desc":"目标语言"},{"name":"input","desc":"待翻译内容"}]', '初始版本', 1, '2026-09-01 12:00:00');
 
+-- ----------------------------
+-- Table structure for chat_usage
+-- 模型用量事件：控制台会话/公开 API 每次模型调用(输入+输出)记一条，用于用量统计
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_usage`;
+CREATE TABLE `chat_usage`  (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+    `app_id` bigint NOT NULL COMMENT '应用ID',
+    `conversation_id` bigint NULL DEFAULT NULL COMMENT '会话ID(公开调用为空)',
+    `user_id` bigint NULL DEFAULT NULL COMMENT '用户ID(公开调用为空)',
+    `model_id` bigint NULL DEFAULT NULL COMMENT '模型ID',
+    `channel` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'console' COMMENT '来源: console控制台会话/public公开API',
+    `mode` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '会话模式: direct/agent/workflow',
+    `prompt_tokens` int NOT NULL DEFAULT 0 COMMENT '输入Token',
+    `completion_tokens` int NOT NULL DEFAULT 0 COMMENT '输出Token',
+    `total_tokens` int NOT NULL DEFAULT 0 COMMENT '总Token(输入+输出)',
+    `cost` decimal(14,6) NOT NULL DEFAULT 0.000000 COMMENT '估算成本(元)，按模型单价计算',
+    `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_app_time`(`app_id` ASC, `create_time` ASC) USING BTREE,
+    INDEX `idx_model_time`(`model_id` ASC, `create_time` ASC) USING BTREE,
+    INDEX `idx_conv`(`conversation_id` ASC) USING BTREE,
+    INDEX `idx_create_time`(`create_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型用量事件' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of chat_usage (演示数据, 便于用量统计页直接出图)
+-- 口径: 控制台会话(console)每次模型调用记一条；公开API(public)每次请求记一条(无会话/用户)。
+-- 单价: deepseek-chat 输入1元/输出2元每百万Token；deepseek-reasoner 输入4元/输出16元每百万Token。
+-- ----------------------------
+INSERT INTO `chat_usage` (`tenant_id`, `app_id`, `conversation_id`, `user_id`, `model_id`, `channel`, `mode`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `cost`, `create_time`) VALUES
+(1, 9, 1, 1, 3, 'console', 'agent', 1800, 620, 2420, 0.003040, DATE_SUB(NOW(), INTERVAL 3 HOUR)),
+(1, 9, 1, 1, 3, 'console', 'agent', 2360, 810, 3170, 0.003980, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(1, 9, 1, 1, 3, 'console', 'agent', 1520, 460, 1980, 0.002440, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(1, 9, 1, 1, 3, 'console', 'agent', 4210, 1340, 5550, 0.006890, DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(1, 9, 1, 1, 3, 'console', 'agent', 1890, 720, 2610, 0.003330, DATE_SUB(NOW(), INTERVAL 7 DAY)),
+(1, 9, 1, 1, 3, 'console', 'agent', 950, 280, 1230, 0.001510, DATE_SUB(NOW(), INTERVAL 9 DAY)),
+(1, 9, 1, 1, 3, 'console', 'agent', 3100, 980, 4080, 0.005060, DATE_SUB(NOW(), INTERVAL 11 DAY)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 640, 210, 850, 0.001060, DATE_SUB(NOW(), INTERVAL 5 HOUR)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 920, 300, 1220, 0.001520, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 1180, 430, 1610, 0.002040, DATE_SUB(NOW(), INTERVAL 4 DAY)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 760, 260, 1020, 0.001280, DATE_SUB(NOW(), INTERVAL 6 DAY)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 2100, 610, 2710, 0.003320, DATE_SUB(NOW(), INTERVAL 8 DAY)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 480, 150, 630, 0.000780, DATE_SUB(NOW(), INTERVAL 10 DAY)),
+(1, 6, NULL, NULL, 3, 'public', 'direct', 1560, 520, 2080, 0.002600, DATE_SUB(NOW(), INTERVAL 12 DAY)),
+(1, 9, NULL, NULL, 4, 'public', 'direct', 4280, 1520, 5800, 0.041440, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(1, 9, NULL, NULL, 4, 'public', 'direct', 3650, 1180, 4830, 0.033480, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(1, 9, NULL, NULL, 4, 'public', 'direct', 5600, 2100, 7700, 0.056000, DATE_SUB(NOW(), INTERVAL 6 DAY)),
+(1, 9, NULL, NULL, 4, 'public', 'direct', 1890, 640, 2530, 0.017800, DATE_SUB(NOW(), INTERVAL 9 DAY)),
+(1, 9, NULL, NULL, 4, 'public', 'direct', 3100, 950, 4050, 0.027600, DATE_SUB(NOW(), INTERVAL 12 DAY));
+
 SET FOREIGN_KEY_CHECKS = 1;

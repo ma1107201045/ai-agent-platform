@@ -9,13 +9,16 @@ import com.agent.platform.workflow.WorkflowGraph;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
+import com.agent.platform.llm.model.Usage;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.app.AppApiKeyService;
+import com.agent.platform.service.chat.ChatUsageStatsService;
 import com.agent.platform.service.model.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -25,6 +28,7 @@ import java.util.List;
  * 公开访问接口（无需登录）：
  * 已发布应用对外分享 / 嵌入访问，支持 workflow / agent / chatflow 三种类型
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/portal/public")
 @RequiredArgsConstructor
@@ -35,6 +39,7 @@ public class PortalPublicController {
     private final ModelService modelService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
+    private final ChatUsageStatsService usageStatsService;
 
     /** 公开应用信息（仅已发布） */
     @GetMapping("/app-agents/{id}")
@@ -101,6 +106,8 @@ public class PortalPublicController {
             AppAgentService.AgentResult result = appAgentService.chat(id, modelId, null, history, null);
             answer = result.getAnswer();
             detail = result.getSteps();
+            recordUsageSafely(app, modelId, new Usage(result.getPromptTokens(), result.getCompletionTokens(),
+                    result.getTotalTokens()), "agent");
         } else {
             // chatflow / direct：默认模型直连
             Long modelId = modelService.defaultChatModelId();
@@ -112,12 +119,29 @@ public class PortalPublicController {
             all.add(last);
             ChatResponse response = model.call(ChatRequest.builder().messages(all).build());
             answer = response == null ? "" : response.getContent();
+            recordUsageSafely(app, modelId, response == null ? null : response.getUsage(), "direct");
         }
 
         PublicChatResult result = new PublicChatResult();
         result.setAnswer(answer);
         result.setDetail(detail);
         return Result.ok(result);
+    }
+
+    /**
+     * 公开调用成功后记录用量事件（channel=public，无会话/用户维度）。
+     * 用量统计为尽力而为，记录失败不影响对外响应。
+     */
+    private void recordUsageSafely(AppAgent app, Long modelId, Usage usage, String mode) {
+        if (usage == null) {
+            return;
+        }
+        try {
+            usageStatsService.recordUsage(app.getTenantId(), app.getId(), null, null,
+                    modelId, "public", mode, usage);
+        } catch (Exception e) {
+            log.warn("记录公开用量事件失败 appId={}: {}", app.getId(), e.getMessage());
+        }
     }
 
     private AppAgent requirePublished(Long id) {

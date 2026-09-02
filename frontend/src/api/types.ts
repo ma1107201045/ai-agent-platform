@@ -91,6 +91,12 @@ export interface AgentStep {
 export interface AgentResult {
   answer: string
   steps: AgentStep[]
+  /** 输入 Token（含工具调用轮次累计） */
+  promptTokens?: number
+  /** 输出 Token（含工具调用轮次累计） */
+  completionTokens?: number
+  /** 全流程累计 Token 总量 */
+  totalTokens?: number
 }
 
 /** 编排节点类型 */
@@ -380,26 +386,54 @@ export interface PromptVariableDef {
 }
 
 /** 用量统计：按日趋势条目 */
-export interface UsageDaily {
+export interface UsageTrendPoint {
   date: string
   calls: number
-  tokens: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
 }
 
 /** 用量统计：应用维度 */
-export interface UsageApp {
+export interface UsageAppRow {
   appId: number | null
   appName: string
   conversations: number
   calls: number
-  tokens: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  cost: number
 }
 
-/** 用量统计总览（最近 N 天） */
-export interface UsageOverview {
+/** 用量统计：模型维度 */
+export interface UsageModelRow {
+  modelId: number | null
+  modelName: string
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  cost: number
+}
+
+/** 用量统计总览（时间区间） */
+export interface UsageSummary {
   conversations: number
   calls: number
-  tokens: number
-  daily: UsageDaily[]
-  apps: UsageApp[]
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  /** 估算成本（元） */
+  cost: number
+  /** 查询起始日期 yyyy-MM-dd */
+  startDate: string
+  /** 查询结束日期 yyyy-MM-dd */
+  endDate: string
+  /** 按日趋势（连续日期，空值补 0） */
+  trend: UsageTrendPoint[]
+  /** 应用维度排行 */
+  apps: UsageAppRow[]
+  /** 模型维度排行 */
+  models: UsageModelRow[]
 }

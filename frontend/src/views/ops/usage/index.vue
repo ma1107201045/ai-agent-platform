@@ -1,463 +1,527 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ChatDotRound, Coin, Lightning, PriceTag, Refresh, Setting } from '@element-plus/icons-vue'
+import {
+  ChatDotRound,
+  Coin,
+  Connection,
+  Files,
+  Lightning,
+  PriceTag,
+  Refresh,
+} from '@element-plus/icons-vue'
+import { appAgentApi } from '@/api/app-agent'
 import { usageApi } from '@/api/usage-stat'
-import type { UsageOverview } from '@/api/types'
+import type { UsageAppRow, UsageModelRow, UsageTrendPoint } from '@/api/types'
 
-/* ---------- 数据加载 ---------- */
+// ---------- 日期与筛选 ----------
+const today = () => {
+  const d = new Date()
+  return fmtDay(d)
+}
+const daysAgo = (n: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return fmtDay(d)
+}
+function fmtDay(d: Date) {
+  const m = `${d.getMonth() + 1}`.padStart(2, '0')
+  const day = `${d.getDate()}`.padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+const range = ref<[string, string]>([daysAgo(6), today()])
+const appId = ref<number | undefined>()
+const shortcuts = [
+  { text: '今天', value: () => [today(), today()] },
+  { text: '近 7 天', value: () => [daysAgo(6), today()] },
+  { text: '近 30 天', value: () => [daysAgo(29), today()] },
+  { text: '近 90 天', value: () => [daysAgo(89), today()] },
+]
+
+const appOptions = ref<{ id: number; name: string }[]>([])
+
+// ---------- 数据 ----------
 const loading = ref(false)
-const days = ref(30)
-const overview = ref<UsageOverview | null>(null)
+const summary = ref({
+  conversations: 0,
+  calls: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0,
+  cost: 0,
+  startDate: '',
+  endDate: '',
+  trend: [] as UsageTrendPoint[],
+  apps: [] as UsageAppRow[],
+  models: [] as UsageModelRow[],
+})
 
 async function load() {
   loading.value = true
   try {
-    overview.value = await usageApi.overview(days.value)
-  } catch {
-    /* 接口异常时保留旧数据 */
+    const res = await usageApi.summary({
+      appId: appId.value,
+      startDate: range.value[0],
+      endDate: range.value[1],
+    })
+    summary.value = res
   } finally {
     loading.value = false
   }
 }
 
-/* ---------- 指标卡 ---------- */
-function fmtWan(n: number) {
-  if (!n) return '0'
-  if (n >= 1e8) return (n / 1e8).toFixed(2) + ' 亿'
-  if (n >= 1e4) return (n / 1e4).toFixed(1) + ' 万'
-  return n.toLocaleString()
+async function loadApps() {
+  const res = await appAgentApi.page({ page: 1, size: 100 })
+  appOptions.value = (res.records || []).map((a) => ({ id: a.id, name: a.name }))
 }
 
-const unitPrice = ref(Number(localStorage.getItem('usage_unit_price') || 1))
-function persistPrice() {
-  localStorage.setItem('usage_unit_price', String(unitPrice.value))
-}
-const cost = computed(() => ((overview.value?.tokens ?? 0) / 1_000_000) * unitPrice.value)
-function fmtMoney(n: number) {
-  return n >= 1 ? `¥ ${n.toFixed(2)}` : `¥ ${n.toFixed(4)}`
-}
-
-const metrics = computed(() => {
-  const o = overview.value
-  return [
-    { key: 'conversations', label: '会话总数', value: fmtWan(o?.conversations ?? 0), icon: ChatDotRound, color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-    { key: 'calls', label: '模型调用次数', value: fmtWan(o?.calls ?? 0), icon: Lightning, color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)' },
-    { key: 'tokens', label: 'Token 消耗', value: fmtWan(o?.tokens ?? 0), icon: Coin, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-    { key: 'cost', label: '参考成本', value: fmtMoney(cost.value), icon: PriceTag, color: '#10b981', bg: 'rgba(16,185,129,0.12)' }
-  ]
+onMounted(() => {
+  loadApps()
+  load()
 })
 
-/* ---------- 趋势图（轻量 SVG，无额外依赖） ---------- */
-const VB_W = 680
-const VB_H = 210
-const PAD_X = 4
-const PAD_TOP = 18
-const PAD_BOTTOM = 14
+// ---------- 汇总指标 ----------
+const fmtNum = (v: number) => (v == null ? '0' : Number(v).toLocaleString('zh-CN'))
 
-interface SeriesPt {
+function fmtBig(v: number) {
+  if (!v) return '0'
+  if (v >= 1e8) return `${+(v / 1e8).toFixed(2)} 亿`
+  if (v >= 1e4) return `${+(v / 1e4).toFixed(2)} 万`
+  return fmtNum(v)
+}
+
+function fmtMoney(v: number) {
+  if (!v) return '0'
+  if (v >= 100) return v.toFixed(2)
+  if (v >= 1) return v.toFixed(3)
+  if (v >= 0.01) return v.toFixed(4)
+  return v.toFixed(6)
+}
+
+const rangeText = computed(
+  () => `${summary.value.startDate || range.value[0]} ~ ${summary.value.endDate || range.value[1]}`,
+)
+
+const metrics = computed(() => [
+  { label: '会话数', display: fmtNum(summary.value.conversations), note: '仅控制台会话去重', icon: ChatDotRound, color: '#8b5cf6' },
+  { label: '模型调用', display: fmtNum(summary.value.calls), note: `${rangeText.value} 期间`, icon: Lightning, color: '#0ea5e9' },
+  { label: 'Token 总量', display: fmtBig(summary.value.totalTokens), note: `输入 ${fmtBig(summary.value.inputTokens)} / 输出 ${fmtBig(summary.value.outputTokens)}`, icon: Coin, color: '#f59e0b' },
+  { label: '输入 Token', display: fmtBig(summary.value.inputTokens), note: 'prompt_tokens', icon: Connection, color: '#3b82f6' },
+  { label: '输出 Token', display: fmtBig(summary.value.outputTokens), note: 'completion_tokens', icon: Files, color: '#f97316' },
+  { label: '估算成本', display: `¥ ${fmtMoney(summary.value.cost)}`, note: '按模型官方单价估算', icon: PriceTag, color: '#10b981' },
+])
+
+// ---------- 趋势图 ----------
+interface ChartPoint {
+  date: string
+  v: number
   x: number
   y: number
-  tip: string
 }
-interface ChartDesc {
-  key: 'tokens' | 'calls'
-  title: string
-  color: string
+interface ChartData {
+  points: ChartPoint[]
   line: string
   area: string
-  pts: SeriesPt[]
-  xStart: string
-  xEnd: string
-  totalText: string
+  max: number
 }
 
-function buildSeries(key: 'tokens' | 'calls', color: string, rows: { date: string; tokens: number; calls: number }[]): ChartDesc | null {
-  if (!rows.length) return null
-  const values = rows.map((r) => (key === 'tokens' ? r.tokens : r.calls))
-  const total = values.reduce((s, v) => s + v, 0)
-  const max = Math.max(...values, 1)
-  const innerH = VB_H - PAD_TOP - PAD_BOTTOM
-  const innerW = VB_W - PAD_X * 2
-  const n = values.length
-  const step = n > 1 ? innerW / (n - 1) : 0
-  const base = PAD_TOP + innerH
-  const pts: SeriesPt[] = values.map((v, i) => ({
-    x: +(PAD_X + i * step).toFixed(1),
-    y: +(PAD_TOP + innerH * (1 - v / max)).toFixed(1),
-    tip: `${rows[i].date} · ${fmtWan(v)}`
+function buildChart(values: UsageTrendPoint[], key: 'totalTokens' | 'calls'): ChartData {
+  const list = values.map((t) => ({ date: t.date, v: Number(t[key]) || 0 }))
+  const w = 640
+  const h = 210
+  const pad = { l: 6, r: 6, t: 16, b: 6 }
+  const max = Math.max(1, ...list.map((p) => p.v))
+  const iw = w - pad.l - pad.r
+  const ih = h - pad.t - pad.b
+  const n = list.length
+  const step = n > 1 ? iw / (n - 1) : 0
+  const points = list.map((p, i) => ({
+    ...p,
+    x: pad.l + (n === 1 ? iw / 2 : i * step),
+    y: pad.t + ih - (p.v / max) * ih,
   }))
-  const line = pts.map((p) => `${p.x},${p.y}`).join(' ')
-  const area = `M${pts[0].x},${base} L${pts.map((p) => `${p.x},${p.y}`).join(' L')} L${pts[n - 1].x},${base} Z`
-  return {
-    key,
-    title: key === 'tokens' ? 'Token 消耗趋势' : '模型调用趋势',
-    color,
-    line,
-    area,
-    pts,
-    xStart: rows[0].date,
-    xEnd: rows[n - 1].date,
-    totalText: fmtWan(total)
-  }
+  const line = points.map((p) => `${p.x},${p.y}`).join(' ')
+  const first = points[0]
+  const last = points[points.length - 1]
+  const area = first ? `M${first.x},${pad.t + ih} L${line} L${last.x},${pad.t + ih} Z` : ''
+  return { points, line, area, max }
 }
 
-const charts = computed<ChartDesc[]>(() => {
-  const daily = overview.value?.daily ?? []
-  return [
-    buildSeries('tokens', '#5b6cff', daily),
-    buildSeries('calls', '#10b981', daily)
-  ].filter((c): c is ChartDesc => c !== null)
-})
+const chartDefs = computed<{ title: string; key: 'totalTokens' | 'calls'; color: string; grad: string; total: string }[]>(() => [
+  { title: 'Token 消耗趋势', key: 'totalTokens', color: '#5b6cff', grad: 'gradUsageToken', total: fmtBig(summary.value.totalTokens) },
+  { title: '模型调用趋势', key: 'calls', color: '#10b981', grad: 'gradUsageCalls', total: fmtNum(summary.value.calls) },
+])
 
-/* ---------- 应用排行 ---------- */
-const appRows = computed(() => {
-  const apps = overview.value?.apps ?? []
-  const maxTokens = Math.max(...apps.map((a) => a.tokens), 0)
-  return apps.map((a, i) => ({ ...a, rank: i + 1, share: maxTokens > 0 ? (a.tokens / maxTokens) * 100 : 0 }))
-})
+const chartDataOf = (key: 'totalTokens' | 'calls') => buildChart(summary.value.trend, key)
 
-onMounted(load)
+// ---------- 排行 ----------
+const maxAppTokens = computed(() => Math.max(1, ...summary.value.apps.map((a) => a.totalTokens)))
+const maxModelTokens = computed(() => Math.max(1, ...summary.value.models.map((m) => m.totalTokens)))
+const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1) : 0)
 </script>
 
 <template>
-  <div class="page-container usage-page">
-    <div class="usage-head">
+  <div class="page">
+    <div class="page-header">
       <div>
-        <h2 class="head-title">用量统计</h2>
-        <p class="head-desc">按日与按应用统计模型调用与 Token 消耗，掌控运行成本</p>
-      </div>
-      <div class="head-actions">
-        <el-radio-group v-model="days" @change="load">
-          <el-radio-button :value="7">近 7 天</el-radio-button>
-          <el-radio-button :value="30">近 30 天</el-radio-button>
-          <el-radio-button :value="90">近 90 天</el-radio-button>
-        </el-radio-group>
-        <el-button class="btn-gradient" @click="load">
-          <el-icon><Refresh /></el-icon>&nbsp;刷新
-        </el-button>
+        <h2>用量统计</h2>
+        <p class="page-sub">按应用 / 模型统计调用次数与 Token 消耗，成本按模型官方单价估算，掌控运行成本</p>
       </div>
     </div>
 
-    <!-- 指标卡 -->
-    <div v-loading="loading" class="metric-grid">
-      <div v-for="m in metrics" :key="m.key" class="metric-card hover-card" :class="`metric-${m.key}`">
-        <div class="metric-icon" :style="{ background: m.bg, color: m.color }">
-          <el-icon :size="24"><component :is="m.icon" /></el-icon>
+    <div class="filter-card">
+      <div class="filter-row">
+        <div class="filter-item">
+          <span class="filter-label">统计区间</span>
+          <el-date-picker
+            v-model="range"
+            type="daterange"
+            unlink-panels
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            :shortcuts="shortcuts"
+            style="width: 300px"
+          />
         </div>
-        <div class="metric-info">
-          <div class="metric-value">{{ loading ? '—' : m.value }}</div>
-          <div class="metric-label">{{ m.label }}</div>
+        <div class="filter-item">
+          <span class="filter-label">应用</span>
+          <el-select v-model="appId" placeholder="全部应用" clearable filterable style="width: 200px">
+            <el-option v-for="a in appOptions" :key="a.id" :label="a.name" :value="a.id" />
+          </el-select>
         </div>
-        <template v-if="m.key === 'cost'">
-          <el-popover trigger="click" placement="top" width="250">
-            <template #reference>
-              <el-icon class="metric-set" :size="14"><Setting /></el-icon>
-            </template>
-            <div class="set-title">参考单价（元 / 百万 Token）</div>
-            <el-input-number v-model="unitPrice" :min="0.01" :max="100" :step="0.1" :precision="2" size="small" @change="persistPrice" />
-            <p class="set-note">按模型单价粗略估算，保存后成本按新单价显示</p>
-          </el-popover>
-        </template>
+        <el-button type="primary" :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
       </div>
     </div>
 
-    <!-- 趋势图 -->
+    <div class="metric-grid">
+      <div v-for="m in metrics" :key="m.label" class="metric-card">
+        <div class="metric-head">
+          <span class="metric-ico" :style="{ background: m.color }">
+            <el-icon :size="14"><component :is="m.icon" /></el-icon>
+          </span>
+          <span class="metric-label">{{ m.label }}</span>
+        </div>
+        <div class="metric-value" :title="m.display">{{ m.display }}</div>
+        <div v-if="m.note" class="metric-note">{{ m.note }}</div>
+      </div>
+    </div>
+
     <div class="chart-grid">
-      <div v-for="c in charts" :key="c.key" class="chart-card hover-card">
-        <div class="chart-head">
-          <div>
-            <div class="chart-title">{{ c.title }}</div>
-            <div class="chart-total" :style="{ color: c.color }">{{ c.totalText }}</div>
-          </div>
-          <div class="chart-range">
-            <span>{{ c.xStart }}</span>
-            <span>~</span>
-            <span>{{ c.xEnd }}</span>
-          </div>
+      <div v-for="c in chartDefs" :key="c.title" class="card">
+        <div class="card-head">
+          <h3>{{ c.title }}</h3>
+          <span class="head-extra">合计 {{ c.total }}</span>
         </div>
-        <svg v-if="c.pts.length > 1" :viewBox="`0 0 ${VB_W} ${VB_H}`" class="usage-svg">
-          <defs>
-            <linearGradient :id="`grad-${c.key}`" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" :stop-color="c.color" stop-opacity="0.25" />
-              <stop offset="100%" :stop-color="c.color" stop-opacity="0.02" />
-            </linearGradient>
-          </defs>
-          <path :d="c.area" :fill="`url(#grad-${c.key})`" />
-          <polyline :points="c.line" fill="none" :stroke="c.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          <circle v-for="(p, idx) in c.pts" :key="idx" :cx="p.x" :cy="p.y" r="2.4" :fill="c.color">
-            <title>{{ p.tip }}</title>
-          </circle>
-        </svg>
-        <div v-else class="chart-empty">该时间范围内暂无调用数据</div>
+        <div class="legend-row">
+          <span><i class="dot" :style="{ background: c.color }"></i>{{ c.title }}</span>
+          <span class="head-extra">{{ rangeText }}</span>
+        </div>
+        <template v-if="summary.trend.length">
+          <svg :key="c.key" viewBox="0 0 640 210" class="chart-svg" preserveAspectRatio="none">
+            <defs>
+              <linearGradient :id="c.grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" :stop-color="c.color" stop-opacity="0.25" />
+                <stop offset="100%" :stop-color="c.color" stop-opacity="0.02" />
+              </linearGradient>
+            </defs>
+            <path :d="chartDataOf(c.key).area" :fill="`url(#${c.grad})`" />
+            <polyline
+              :points="chartDataOf(c.key).line"
+              fill="none"
+              :stroke="c.color"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <template v-for="(p, i) in chartDataOf(c.key).points" :key="i">
+              <title>{{ p.date }}：{{ p.v.toLocaleString('zh-CN') }}</title>
+              <rect :x="p.x - 4" :y="0" width="8" height="210" fill="transparent" />
+              <circle v-if="chartDataOf(c.key).points.length <= 60" :cx="p.x" :cy="p.y" r="2.5" :fill="c.color" />
+            </template>
+          </svg>
+        </template>
+        <el-empty v-else description="该区间暂无数据，先发起一次对话吧" :image-size="72" />
       </div>
     </div>
 
-    <!-- 应用 Token 排行 -->
-    <div class="rank-card hover-card">
-      <div class="rank-head">
-        <div>
-          <div class="chart-title">应用 Token 消耗排行</div>
-          <div class="rank-sub">按 Token 总量降序，便于定位高消耗应用</div>
+    <div class="rank-grid">
+      <div class="card">
+        <div class="card-head">
+          <h3>应用 Token 排行</h3>
+          <span class="head-extra">{{ summary.apps.length }} 个应用</span>
         </div>
-      </div>
-      <el-table v-loading="loading" :data="appRows" class="rank-table">
-        <el-table-column label="#" width="64">
-          <template #default="{ row }">
-            <span class="rank-badge" :class="{ top: row.rank <= 3 }">{{ row.rank }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="应用" min-width="220">
-          <template #default="{ row }">
-            <span class="app-name">{{ row.appName }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="会话数" width="120" align="right">
-          <template #default="{ row }">{{ row.conversations.toLocaleString() }}</template>
-        </el-table-column>
-        <el-table-column label="调用次数" width="130" align="right">
-          <template #default="{ row }">{{ row.calls.toLocaleString() }}</template>
-        </el-table-column>
-        <el-table-column label="Token 消耗" width="140" align="right">
-          <template #default="{ row }">
-            <b class="token-num">{{ row.tokens.toLocaleString() }}</b>
-          </template>
-        </el-table-column>
-        <el-table-column label="占比" min-width="200">
-          <template #default="{ row }">
-            <div class="share-cell">
-              <div class="share-bar">
-                <div class="share-fill" :style="{ width: `${row.share}%` }" />
+        <el-table :data="summary.apps" size="small" style="width: 100%">
+          <el-table-column label="排名" width="56" align="center">
+            <template #default="{ $index }">
+              <span :class="['rank', $index < 3 ? `rank-${$index + 1}` : '']">{{ $index + 1 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="应用" min-width="140" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.appName }}</template>
+          </el-table-column>
+          <el-table-column label="会话数" width="80" align="right">
+            <template #default="{ row }">{{ row.conversations }}</template>
+          </el-table-column>
+          <el-table-column label="调用次数" width="90" align="right">
+            <template #default="{ row }">{{ row.calls }}</template>
+          </el-table-column>
+          <el-table-column label="Token 消耗" min-width="150">
+            <template #default="{ row }">
+              <div class="cell-bar">
+                <div class="cell-bar-text">{{ fmtNum(row.totalTokens) }}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" :style="{ width: pct(row.totalTokens, maxAppTokens) + '%', background: '#5b6cff' }" />
+                </div>
               </div>
-              <span class="share-text">{{ row.share.toFixed(1) }}%</span>
-            </div>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <div class="rank-empty">所选时间范围内暂无调用数据</div>
-        </template>
-      </el-table>
+            </template>
+          </el-table-column>
+          <el-table-column label="成本(元)" width="110" align="right">
+            <template #default="{ row }">¥ {{ fmtMoney(row.cost) }}</template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="!summary.apps.length" description="该区间暂无应用用量" :image-size="72" />
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>模型 Token 排行</h3>
+          <span class="head-extra">{{ summary.models.length }} 个模型</span>
+        </div>
+        <el-table :data="summary.models" size="small" style="width: 100%">
+          <el-table-column label="排名" width="56" align="center">
+            <template #default="{ $index }">
+              <span :class="['rank', $index < 3 ? `rank-${$index + 1}` : '']">{{ $index + 1 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="模型" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.modelName }}</template>
+          </el-table-column>
+          <el-table-column label="调用次数" width="90" align="right">
+            <template #default="{ row }">{{ row.calls }}</template>
+          </el-table-column>
+          <el-table-column label="输入 Token" width="110" align="right">
+            <template #default="{ row }">{{ fmtNum(row.inputTokens) }}</template>
+          </el-table-column>
+          <el-table-column label="输出 Token" width="110" align="right">
+            <template #default="{ row }">{{ fmtNum(row.outputTokens) }}</template>
+          </el-table-column>
+          <el-table-column label="Token 合计" min-width="120">
+            <template #default="{ row }">
+              <div class="cell-bar">
+                <div class="cell-bar-text">{{ fmtNum(row.totalTokens) }}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" :style="{ width: pct(row.totalTokens, maxModelTokens) + '%', background: '#10b981' }" />
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="成本(元)" width="110" align="right">
+            <template #default="{ row }">¥ {{ fmtMoney(row.cost) }}</template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="!summary.models.length" description="该区间暂无模型用量" :image-size="72" />
+      </div>
     </div>
 
     <el-alert
+      class="usage-tip"
       type="info"
       :closable="false"
-      class="scope-tip"
-      title="统计口径：一次模型响应计为一次调用（assistant 消息）；直连模式与 Agent 模式的 Token 已逐条落库。工作流节点内的 Token 汇总将在引擎用量上报后自动并入，当前该部分不参与成本估算。"
+      show-icon
+      title="统计口径"
+      description="每次模型调用（控制台会话 console / 公开 API public，覆盖 direct / agent 模式）成功并返回 usage 时记一条用量事件；会话数仅统计控制台去重会话。成本按模型官方单价（元/百万 Token）估算：deepseek-chat 1/2、deepseek-reasoner 4/16，未知模型按 0 计。"
     />
   </div>
 </template>
 
 <style scoped>
-.usage-page {
+.page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
 }
-.usage-head {
+.page-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.page-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.page-sub {
+  margin: 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.filter-card {
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
-.head-actions {
+.filter-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+.filter-label {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
-/* ---------- 指标卡 ---------- */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: 20px;
-  min-height: 96px;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
 }
 .metric-card {
-  position: relative;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.metric-head {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
-.metric-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+.metric-ico {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-}
-.metric-value {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
+  color: #fff;
 }
 .metric-label {
-  margin-top: 3px;
+  color: var(--el-text-color-secondary);
   font-size: 13px;
-  color: var(--text-secondary);
 }
-.metric-set {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  color: var(--text-tertiary);
-  cursor: pointer;
-}
-.metric-set:hover {
-  color: var(--el-color-primary);
-}
-.set-title {
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-.set-note {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  line-height: 1.6;
-  margin: 8px 0 0;
-}
-
-/* ---------- 趋势图 ---------- */
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-}
-.chart-card {
-  padding: 18px 20px 12px;
-}
-.chart-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.chart-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-.chart-total {
-  margin-top: 4px;
+.metric-value {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.chart-range {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.metric-note {
+  margin-top: 4px;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.usage-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-  margin-top: 6px;
-}
-.chart-empty {
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ---------- 排行表 ---------- */
-.rank-card {
-  margin-top: 16px;
-  padding: 18px 20px;
+.chart-grid,
+.rank-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
 }
-.rank-head {
+.card {
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.card-head {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  align-items: center;
+  margin-bottom: 6px;
 }
-.rank-sub {
-  margin-top: 4px;
+.card-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.head-extra {
+  color: var(--el-text-color-secondary);
   font-size: 12px;
-  color: var(--text-tertiary);
 }
-.rank-table {
-  --el-table-border-color: transparent;
+.legend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.chart-svg {
+  display: block;
   width: 100%;
+  height: 210px;
 }
-.rank-badge {
+
+.rank {
   display: inline-flex;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 50%;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--bg-fill, #f0f2f5);
 }
-.rank-badge.top {
-  color: #fff;
-  background: linear-gradient(135deg, #ff9d5c, #ff7a5c);
+.rank-1 {
+  background: #fef3c7;
+  color: #b45309;
 }
-.app-name {
-  font-weight: 500;
-  color: var(--text-primary);
+.rank-2 {
+  background: #e5e7eb;
+  color: #4b5563;
 }
-.token-num {
+.rank-3 {
+  background: #ffe0c7;
+  color: #c2410c;
+}
+.cell-bar-text {
   font-variant-numeric: tabular-nums;
 }
-.share-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.share-bar {
-  flex: 1;
-  height: 6px;
-  border-radius: 4px;
-  background: var(--bg-fill, #f0f2f5);
+.bar-track {
+  height: 3px;
+  margin-top: 4px;
+  background: var(--el-fill-color-light);
+  border-radius: 2px;
   overflow: hidden;
 }
-.share-fill {
+.bar-fill {
   height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #5b6cff, #7c8cff);
-  transition: width 0.4s ease;
-}
-.share-text {
-  width: 44px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.rank-empty {
-  text-align: center;
-  padding: 30px 0;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
-.scope-tip {
-  margin-top: 16px;
-  border-radius: 10px;
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
-@media (max-width: 1000px) {
-  .metric-grid,
-  .chart-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.usage-tip {
+  border-radius: 8px;
 }
-@media (max-width: 640px) {
-  .metric-grid,
-  .chart-grid {
+
+@media (max-width: 900px) {
+  .chart-grid,
+  .rank-grid {
     grid-template-columns: 1fr;
   }
 }

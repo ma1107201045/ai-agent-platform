@@ -3,11 +3,14 @@ package com.agent.platform.service.chat;
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.dao.entity.chat.ChatConversation;
 import com.agent.platform.dao.entity.chat.ChatMessage;
+import com.agent.platform.dao.entity.chat.ChatUsage;
 import com.agent.platform.dao.mapper.chat.ChatConversationMapper;
 import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
+import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
 import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
+import com.agent.platform.llm.model.Usage;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.model.ModelService;
@@ -21,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +38,7 @@ import java.util.function.Consumer;
 /**
  * 聊天会话服务：会话 CRUD + 消息持久化 + 对话执行（直连模型 / 运行工作流）
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatConversationService {
@@ -44,6 +49,8 @@ public class ChatConversationService {
     private final ModelService modelService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
+    private final ChatUsageStatsService usageStatsService;
+    private final ChatUsageMapper usageMapper;
 
     // ---------- 会话 CRUD ----------
 
@@ -99,6 +106,8 @@ public class ChatConversationService {
         conversationMapper.updateById(conv);
         messageMapper.delete(new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getConversationId, id));
+        usageMapper.delete(new LambdaQueryWrapper<ChatUsage>()
+                .eq(ChatUsage::getConversationId, id));
     }
 
     public List<ChatMessage> messages(Long conversationId, Long userId) {
@@ -175,7 +184,8 @@ public class ChatConversationService {
     // ---------- 发送消息 ----------
 
     /**
-     * 非流式发送：保存用户消息 → 按会话模式执行（直连模型 / 运行工作流）→ 保存助手消息
+     * 非流式发送：保存用户消息 → 按会话模式执行（直连模型 / Agent / 运行工作流）→ 保存助手消息。
+     * 调用成功且拿到 usage 时，以 console 渠道写入一条用量事件。
      *
      * @return 保存后的助手消息（含回答文本与工作流轨迹）
      */
@@ -185,6 +195,8 @@ public class ChatConversationService {
         String answer;
         String traceJson = null;
         long tokens = 0;
+        Long usedModelId = null;
+        Usage usage = null;
         if ("workflow".equals(conv.getMode())) {
             RunResult result = runWorkflow(conv, content);
             answer = result.getAnswer();
@@ -201,6 +213,8 @@ public class ChatConversationService {
             answer = result.getAnswer();
             traceJson = toJson(result.getSteps());
             tokens = result.getTotalTokens();
+            usedModelId = mid;
+            usage = new Usage(result.getPromptTokens(), result.getCompletionTokens(), result.getTotalTokens());
         } else {
             Long mid = modelId != null ? modelId : conv.getModelId();
             if (mid == null) {
@@ -210,14 +224,18 @@ public class ChatConversationService {
             ChatModel model = modelService.chatModelOf(mid);
             ChatResponse response = model.call(buildChatRequest(conv, history, content, mid));
             answer = response == null ? "" : response.getContent();
-            tokens = response != null && response.getUsage() != null ? response.getUsage().totalTokens() : 0;
+            usage = response == null ? null : response.getUsage();
+            tokens = usage == null ? 0 : usage.totalTokens();
+            usedModelId = mid;
         }
         saveMessage(conversationId, "user", content, null, 0);
-        return saveMessage(conversationId, "assistant", answer, traceJson, tokens);
+        ChatMessage assistant = saveMessage(conversationId, "assistant", answer, traceJson, tokens);
+        recordUsageSafely(conv, usedModelId, usage);
+        return assistant;
     }
 
     /**
-     * 流式发送（仅直连模式）：先保存用户消息，增量推送 SSE 块，结束后持久化完整回答
+     * 流式发送（仅直连模式）：先保存用户消息，增量推送 SSE 块，结束后持久化完整回答并记录用量事件
      */
     @Transactional(rollbackFor = Exception.class)
     public void streamSend(Long conversationId, Long userId, String content, Long modelId, Consumer<ChatChunk> onChunk) {
@@ -234,16 +252,32 @@ public class ChatConversationService {
         ChatModel model = modelService.chatModelOf(mid);
         StringBuilder sb = new StringBuilder();
         long[] tokens = {0};
+        Usage[] usage = {null};
         model.stream(buildChatRequest(conv, history, content, mid), chunk -> {
             if (chunk.getDelta() != null) {
                 sb.append(chunk.getDelta());
             }
             if (chunk.getUsage() != null) {
                 tokens[0] = chunk.getUsage().totalTokens();
+                usage[0] = chunk.getUsage();
             }
             onChunk.accept(chunk);
         });
         saveMessage(conversationId, "assistant", sb.toString(), null, tokens[0]);
+        recordUsageSafely(conv, mid, usage[0]);
+    }
+
+    /** 记录一条控制台用量事件；失败仅告警日志，不影响对话主流程 */
+    private void recordUsageSafely(ChatConversation conv, Long modelId, Usage usage) {
+        if (usage == null) {
+            return;
+        }
+        try {
+            usageStatsService.recordUsage(conv.getTenantId(), conv.getAppId(), conv.getId(),
+                    conv.getUserId(), modelId, "console", conv.getMode(), usage);
+        } catch (Exception e) {
+            log.warn("记录用量事件失败 conversationId={}: {}", conv.getId(), e.getMessage());
+        }
     }
 
     // ---------- 内部方法 ----------

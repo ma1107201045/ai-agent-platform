@@ -5,10 +5,12 @@ import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentTool;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
 import com.agent.platform.dao.entity.chat.ChatConversation;
+import com.agent.platform.dao.entity.chat.ChatUsage;
 import com.agent.platform.dao.mapper.app.AppAgentMapper;
 import com.agent.platform.dao.mapper.app.AppAgentVersionMapper;
 import com.agent.platform.dao.mapper.chat.ChatConversationMapper;
 import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
+import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -63,6 +65,7 @@ public class AppAgentService {
     private final AppAgentVersionMapper appAgentVersionMapper;
     private final ChatConversationMapper chatConversationMapper;
     private final ChatMessageMapper chatMessageMapper;
+    private final ChatUsageMapper chatUsageMapper;
     private final ModelService modelService;
     private final AppAgentToolService appToolService;
     private final KnowledgeService knowledgeService;
@@ -149,6 +152,7 @@ public class AppAgentService {
         }
         chatConversationMapper.delete(
                 new LambdaQueryWrapper<ChatConversation>().eq(ChatConversation::getAppId, id));
+        chatUsageMapper.delete(new LambdaQueryWrapper<ChatUsage>().eq(ChatUsage::getAppId, id));
         appAgentMapper.deleteById(id);
         appAgentVersionMapper.delete(
                 new LambdaQueryWrapper<AppAgentVersion>().eq(AppAgentVersion::getAppId, id));
@@ -325,6 +329,8 @@ public class AppAgentService {
 
         List<AgentStep> steps = new ArrayList<>();
         String answer = null;
+        long promptTokens = 0;
+        long completionTokens = 0;
         long totalTokens = 0;
         for (int i = 0; i < maxIter; i++) {
             ChatRequest.ChatRequestBuilder builder = ChatRequest.builder().messages(messages);
@@ -332,8 +338,10 @@ public class AppAgentService {
                 builder.tools(appToolService.toFunctionTools(tools));
             }
             ChatResponse response = chatModel.call(builder.build());
-            // 累加每一轮（含工具调用轮次）的 Token 用量，供消息落库与用量统计
+            // 累加每一轮（含工具调用轮次）的输入/输出/总 Token，供消息落库与用量统计
             if (response != null && response.getUsage() != null) {
+                promptTokens += response.getUsage().promptTokens();
+                completionTokens += response.getUsage().completionTokens();
                 totalTokens += response.getUsage().totalTokens();
             }
             List<ToolCall> toolCalls = response == null ? null : response.getToolCalls();
@@ -370,7 +378,7 @@ public class AppAgentService {
         if (answer == null) {
             answer = "已达到最大迭代次数（" + maxIter + "），请调整问题或检查工具配置。";
         }
-        return new AgentResult(answer, steps, totalTokens);
+        return new AgentResult(answer, steps, promptTokens, completionTokens, totalTokens);
     }
 
     /** 取历史中最后一条用户消息作为知识库检索查询 */
@@ -452,7 +460,11 @@ public class AppAgentService {
         private String answer;
         /** 工具调用步骤 */
         private List<AgentStep> steps;
-        /** 全流程累计 Token 用量（含工具调用轮次） */
+        /** 输入 Token（含工具调用轮次累计） */
+        private long promptTokens;
+        /** 输出 Token（含工具调用轮次累计） */
+        private long completionTokens;
+        /** 全流程累计 Token 总量（含工具调用轮次） */
         private long totalTokens;
     }
 
