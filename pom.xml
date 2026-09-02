@@ -39,7 +39,7 @@
         <jjwt.version>0.12.5</jjwt.version>
         <mvel.version>2.5.2.Final</mvel.version>
         <pdfbox.version>3.0.8</pdfbox.version>
-        <poi.version>5.2.5</poi.version>
+        <poi.version>5.4.0</poi.version>
     </properties>
 
     <dependencyManagement>
