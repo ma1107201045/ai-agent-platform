@@ -133,9 +133,9 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { path: '/publish', title: '发布管理', icon: Share },
       { path: '/publish/api-keys', title: 'API 密钥', icon: Key },
+      { path: '/publish/versions', title: '版本历史', icon: Clock },
       { path: '/publish/channels', title: '渠道管理', icon: Platform, planned: true },
-      { path: '/publish/docs', title: 'API 文档', icon: Reading, planned: true },
-      { path: '/publish/versions', title: '版本历史', icon: Clock, planned: true }
+      { path: '/publish/docs', title: 'API 文档', icon: Reading, planned: true }
     ]
   },
   {

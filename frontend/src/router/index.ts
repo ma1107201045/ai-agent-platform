@@ -221,6 +221,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/publish/api-keys/index.vue'),
         meta: { title: 'API 密钥' }
       },
+      {
+        path: 'publish/versions',
+        name: 'PublishVersions',
+        component: () => import('@/views/publish/versions/index.vue'),
+        meta: { title: '版本历史' }
+      },
       planned('publish/channels', 'PublishChannels', {
         title: '渠道管理',
         phase: 'P0',
@@ -242,16 +248,6 @@ const routes: RouteRecordRaw[] = [
           { name: '接口调试', detail: '在文档页直接调试调用' }
         ],
         dependency: '需基于应用 API 生成在线文档'
-      }),
-      planned('publish/versions', 'PublishVersions', {
-        title: '版本历史',
-        phase: 'P1',
-        desc: '查看发布历史快照，支持一键回滚到指定版本',
-        features: [
-          { name: '版本列表', detail: '按时间查看每次发布的配置快照' },
-          { name: '回滚发布', detail: '将线上版本一键回滚到历史版本' }
-        ],
-        dependency: '后端已有 AgentAppVersion 快照数据，需补充版本列表与回滚接口'
       }),
 
       /* ---------------- 观测 /ops ---------------- */

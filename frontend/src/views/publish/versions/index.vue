@@ -153,11 +153,11 @@ const detailVersion = ref<AppAgentVersion | null>(null)
 const detailTab = ref('workflow')
 const detailTitle = computed(() =>
   detailVersion.value ? `v${detailVersion.value.version} · 版本快照内容` : '版本快照内容')
+const detailParts = computed(() => (detailVersion.value ? snapshotParts(detailVersion.value) : []))
 
 function openDetail(row: AppAgentVersion) {
   detailVersion.value = row
-  const parts = snapshotParts(row)
-  detailTab.value = parts[0]?.key ?? 'workflow'
+  detailTab.value = detailParts.value.length ? detailParts.value[0].key : 'raw'
   detailVisible.value = true
 }
 
@@ -316,11 +316,8 @@ function goEdit() {
     <el-dialog v-model="detailVisible" :title="detailTitle" width="640px" destroy-on-close>
       <div v-if="detailVersion" class="detail-body">
         <el-tabs v-model="detailTab">
-          <el-tab-pane v-if="snapshotParts(detailVersion).length" :label="snapshotParts(detailVersion)[0].title" :name="snapshotParts(detailVersion)[0].key">
-            <pre class="code-view">{{ snapshotParts(detailVersion)[0].content }}</pre>
-          </el-tab-pane>
-          <el-tab-pane v-if="snapshotParts(detailVersion).some((p) => p.key === 'prompt')" label="提示词配置" name="prompt">
-            <pre class="code-view">{{ snapshotParts(detailVersion).find((p) => p.key === 'prompt')!.content }}</pre>
+          <el-tab-pane v-for="part in detailParts" :key="part.key" :label="part.title" :name="part.key">
+            <pre class="code-view">{{ part.content }}</pre>
           </el-tab-pane>
           <el-tab-pane label="原始快照" name="raw">
             <pre class="code-view">{{ prettyJson(JSON.stringify({ workflowJson: detailVersion.workflowJson, promptConfig: detailVersion.promptConfig })) }}</pre>
