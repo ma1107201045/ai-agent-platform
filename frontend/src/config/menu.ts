@@ -97,12 +97,12 @@ export const menuGroups: MenuGroup[] = [
     icon: MagicStick,
     items: [
       { path: '/app/agents', title: '智能体', icon: Grid },
-      { path: '/app/agents/templates', title: '应用模板', icon: CopyDocument, planned: true },
-      { path: '/app/agents/marketplace', title: '应用市场', icon: Shop, planned: true },
-      { path: '/app/agents/multi-agent', title: '多智能体编排', icon: Avatar, planned: true },
-      { path: '/app/agents/prompts', title: '提示词库', icon: Collection, planned: true },
-      { path: '/app/agents/schedules', title: '定时任务', icon: Timer, planned: true },
-      { path: '/app/agents/guardrails', title: '内容安全', icon: Umbrella, planned: true }
+      { path: '/app/templates', title: '应用模板', icon: CopyDocument, planned: true },
+      { path: '/app/marketplace', title: '应用市场', icon: Shop, planned: true },
+      { path: '/app/multi-agent', title: '多智能体编排', icon: Avatar, planned: true },
+      { path: '/app/prompts', title: '提示词库', icon: Collection, planned: true },
+      { path: '/app/schedules', title: '定时任务', icon: Timer, planned: true },
+      { path: '/app/guardrails', title: '内容安全', icon: Umbrella, planned: true }
     ]
   },
   {

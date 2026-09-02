@@ -16,7 +16,7 @@ public class AgentPlatformApplicationTests {
 
 
     @Test
-    void test01() throws IOException, TikaException {
+    void testTikaPdf() throws IOException, TikaException {
         Tika tika = new Tika();
         //resources 目录 下边有个 test.txt 文件
         File file = new File("D:\\workspace\\ai-agent-platform\\agent-web\\" +

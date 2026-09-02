@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowDown,
   Bell,
+  Expand,
   Fold,
   Lock,
   Monitor,
@@ -18,9 +19,12 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+/** 面板收起：仅保留左侧 64px 图标导航条 */
 const collapsed = ref(false)
+/** 当前展开的分组 key（点击图标条后右侧弹出该分组的菜单面板） */
+const currentGroupKey = ref<string | null>(null)
 
-/** 高亮匹配：精确命中优先，其次子路径前缀命中（如 /app-agents/1/edit 高亮“智能体”） */
+/** 高亮匹配：精确命中优先，其次子路径前缀命中（如 /app/agents/1/edit 高亮“智能体”） */
 const activeMenu = computed(() => {
   const p = route.path
   return (
@@ -30,8 +34,48 @@ const activeMenu = computed(() => {
   )
 })
 
-/** 默认展开全部分组 */
-const openedGroups = menuGroups.map((g) => g.key)
+/** 图标条主体导航（帮助与文档独立放到底部） */
+const navGroups = computed(() => menuGroups.filter((g) => g.key !== 'support'))
+const footGroups = computed(() => menuGroups.filter((g) => g.key === 'support'))
+
+const currentGroup = computed(
+  () => menuGroups.find((g) => g.key === currentGroupKey.value) ?? null
+)
+
+/** 路由变化时，若激活菜单跨分组则自动切换面板，保证图标条与菜单高亮同步 */
+watch(
+  activeMenu,
+  (path) => {
+    const group = menuGroups.find((g) =>
+      g.items.some((it) => path === it.path || path.startsWith(it.path + '/'))
+    )
+    if (group) {
+      if (group.key !== currentGroupKey.value) {
+        currentGroupKey.value = group.key
+        collapsed.value = false
+      }
+    } else if (currentGroupKey.value === null) {
+      // 页面不在菜单内（如账号安全页）时保持当前分组
+      currentGroupKey.value = menuGroups[0]?.key ?? null
+    }
+  },
+  { immediate: true }
+)
+
+function openGroup(key: string) {
+  if (key === currentGroupKey.value && !collapsed.value) {
+    // 再次点击已展开的分组 → 收起面板
+    collapsed.value = true
+    return
+  }
+  currentGroupKey.value = key
+  collapsed.value = false
+}
+
+function go(path: string) {
+  router.push(path)
+}
+
 const displayName = computed(
   () => userStore.profile?.nickname || userStore.profile?.username || '用户'
 )
@@ -69,50 +113,85 @@ if (import.meta.env.DEV) {
 
 <template>
   <el-container class="layout">
-    <el-aside :width="collapsed ? '72px' : '228px'" class="aside">
-      <div class="logo" @click="router.push(DEFAULT_HOME)">
-        <div class="logo-badge">
-          <el-icon :size="20"><Monitor /></el-icon>
-        </div>
-        <transition name="fade">
-          <span v-if="!collapsed" class="logo-text">AgentForge</span>
-        </transition>
-      </div>
-
-      <div class="menu-wrap">
-        <el-menu
-          :default-active="activeMenu"
-          :default-openeds="openedGroups"
-          router
-          :collapse="collapsed"
-          :collapse-transition="false"
-          class="menu"
-        >
-          <el-sub-menu v-for="g in menuGroups" :key="g.key" :index="g.key" class="menu-group">
-            <template #title>
-              <el-icon class="group-icon"><component :is="g.icon" /></el-icon>
-              <span class="group-title">{{ g.title }}</span>
-            </template>
-            <el-menu-item v-for="item in g.items" :key="item.path" :index="item.path">
-              <el-icon class="item-icon" :size="16"><component :is="item.icon" /></el-icon>
-              <template #title>
-                <span class="menu-item-title">{{ item.title }}</span>
-                <span v-if="item.planned" class="planned-badge">规划</span>
-              </template>
-            </el-menu-item>
-          </el-sub-menu>
-        </el-menu>
-      </div>
-
-      <div class="aside-footer">
-        <el-tooltip :content="collapsed ? '展开菜单' : '收起菜单'" placement="right">
-          <div class="collapse-btn" @click="collapsed = !collapsed">
-            <el-icon :size="16"><Fold /></el-icon>
-            <span v-if="!collapsed">收起菜单</span>
+    <!-- 侧边导航：左侧图标条 + 右侧分组菜单面板 -->
+    <div class="sidebar" :class="{ collapsed }">
+      <!-- 图标条 -->
+      <div class="rail">
+        <el-tooltip content="AgentForge" placement="right" :show-after="200">
+          <div class="rail-logo" @click="go(DEFAULT_HOME)">
+            <div class="rail-logo-badge">
+              <el-icon :size="19"><Monitor /></el-icon>
+            </div>
           </div>
         </el-tooltip>
+
+        <div class="rail-nav">
+          <el-tooltip
+            v-for="g in navGroups"
+            :key="g.key"
+            :content="g.title"
+            placement="right"
+            :show-after="200"
+          >
+            <button
+              class="rail-btn"
+              :class="{ active: g.key === currentGroupKey }"
+              @click="openGroup(g.key)"
+            >
+              <el-icon :size="18"><component :is="g.icon" /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
+
+        <div class="rail-bottom">
+          <el-tooltip
+            v-for="g in footGroups"
+            :key="g.key"
+            :content="g.title"
+            placement="right"
+            :show-after="200"
+          >
+            <button
+              class="rail-btn"
+              :class="{ active: g.key === currentGroupKey }"
+              @click="openGroup(g.key)"
+            >
+              <el-icon :size="18"><component :is="g.icon" /></el-icon>
+            </button>
+          </el-tooltip>
+          <el-tooltip :content="collapsed ? '展开菜单' : '收起菜单'" placement="right" :show-after="200">
+            <button class="rail-btn" @click="collapsed = !collapsed">
+              <el-icon :size="16"><Expand v-if="collapsed" /><Fold v-else /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
       </div>
-    </el-aside>
+
+      <!-- 分组菜单面板 -->
+      <div class="panel">
+        <template v-if="currentGroup">
+          <div class="panel-header">
+            <el-icon class="panel-header-icon" :size="16">
+              <component :is="currentGroup.icon" />
+            </el-icon>
+            <span class="panel-header-title">{{ currentGroup.title }}</span>
+          </div>
+          <div class="panel-list">
+            <button
+              v-for="item in currentGroup.items"
+              :key="item.path"
+              class="panel-item"
+              :class="{ 'is-active': item.path === activeMenu }"
+              @click="go(item.path)"
+            >
+              <el-icon class="pi-icon" :size="15"><component :is="item.icon" /></el-icon>
+              <span class="panel-item-title">{{ item.title }}</span>
+              <span v-if="item.planned" class="planned-badge">规划</span>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
 
     <el-container>
       <el-header class="header">
@@ -174,150 +253,171 @@ if (import.meta.env.DEV) {
   background: var(--bg-page);
 }
 
-/* ---------- 侧边栏 ---------- */
-.aside {
+/* ============================================================
+   侧边导航（图标条 + 分组面板）
+   ============================================================ */
+.sidebar {
+  height: 100%;
+  width: 264px;
+  flex-shrink: 0;
+  display: flex;
   background: var(--bg-card);
   border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  transition: width 0.25s ease;
   overflow: hidden;
+  transition: width 0.25s ease;
+}
+.sidebar.collapsed {
+  width: 64px;
 }
 
-.logo {
+/* ---------- 图标条 ---------- */
+.rail {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rail-logo {
   height: 64px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 18px;
+  justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
   user-select: none;
 }
-.logo-badge {
+.rail-logo-badge {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: var(--brand-1);
+  border-radius: 10px;
+  background: var(--brand-gradient);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease;
 }
-.logo-text {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-  white-space: nowrap;
+.rail-logo:hover .rail-logo-badge {
+  transform: scale(1.06);
 }
-
-.menu-wrap {
+.rail-nav {
   flex: 1;
-  padding: 8px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 12px;
   overflow-y: auto;
   overflow-x: hidden;
 }
-.menu {
-  border-right: none;
-  background: transparent;
-  --el-menu-item-height: 36px;
-}
-
-/* ---------- 一级分类：分组标题（克制简洁） ---------- */
-.menu :deep(.el-sub-menu) {
-  margin-top: 12px;
-}
-.menu :deep(.el-sub-menu:first-child) {
-  margin-top: 2px;
-}
-.menu :deep(.el-sub-menu__title) {
-  height: 36px;
-  margin: 0;
-  padding: 0 8px !important;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  gap: 6px;
-  transition: color 0.15s ease;
-}
-.menu :deep(.el-sub-menu__title .group-icon) {
-  font-size: 14px;
-  color: var(--text-secondary);
-  transition: color 0.15s ease;
-}
-.menu :deep(.el-sub-menu__icon-arrow) {
-  display: none;
-}
-.menu :deep(.el-sub-menu__title:hover) {
+.rail-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-secondary);
-}
-.menu :deep(.el-sub-menu__title:hover .group-icon) {
-  color: var(--text-secondary);
-}
-.menu :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-  color: var(--text-secondary);
-}
-.menu :deep(.el-sub-menu.is-active > .el-sub-menu__title .group-icon) {
-  color: var(--text-secondary);
-}
-/* 折叠态：分组标题仅保留图标 */
-.menu.el-menu--collapse :deep(.el-sub-menu__title) {
-  padding: 0 !important;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.rail-btn:hover {
+  background: var(--fill-light);
+  color: var(--text-primary);
+}
+.rail-btn.active {
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-card);
+}
+.rail-bottom {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0 14px;
+  border-top: 1px solid var(--border-color);
 }
 
-/* ---------- 二级菜单项（克制简洁） ---------- */
-.menu :deep(.el-sub-menu .el-menu-item) {
-  min-width: 0;
-  height: 36px;
-  margin: 1px 0;
-  padding-left: 20px !important;
-  border-radius: 6px;
+/* ---------- 分组菜单面板 ---------- */
+.panel {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+}
+.panel-header {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+.panel-header-icon {
+  color: var(--brand-1);
+}
+.panel-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px 16px;
+}
+.panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 38px;
+  margin-bottom: 4px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
-.menu :deep(.el-sub-menu .el-menu-item .item-icon) {
-  margin-right: 8px;
+.panel-item .pi-icon {
+  flex-shrink: 0;
   color: var(--text-secondary);
   transition: color 0.15s ease;
 }
-.menu :deep(.el-sub-menu .el-menu-item:hover) {
+.panel-item:hover {
   background: var(--fill-light);
   color: var(--text-primary);
 }
-.menu :deep(.el-sub-menu .el-menu-item:hover .item-icon) {
+.panel-item:hover .pi-icon {
   color: var(--text-primary);
 }
-.menu :deep(.el-sub-menu .el-menu-item.is-active) {
-  background: var(--fill-light);
+.panel-item.is-active {
+  background: var(--brand-gradient-soft);
   color: var(--brand-1);
   font-weight: 600;
 }
-.menu :deep(.el-sub-menu .el-menu-item.is-active .item-icon) {
+.panel-item.is-active .pi-icon {
   color: var(--brand-1);
 }
-.menu:not(.el-menu--collapse) :deep(.el-sub-menu .el-menu-item.is-active) {
-  position: relative;
-}
-.menu:not(.el-menu--collapse) :deep(.el-sub-menu .el-menu-item.is-active::before) {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 16px;
-  border-radius: 2px;
-  background: var(--brand-1);
-}
-
-.menu-item-title {
+.panel-item-title {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -326,7 +426,7 @@ if (import.meta.env.DEV) {
 }
 .planned-badge {
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: 4px;
   padding: 2px 6px;
   border-radius: 6px;
   font-size: 10px;
@@ -336,29 +436,9 @@ if (import.meta.env.DEV) {
   background: var(--fill-light);
 }
 
-.aside-footer {
-  padding: 12px;
-  border-top: 1px solid var(--border-color);
-}
-.collapse-btn {
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-.collapse-btn:hover {
-  background: var(--brand-gradient-soft);
-  color: var(--brand-1);
-}
-
-/* ---------- 顶栏 ---------- */
+/* ============================================================
+   顶栏
+   ============================================================ */
 .header {
   height: 64px;
   background: var(--bg-card);

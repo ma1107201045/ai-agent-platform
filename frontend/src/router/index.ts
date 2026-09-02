@@ -66,7 +66,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/app/agents/index.vue'),
         meta: { title: '智能体' }
       },
-      planned('app/agents-templates', 'AppTemplates', {
+      planned('app/templates', 'AppTemplates', {
         title: '应用模板',
         phase: 'P2',
         desc: '从模板一键创建应用，覆盖常见业务场景，降低上手成本',
@@ -76,7 +76,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端维护模板市场数据与模板实例化接口'
       }),
-      planned('app/agents-marketplace', 'AppMarketplace', {
+      planned('app/marketplace', 'AppMarketplace', {
         title: '应用市场',
         phase: 'P1',
         desc: '发现、分享并一键安装社区智能体，像应用商店一样获取场景能力',
@@ -87,7 +87,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端新增应用市场数据与安装接口'
       }),
-      planned('app/agents/multi-agent', 'MultiAgent', {
+      planned('app/multi-agent', 'MultiAgent', {
         title: '多智能体编排',
         phase: 'P1',
         desc: '编排多个角色智能体协作分工，胜任复杂业务流程',
@@ -98,7 +98,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需扩展 WorkflowEngine 支持多智能体协作'
       }),
-      planned('app/agents/prompts', 'AppPrompts', {
+      planned('app/prompts', 'AppPrompts', {
         title: '提示词库',
         phase: 'P0',
         desc: '集中管理可复用的提示词模板与版本，支撑应用编排与调试',
@@ -109,7 +109,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端新增提示词实体与版本快照'
       }),
-      planned('app/agents/schedules', 'AppSchedules', {
+      planned('app/schedules', 'AppSchedules', {
         title: '定时任务',
         phase: 'P2',
         desc: '按时间或事件触发智能体/工作流自动执行',
@@ -120,7 +120,7 @@ const routes: RouteRecordRaw[] = [
         ],
         dependency: '需后端新增任务调度与触发服务'
       }),
-      planned('app/agents/guardrails', 'AppGuardrails', {
+      planned('app/guardrails', 'AppGuardrails', {
         title: '内容安全',
         phase: 'P1',
         desc: '输入输出内容校验与敏感词过滤，保障应用合规安全',
