@@ -186,27 +186,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/tools/index.vue'),
         meta: { title: '工具管理' }
       },
-      planned('tools/marketplace', 'ToolMarketplace', {
-        title: '插件市场',
-        phase: 'P2',
-        desc: '内置常用工具模板与一键安装，降低接入成本',
-        features: [
-          { name: '模板市场', detail: '内置搜索、HTTP、数据库等常用工具模板' },
-          { name: '一键安装', detail: '从市场安装工具到当前工作空间' }
-        ],
-        dependency: '需后端维护工具模板市场数据'
-      }),
-      planned('tools/integrations', 'ToolIntegrations', {
-        title: '数据集成',
-        phase: 'P2',
-        desc: '连接外部业务系统与数据源，扩展智能体能力边界',
-        features: [
-          { name: '连接器管理', detail: '数据库、HTTP、企业应用等连接器' },
-          { name: '认证配置', detail: 'OAuth、API Key 等认证方式管理' },
-          { name: '集成调用', detail: '在工具与应用中调用已配置连接器' }
-        ],
-        dependency: '需后端新增连接器配置与代理调用能力'
-      }),
+      {
+        path: 'tools/marketplace',
+        name: 'ToolMarketplace',
+        component: () => import('@/views/tools/marketplace/index.vue'),
+        meta: { title: '插件市场' }
+      },
+      {
+        path: 'tools/integrations',
+        name: 'ToolIntegrations',
+        component: () => import('@/views/tools/integrations/index.vue'),
+        meta: { title: '数据集成' }
+      },
 
       /* ---------------- 发布 /publish ---------------- */
       {

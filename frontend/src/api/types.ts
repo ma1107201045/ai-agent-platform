@@ -505,3 +505,184 @@ export interface UsageSummary {
   /** 模型维度排行 */
   models: UsageModelRow[]
 }
+
+// ==================== 记忆管理（/data/memory） ====================
+
+/** 记忆策略（mem_strategy，每个应用一条） */
+export interface MemStrategy {
+  id?: number
+  tenantId: number
+  appId: number
+  /** 是否启用长期记忆：0否 1是 */
+  enabled: number
+  /** 对话后自动抽取记忆：0否 1是 */
+  autoExtract: number
+  /** 自动抽取使用的对话模型ID */
+  extractModelId?: number | null
+  /** 每次对话注入的记忆条目数 */
+  topN: number
+  /** 记忆保留天数（空 = 永久保留） */
+  keepDays?: number | null
+  /** 单应用记忆条目上限 */
+  maxItems: number
+  /** 状态：0禁用 1启用 */
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 会话变量（mem_variable） */
+export interface MemVariable {
+  id?: number
+  tenantId: number
+  appId: number
+  /** 作用域：global 全局 / session 指定会话 */
+  scope: 'global' | 'session'
+  /** 所属会话ID（scope=session 时使用，空 = 该应用全部会话） */
+  conversationId?: number | null
+  /** 变量名（英文下划线） */
+  name: string
+  value?: string
+  /** 类型：string/number/boolean/json */
+  valueType: 'string' | 'number' | 'boolean' | 'json'
+  remark?: string
+  /** 状态：0禁用 1启用 */
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 长期记忆条目（mem_item） */
+export interface MemItem {
+  id?: number
+  tenantId: number
+  appId: number
+  /** 作用域：global 全局 / user 用户 */
+  scope: 'global' | 'user'
+  /** 来源：manual 手动 / auto 自动抽取 */
+  source: 'manual' | 'auto'
+  /** 类别：preference 偏好 / fact 事实 / event 事件 / summary 摘要 / custom 自定义 */
+  category: 'preference' | 'fact' | 'event' | 'summary' | 'custom'
+  content: string
+  /** 重要度 1-5 */
+  importance: number
+  /** 命中次数 */
+  hitCount: number
+  lastHitAt?: string
+  /** 状态：0禁用 1启用 */
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+// ==================== 数据存储（/data/storage） ====================
+
+/** 数据表列定义 */
+export interface DataColumn {
+  key: string
+  label: string
+  /** text/number/boolean/date/select */
+  type: 'text' | 'number' | 'boolean' | 'date' | 'select'
+  /** select 类型的选项 */
+  options?: string[]
+}
+
+/** 自定义数据表（data_table） */
+export interface DataTable {
+  id: number
+  tenantId: number
+  /** 数据表名（租户内唯一） */
+  name: string
+  /** 显示名称 */
+  label?: string
+  description?: string
+  /** 列定义 JSON 字符串（[{key,label,type,options?}]） */
+  columnsJson?: string
+  /** 行记录数 */
+  rowCount: number
+  /** 状态：0禁用 1启用 */
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+/** 数据记录行视图（data_record 解析后的行） */
+export interface DataRecordRow {
+  id: number
+  tableId: number
+  /** 列键值对象 */
+  data: Record<string, unknown>
+  createTime?: string
+  updateTime?: string
+}
+
+// ==================== 素材管理（/data/assets） ====================
+
+export type AssetCategory = 'image' | 'document' | 'audio' | 'video' | 'other'
+
+/** 素材文件（asset_file） */
+export interface AssetFile {
+  id: number
+  tenantId: number
+  /** 素材名称（展示用） */
+  name: string
+  originalName?: string
+  ext?: string
+  contentType?: string
+  /** 文件大小（字节） */
+  size: number
+  category: AssetCategory
+  status: number
+  createdBy?: number
+  createTime?: string
+  updateTime?: string
+}
+
+// ==================== 数据集成（/tools/integrations） ====================
+
+/** 外部连接器（tool_connector）：http=HTTP API / mysql=MySQL 数据库 */
+export interface ToolConnector {
+  id: number
+  tenantId: number
+  /** 连接器名称（英文标识符，生成 HTTP 工具时作为工具名） */
+  name: string
+  description?: string
+  /** http / mysql */
+  type: 'http' | 'mysql'
+  /** http：API 地址；mysql：JDBC URL */
+  url?: string
+  /** http：请求方式 */
+  method?: string
+  /** http：额外请求头（JSON 对象） */
+  headers?: string
+  /** 鉴权：none / bearer / basic */
+  authType?: 'none' | 'bearer' | 'basic'
+  authToken?: string
+  authUsername?: string
+  authPassword?: string
+  /** 状态：0禁用 1启用 */
+  status: number
+  createTime?: string
+  updateTime?: string
+}
+
+// ==================== 插件市场（/tools/marketplace） ====================
+
+/** 插件市场工具模板 */
+export interface ToolTemplate {
+  key: string
+  /** 工具名称（英文标识符，安装后为 app_agent_tool.name） */
+  name: string
+  description: string
+  /** basic 通用 / text 文本处理 / web 网络数据 */
+  category: string
+  /** http / code */
+  type: 'http' | 'code'
+  method?: string
+  url?: string
+  code?: string
+  /** 参数 JSON Schema */
+  parameters?: string
+  /** 是否已安装 */
+  installed: boolean
+}
