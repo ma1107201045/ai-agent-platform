@@ -1383,7 +1383,7 @@ onUnmounted(() => {
   <div class="editor">
     <!-- 顶部工具栏 -->
     <div class="toolbar">
-      <el-button link @click="router.push('/app-agents')">
+      <el-button link @click="router.push('/app/agents')">
         <el-icon>
           <ArrowLeft/>
         </el-icon>

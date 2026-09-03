@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
  * <p>模型管理接口（供应商/模型 CRUD、可用列表）见 {@link ModelController}
  */
 @RestController
-@RequestMapping("/api/model")
+@RequestMapping("/api/model/models")
 @RequiredArgsConstructor
 public class ModelInvokeController {
 
@@ -35,7 +35,7 @@ public class ModelInvokeController {
     // ---------- 模型调用 ----------
 
     /** 非流式对话 */
-    @PostMapping("/models/chat")
+    @PostMapping("/chat")
     public Result<ChatResponse> chat(@RequestBody ChatReq request) {
         ChatModel model = modelRuntimeService.chatModelOf(request.getModelId());
         return Result.ok(model.call(buildReq(request)));
@@ -44,7 +44,7 @@ public class ModelInvokeController {
     /**
      * 流式对话（SSE）。事件：message 携带 ChatChunk JSON，结束事件 done 携带 [DONE]
      */
-    @PostMapping(value = "/models/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping(value = "/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestBody ChatReq request) {
         SseEmitter emitter = new SseEmitter(120_000L);
         streamExecutor.execute(() -> {
@@ -67,7 +67,7 @@ public class ModelInvokeController {
     }
 
     /** 向量化 */
-    @PostMapping("/models/embed")
+    @PostMapping("/embed")
     public Result<EmbeddingResult> embed(@RequestBody EmbedReq request) {
         EmbeddingModel model = modelRuntimeService.embeddingModelOf(request.getModelId());
         return Result.ok(model.embed(request.getTexts()));
