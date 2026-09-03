@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ChatDotRound, Delete, EditPen, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { appAgentApi } from '@/api/app-agent'
-import { conversationApi } from '@/api/conversation'
+import { conversationApi } from '@/api/chat-conversation.ts'
 import type {
   AppAgent,
   AgentStep,

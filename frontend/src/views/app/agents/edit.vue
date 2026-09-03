@@ -997,14 +997,24 @@ async function publish() {
     return
   }
   if (appType.value !== 'agent') {
+    // 全流程 schema 校验：必填缺失（error 级）为硬阻断并定位到首个问题节点；
+    // 仅结构/效果类提示（warn）允许确认后继续
     const errors = validateWorkflow()
+    if (errors.length > 0) {
+      await ElMessageBox.alert(
+          `以下节点存在必填配置缺失，请完善后再发布：\n${errors.map((e) => e.text).join('\n')}`,
+          '无法发布',
+          {confirmButtonText: '去完善', type: 'error'}
+      ).catch(() => false)
+      highlightNode(errors[0].node.id)
+      return
+    }
     const structure = checkStructure()
-    const allWarnings = [...structure, ...errors.map((e) => e.text)]
-    if (allWarnings.length > 0) {
+    if (structure.length > 0) {
       const proceed = await ElMessageBox.confirm(
-          `发布前检查到以下问题：\n${allWarnings.join('\n')}\n\n仍要继续发布吗？`,
+          `发布前检查到以下提示：\n${structure.join('\n')}\n\n仍要继续发布吗？`,
           '发布前检查',
-          {confirmButtonText: '仍要发布', cancelButtonText: '去完善', type: 'warning'}
+          {confirmButtonText: '仍要发布', cancelButtonText: '返回检查', type: 'warning'}
       ).catch(() => false)
       if (!proceed) return
     }
@@ -1079,6 +1089,21 @@ const running = ref(false)
 const runResult = ref<RunResult | null>(null)
 const highlightedNodeId = ref<string | null>(null)
 const lastRunFailed = ref(false)
+/** 当前流式运行 runId（供停止接口使用；无流式运行时为 null） */
+const curRunId = ref<string | null>(null)
+/** 流式运行过程中已结束节点的轨迹（结束前实时展示，结束后以 runResult.trace 为准） */
+const streamTrace = ref<TraceItem[]>([])
+
+const displayTrace = computed(() => runResult.value?.trace ?? streamTrace.value)
+
+/** 运行终态展示（仅 runResult 就绪后使用） */
+const runStatusMeta = computed(() => {
+  const s = runResult.value?.status
+  if (s === 'failed' || lastRunFailed.value) return {tag: 'danger' as const, text: '运行失败'}
+  if (s === 'canceled') return {tag: 'info' as const, text: '已停止'}
+  if (s === 'timeout') return {tag: 'warning' as const, text: '运行超时'}
+  return {tag: 'success' as const, text: '运行成功'}
+})
 
 function toggleDebug() {
   debugVisible.value = !debugVisible.value
@@ -1089,6 +1114,8 @@ function clearRunState() {
   runResult.value = null
   highlightedNodeId.value = null
   lastRunFailed.value = false
+  curRunId.value = null
+  streamTrace.value = []
   // 直接删除运行态属性而非整体替换 data：
   // 整体替换 node.data 会让 vue-flow 的 Handle 组件在更新期访问到失效实例（emitsOptions/subTree 空指针），
   // 且会使右侧配置面板持有的 config 引用失效。
@@ -1104,13 +1131,24 @@ function clearRunState() {
   }
 }
 
-/** trace 状态 -> 节点着色 class */
+/** trace 状态 -> 节点着色 class（含实时 running / canceled） */
 function nodeRunClass(data: any) {
   const s = data?.runStatus
   if (s === 'success') return 'run-success'
   if (s === 'error') return 'run-error'
   if (s === 'skipped') return 'run-skipped'
+  if (s === 'canceled') return 'run-canceled'
+  if (s === 'running') return 'run-running'
   return ''
+}
+
+/** 将单个 trace 项实时应用到画布节点（节点着色 / 耗时 / 错误气泡） */
+function applyItemToCanvas(item: TraceItem) {
+  const n = nodes.value.find((x) => x.id === item.nodeId)
+  if (!n?.data) return
+  n.data.runStatus = item.status
+  n.data.runCost = item.costMs
+  n.data.runError = item.error
 }
 
 /** 将运行 trace 映射到画布节点 / 边 */
@@ -1204,6 +1242,10 @@ function highlightNode(nodeId: string) {
   setCenter(node.position.x, node.position.y, {zoom: 0.9})
 }
 
+/**
+ * 运行调试（SSE 流式）：节点逐个执行时实时点亮画布 / 追加轨迹，
+ * 结束后整体落色并高亮执行路径。运行中可点击「停止」中断（优雅取消）。
+ */
 async function runDebug() {
   const text = debugInput.value.trim()
   if (!text) {
@@ -1225,20 +1267,56 @@ async function runDebug() {
     ElMessage.warning(`流程结构提示：\n${structure.join('\n')}`)
   }
   running.value = true
+  lastRunFailed.value = false
+  runResult.value = null
+  streamTrace.value = []
+  curRunId.value = null
   try {
     await saveDraft() // 先保存草稿，确保后端运行的是当前画布内容
     clearRunState()
-    const result = await appAgentApi.run(appId, [{role: 'user', content: text}])
-    runResult.value = result
-    applyTraceToCanvas(result.trace)
-    const failed = result.trace.find((t) => t.status === 'error')
-    if (failed) {
-      lastRunFailed.value = true
-      highlightNode(failed.nodeId)
-      ElMessage.error(`节点「${failed.label}」执行失败：${failed.error || '未知错误'}`)
-    } else {
-      ElMessage.success(`运行完成，共执行 ${result.trace.length} 个节点`)
-    }
+    await appAgentApi.runStream(
+        appId,
+        [{role: 'user', content: text}],
+        {
+          onRunStarted(runId) {
+            curRunId.value = runId
+          },
+          onNodeStarted(nodeId) {
+            const n = nodes.value.find((x) => x.id === nodeId)
+            if (n?.data) n.data.runStatus = 'running'
+          },
+          onNodeFinished(item) {
+            applyItemToCanvas(item)
+            streamTrace.value.push(item)
+          },
+          onDone(result) {
+            curRunId.value = null
+            highlightedNodeId.value = null
+            runResult.value = result
+            applyTraceToCanvas(result.trace)
+            const canceled = result.status === 'canceled'
+            if (canceled) {
+              ElMessage.info('运行已停止')
+            } else if (result.status === 'failed' || result.status === 'timeout') {
+              lastRunFailed.value = true
+              const errItem = result.trace.find((t) => t.status === 'error')
+              if (errItem) {
+                highlightNode(errItem.nodeId)
+                ElMessage.error(`节点「${errItem.label}」执行失败：${errItem.error || '未知错误'}`)
+              } else {
+                ElMessage.error(result.error || '运行失败')
+              }
+            } else {
+              ElMessage.success(`运行完成，共执行 ${result.trace.length} 个节点`)
+            }
+          },
+          onError(message) {
+            curRunId.value = null
+            lastRunFailed.value = true
+            ElMessage.error(message || '运行失败')
+          }
+        }
+    )
   } catch (e: any) {
     ElMessage.error(e?.message || '运行失败')
   } finally {
@@ -1246,10 +1324,27 @@ async function runDebug() {
   }
 }
 
-const nodeStatusColor: Record<string, 'success' | 'danger' | 'info'> = {
+/** 停止当前流式运行：优雅取消，等待引擎收尾后由 done(canceled) 事件收敛界面 */
+async function stopRun() {
+  const rid = curRunId.value
+  if (!rid) {
+    running.value = false
+    return
+  }
+  try {
+    await appAgentApi.cancelRun(rid)
+    ElMessage.info('已请求停止，等待当前节点返回…')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '停止失败')
+    running.value = false
+  }
+}
+
+const nodeStatusColor: Record<string, 'success' | 'danger' | 'info' | 'warning'> = {
   success: 'success',
   error: 'danger',
-  skipped: 'info'
+  skipped: 'info',
+  canceled: 'info'
 }
 
 /** 浏览器关闭 / 刷新前提示未保存 */
@@ -1567,6 +1662,7 @@ onUnmounted(() => {
                 >
                   <span v-if="data.runStatus === 'success'" class="run-badge run-badge-success">✓</span>
                   <span v-else-if="data.runStatus === 'error'" class="run-badge run-badge-error">!</span>
+                  <span v-else-if="data.runStatus === 'canceled'" class="run-badge run-badge-canceled">✕</span>
                   <span
                       v-else-if="!data.runStatus && nodeWarnings(data).length"
                       class="node-warn-badge"
@@ -1762,7 +1858,7 @@ onUnmounted(() => {
     </div>
 
     <template v-if="appType !== 'agent'">
-      <!-- 运行调试面板 -->
+      <!-- 运行调试面板（SSE 实时节点状态） -->
       <div v-if="debugVisible" class="debug-panel">
         <div class="debug-head">
           <div class="debug-title">
@@ -1772,6 +1868,15 @@ onUnmounted(() => {
             运行调试
           </div>
           <div class="debug-head-actions">
+            <el-button
+                v-if="running && curRunId"
+                size="small"
+                type="danger"
+                plain
+                :disabled="!curRunId"
+                @click="stopRun"
+            >停止</el-button
+            >
             <el-button size="small" type="primary" :icon="VideoPlay" :loading="running" @click="runDebug">
               运行
             </el-button>
@@ -1785,24 +1890,26 @@ onUnmounted(() => {
                 type="textarea"
                 :rows="2"
                 resize="none"
-                placeholder="输入测试消息后点击「运行」，将按当前画布执行并实时标注节点状态"
+                placeholder="输入测试消息后点击「运行」，节点将逐个实时点亮（运行中可停止）"
                 @keydown.enter.exact.prevent="runDebug"
             />
           </div>
           <div class="debug-result-area">
-            <template v-if="runResult">
-              <div class="debug-answer">
+            <template v-if="displayTrace.length > 0">
+              <div v-if="runResult" class="debug-answer">
                 <span class="debug-answer-label">最终回答</span>
                 <div class="debug-answer-text">{{ runResult.answer }}</div>
               </div>
               <div class="debug-trace-head">
-                <span>执行轨迹（点击定位节点）</span>
-                <el-tag v-if="lastRunFailed" size="small" type="danger" effect="light">运行失败</el-tag>
-                <el-tag v-else size="small" type="success" effect="light">运行成功</el-tag>
+                <span>{{ runResult ? '执行轨迹（点击定位节点）' : '执行轨迹（实时）' }}</span>
+                <el-tag v-if="running && !runResult" size="small" type="info" effect="light">运行中…</el-tag>
+                <el-tag v-else-if="runResult" size="small" :type="runStatusMeta.tag" effect="light">
+                  {{ runStatusMeta.text }}
+                </el-tag>
               </div>
               <div class="debug-trace-list">
                 <div
-                    v-for="(t, i) in runResult.trace"
+                    v-for="(t, i) in displayTrace"
                     :key="i"
                     class="debug-trace-item"
                     :class="{ active: t.nodeId === highlightedNodeId }"
@@ -1818,7 +1925,12 @@ onUnmounted(() => {
                 </div>
               </div>
             </template>
-            <el-empty v-else description="输入测试消息后点击「运行」，结果将在此展示" :image-size="52"/>
+            <el-empty
+                v-else-if="!running"
+                description="输入测试消息后点击「运行」，节点将逐个实时点亮并在此展示结果"
+                :image-size="52"
+            />
+            <div v-else class="debug-running-hint">正在运行，节点将逐个点亮…</div>
           </div>
         </div>
       </div>
@@ -2541,6 +2653,29 @@ onUnmounted(() => {
   filter: grayscale(0.5);
 }
 
+/* 执行中：呼吸式高亮（微弱脉冲，突出当前活跃节点） */
+.flow-node.run-running {
+  border-color: #409eff;
+  animation: run-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes run-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.35);
+  }
+}
+
+/* 被取消的运行节点：灰色虚线终态 */
+.flow-node.run-canceled {
+  border-style: dashed;
+  border-color: #909399;
+  opacity: 0.65;
+}
+
 .flow-node.run-highlight {
   border-color: var(--brand-1);
   box-shadow: 0 0 0 2px rgba(91, 108, 255, 0.25);
@@ -2569,6 +2704,10 @@ onUnmounted(() => {
 
 .run-badge-error {
   background: #f56c6c;
+}
+
+.run-badge-canceled {
+  background: #909399;
 }
 
 .node-warn-badge {
@@ -2838,6 +2977,13 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 10px 14px;
   margin-bottom: 10px;
+}
+
+.debug-running-hint {
+  padding: 16px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .debug-answer-label {

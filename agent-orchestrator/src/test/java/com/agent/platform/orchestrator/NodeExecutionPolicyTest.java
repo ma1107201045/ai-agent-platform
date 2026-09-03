@@ -25,7 +25,7 @@ class NodeExecutionPolicyTest {
     private NodeContext ctx(Map<String, Object> config) {
         WorkflowNode n = WorkflowDsl.node("n1", NodeType.LLM, config);
         return new NodeContext(n, null, "hi", new ConcurrentHashMap<>(),
-                new VariableRenderer(), null, null, null, new ObjectMapper());
+                new VariableRenderer(new ObjectMapper()), null, null, null, new ObjectMapper());
     }
 
     @Test

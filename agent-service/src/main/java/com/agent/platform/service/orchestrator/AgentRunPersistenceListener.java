@@ -1,7 +1,7 @@
 package com.agent.platform.service.orchestrator;
 
-import com.agent.platform.dao.entity.chat.AgentRun;
-import com.agent.platform.dao.mapper.chat.AgentRunMapper;
+import com.agent.platform.dao.entity.chat.ChatAgentRun;
+import com.agent.platform.dao.mapper.chat.ChatAgentRunMapper;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEventListener;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -29,13 +29,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AgentRunPersistenceListener implements WorkflowEventListener {
 
-    private final AgentRunMapper agentRunMapper;
+    private final ChatAgentRunMapper chatAgentRunMapper;
     private final ObjectMapper objectMapper;
 
     @Override
     public void onFlowStarted(FlowStarted e) {
         try {
-            AgentRun run = new AgentRun();
+            ChatAgentRun run = new ChatAgentRun();
             run.setRunId(e.runId());
             run.setAppId(e.appId());
             run.setMode("workflow");
@@ -44,7 +44,7 @@ public class AgentRunPersistenceListener implements WorkflowEventListener {
             run.setCostMs(0L);
             run.setCreateTime(LocalDateTime.now());
             // run_id 唯一；并发重复开始由调用方保证（若已存在则跳过插入，等待终态更新）
-            agentRunMapper.insert(run);
+            chatAgentRunMapper.insert(run);
         } catch (Exception ex) {
             log.warn("写入 agent_run 开始记录失败 runId={}: {}", e.runId(), ex.getMessage());
         }
@@ -57,7 +57,7 @@ public class AgentRunPersistenceListener implements WorkflowEventListener {
             if (result.getRunId() == null) {
                 return;
             }
-            AgentRun update = new AgentRun();
+            ChatAgentRun update = new ChatAgentRun();
             update.setRunId(result.getRunId());
             update.setAppId(result.getAppId());
             update.setAnswer(result.getAnswer());
@@ -68,14 +68,14 @@ public class AgentRunPersistenceListener implements WorkflowEventListener {
             if (result.getTrace() != null) {
                 update.setTraceJson(objectMapper.writeValueAsString(result.getTrace()));
             }
-            LambdaUpdateWrapper<AgentRun> uw = new LambdaUpdateWrapper<AgentRun>()
-                    .eq(AgentRun::getRunId, result.getRunId());
-            if (agentRunMapper.update(update, uw) == 0) {
+            LambdaUpdateWrapper<ChatAgentRun> uw = new LambdaUpdateWrapper<ChatAgentRun>()
+                    .eq(ChatAgentRun::getRunId, result.getRunId());
+            if (chatAgentRunMapper.update(update, uw) == 0) {
                 // 兜底：若开始事件丢失（如空图直接结束），此处补齐整行
-                AgentRun existing = agentRunMapper.selectOne(
-                        new LambdaQueryWrapper<AgentRun>().eq(AgentRun::getRunId, result.getRunId()).last("limit 1"));
+                ChatAgentRun existing = chatAgentRunMapper.selectOne(
+                        new LambdaQueryWrapper<ChatAgentRun>().eq(ChatAgentRun::getRunId, result.getRunId()).last("limit 1"));
                 if (existing == null) {
-                    AgentRun full = new AgentRun();
+                    ChatAgentRun full = new ChatAgentRun();
                     full.setRunId(result.getRunId());
                     full.setAppId(result.getAppId());
                     full.setMode("workflow");
@@ -86,7 +86,7 @@ public class AgentRunPersistenceListener implements WorkflowEventListener {
                     full.setTraceJson(update.getTraceJson());
                     full.setFinishTime(LocalDateTime.now());
                     full.setCreateTime(result.getStartedAt() == null ? LocalDateTime.now() : result.getStartedAt());
-                    agentRunMapper.insert(full);
+                    chatAgentRunMapper.insert(full);
                 }
             }
         } catch (Exception ex) {
@@ -96,14 +96,14 @@ public class AgentRunPersistenceListener implements WorkflowEventListener {
 
     /** 查询某次运行是否已存在（供外部调用前幂等判断） */
     public boolean existsRunId(String runId) {
-        return agentRunMapper.selectCount(new LambdaQueryWrapper<AgentRun>()
-                .eq(AgentRun::getRunId, runId)) > 0;
+        return chatAgentRunMapper.selectCount(new LambdaQueryWrapper<ChatAgentRun>()
+                .eq(ChatAgentRun::getRunId, runId)) > 0;
     }
 
     /** 最近一次同 runId 记录（透传给 service 层做幂等/诊断） */
-    public AgentRun findByRunId(String runId) {
-        List<AgentRun> list = agentRunMapper.selectList(new LambdaQueryWrapper<AgentRun>()
-                .eq(AgentRun::getRunId, runId).orderByDesc(AgentRun::getCreateTime).last("limit 1"));
+    public ChatAgentRun findByRunId(String runId) {
+        List<ChatAgentRun> list = chatAgentRunMapper.selectList(new LambdaQueryWrapper<ChatAgentRun>()
+                .eq(ChatAgentRun::getRunId, runId).orderByDesc(ChatAgentRun::getCreateTime).last("limit 1"));
         return list.isEmpty() ? null : list.getFirst();
     }
 }

@@ -264,6 +264,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '对话记录' }
       },
       {
+        path: 'ops/runs',
+        name: 'OpsRuns',
+        component: () => import('@/views/ops/runs/index.vue'),
+        meta: { title: '运行记录' }
+      },
+      {
         path: 'ops/usage',
         name: 'OpsUsage',
         component: () => import('@/views/ops/usage/index.vue'),

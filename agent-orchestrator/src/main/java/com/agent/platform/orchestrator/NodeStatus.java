@@ -20,7 +20,9 @@ public enum NodeStatus {
     /** 未执行：位于未选中的分支，或上游出错导致连锁跳过 */
     SKIPPED("skipped"),
     /** 执行失败 */
-    ERROR("error");
+    ERROR("error"),
+    /** 运行被取消时，已入队 / 中断的节点终态 */
+    CANCELED("canceled");
 
     private static final Map<String, NodeStatus> BY_CODE = Arrays.stream(values())
             .collect(Collectors.toMap(NodeStatus::getCode, Function.identity()));

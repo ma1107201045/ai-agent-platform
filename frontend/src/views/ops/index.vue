@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ChatDotRound, DataAnalysis, MagicStick, Promotion } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
-import { conversationApi } from '@/api/conversation'
+import { conversationApi } from '@/api/chat-conversation.ts'
 import type {
   AppAgent,
   AgentStep,

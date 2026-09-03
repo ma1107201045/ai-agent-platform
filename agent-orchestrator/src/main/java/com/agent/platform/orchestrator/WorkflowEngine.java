@@ -120,12 +120,12 @@ public class WorkflowEngine {
 
     /** 执行工作流（不指定 runId，自动生成） */
     public RunResult run(WorkflowGraph graph, String userInput) {
-        return run(graph, userInput, null, null);
+        return run(graph, userInput, null, null, null);
     }
 
     /** 执行工作流（不指定 runId，自动生成） */
     public RunResult run(WorkflowGraph graph, String userInput, Long appId) {
-        return run(graph, userInput, appId, null);
+        return run(graph, userInput, appId, null, null);
     }
 
     /**
@@ -137,29 +137,33 @@ public class WorkflowEngine {
      * @param runId     运行标识（可为 null，自动生成；显式传入便于与运行记录 / 取消接口关联）
      */
     public RunResult run(WorkflowGraph graph, String userInput, Long appId, String runId) {
+        return run(graph, userInput, appId, runId, null);
+    }
+
+    /**
+     * 执行工作流（按次订阅监听器版）
+     * <p>
+     * 除引擎装配时注册的全局监听器外，额外派发 {@code runListeners}（仅本次 run 有效），
+     * 用于 SSE 实时进度推送等一次运行专属消费方。
+     *
+     * @param graph        DSL 图
+     * @param userInput    用户最新输入
+     * @param appId        所属应用 ID（可为 null）
+     * @param runId        运行标识（可为 null，自动生成；显式传入便于与运行记录 / 取消接口关联）
+     * @param runListeners 本次运行专属监听器（可为 null / 空）；事件在各节点线程同步派发，实现应快速返回
+     */
+    public RunResult run(WorkflowGraph graph, String userInput, Long appId, String runId,
+                         List<WorkflowEventListener> runListeners) {
         String rid = runId == null || runId.isBlank() ? newRunId() : runId;
         LocalDateTime startedAt = LocalDateTime.now();
-        if (graph == null || graph.getNodes() == null || graph.getNodes().isEmpty()) {
-            RunResult empty = RunResult.builder()
-                    .runId(rid)
-                    .appId(appId)
-                    .status(RunStatus.SUCCESS)
-                    .startedAt(startedAt)
-                    .finishedAt(LocalDateTime.now())
-                    .costMs(0L)
-                    .answer("")
-                    .trace(new ArrayList<>())
-                    .build();
-            dispatchFlowFinished(empty);
-            return empty;
-        }
         RunState st = new RunState();
         st.runId = rid;
         st.startedAt = startedAt;
         st.userInput = userInput == null ? "" : userInput;
         st.appId = appId;
+        st.runListeners = runListeners == null || runListeners.isEmpty() ? List.of() : List.copyOf(runListeners);
         activeRuns.put(rid, st);
-        dispatch(listener -> listener.onFlowStarted(
+        dispatch(st, listener -> listener.onFlowStarted(
                 new WorkflowEventListener.FlowStarted(rid, appId, st.userInput, startedAt)));
 
         RunResult result;
@@ -170,28 +174,61 @@ public class WorkflowEngine {
         } finally {
             activeRuns.remove(rid);
         }
-        dispatchFlowFinished(result);
+        dispatchFlowFinished(st, result);
         return result;
     }
 
-    /** 统一派发运行结束事件（持久化 / 推送最终状态），实现异常不影响调用方 */
-    private void dispatchFlowFinished(RunResult result) {
-        dispatch(listener -> listener.onFlowFinished(new WorkflowEventListener.FlowFinished(result)));
+    /**
+     * 取消一次正在运行的工作流（运行结束后调用返回 false）。
+     * <p>
+     * 取消语义为「优雅终止」：置取消标记后不再推进任何下游调度；已入队尚未执行的节点记为
+     * {@link NodeStatus#CANCELED}；正在执行的节点等待其本次调用自然返回（受节点超时上限约束），
+     * 整场结果以 {@link RunStatus#CANCELED} 结束。
+     *
+     * @return true 表示确实中断了运行中的工作流；false 表示该 runId 不存在或已结束
+     */
+    public boolean cancel(String runId) {
+        if (runId == null || runId.isBlank()) {
+            return false;
+        }
+        RunState st = activeRuns.get(runId);
+        if (st == null) {
+            return false;
+        }
+        return st.cancelled.compareAndSet(false, true);
     }
 
-    /** 安全派发：任一监听器异常仅记录，不阻断流程 */
-    private void dispatch(java.util.function.Consumer<WorkflowEventListener> callback) {
+    /** 统一派发运行结束事件（持久化 / 推送最终状态），实现异常不影响调用方 */
+    private void dispatchFlowFinished(RunState st, RunResult result) {
+        dispatch(st, listener -> listener.onFlowFinished(new WorkflowEventListener.FlowFinished(result)));
+    }
+
+    /** 安全派发：任一监听器异常仅记录，不阻断流程；先全局监听器、后本次运行监听器 */
+    private void dispatch(RunState st, java.util.function.Consumer<WorkflowEventListener> callback) {
+        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(WorkflowEngine.class);
         for (WorkflowEventListener listener : eventListeners) {
             try {
                 callback.accept(listener);
             } catch (Exception ex) {
-                org.slf4j.LoggerFactory.getLogger(WorkflowEngine.class)
-                        .warn("工作流事件监听器执行异常: {}", ex.getMessage());
+                logger.warn("工作流事件监听器执行异常: {}", ex.getMessage());
+            }
+        }
+        if (st != null) {
+            for (WorkflowEventListener listener : st.runListeners) {
+                try {
+                    callback.accept(listener);
+                } catch (Exception ex) {
+                    logger.warn("工作流运行期监听器执行异常: {}", ex.getMessage());
+                }
             }
         }
     }
 
     private RunResult doRun(RunState st, WorkflowGraph graph) {
+        // 0) 防御空图：无节点直接成功空结果（事件仍按一次完整运行派发）
+        if (graph == null || graph.getNodes() == null || graph.getNodes().isEmpty()) {
+            return finish(st, RunStatus.SUCCESS, null, "");
+        }
         // 1) 建索引
         for (WorkflowGraph.WorkflowNode n : graph.getNodes()) {
             st.nodeById.put(n.getId(), n);
@@ -250,6 +287,9 @@ public class WorkflowEngine {
         }
 
         // 7) 组装最终回答（存在致命错误时整场 FAILED）
+        if (st.cancelled.get()) {
+            return finish(st, RunStatus.CANCELED, "用户取消运行", "");
+        }
         String fatal = st.fatalError.get();
         if (fatal != null) {
             return finish(st, RunStatus.FAILED, fatal, USER_FACING_FAILED);
@@ -302,6 +342,23 @@ public class WorkflowEngine {
         LocalDateTime startedAt;
         String userInput = "";
         Long appId;
+        /** 取消标记：置位后不再推进任何下游调度；在途节点在其返回后整场以 CANCELED 结束 */
+        final java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        /** 本次运行专属监听器（SSE 实时推送等按次订阅），仅对本次 run 生效 */
+        List<WorkflowEventListener> runListeners = List.of();
+    }
+
+    /** 取消时记录单个节点的 canceled 终态（不释放下游，链路自然收敛） */
+    private void recordCancelledNode(RunState st, WorkflowGraph.WorkflowNode node) {
+        RunResult.TraceItem item = RunResult.TraceItem.builder()
+                .nodeId(node.getId())
+                .nodeType(node.nodeType())
+                .label(labelOf(node))
+                .status(NodeStatus.CANCELED)
+                .build();
+        st.trace.add(item);
+        dispatch(st, listener -> listener.onNodeFinished(
+                new WorkflowEventListener.NodeFinished(st.runId, st.appId, item)));
     }
 
     /** 提交节点异步执行。每个真实执行节点占用一个 pending 计数。 */
@@ -328,7 +385,7 @@ public class WorkflowEngine {
                 .status(NodeStatus.SKIPPED)
                 .build();
         st.trace.add(item);
-        dispatch(listener -> listener.onNodeFinished(
+        dispatch(st, listener -> listener.onNodeFinished(
                 new WorkflowEventListener.NodeFinished(st.runId, st.appId, item)));
         releaseEdges(st, node, null, true);
     }
@@ -339,8 +396,13 @@ public class WorkflowEngine {
      */
     private void executeWithTrace(RunState st, String nodeId) {
         WorkflowGraph.WorkflowNode node = st.nodeById.get(nodeId);
+        // 取消后已入队但未执行的节点：直接记 canceled 终态（不派发 NodeStarted）
+        if (st.cancelled.get()) {
+            recordCancelledNode(st, node);
+            return;
+        }
         NodeHandler handler = registry.required(node.nodeType());
-        dispatch(listener -> listener.onNodeStarted(
+        dispatch(st, listener -> listener.onNodeStarted(
                 new WorkflowEventListener.NodeStarted(st.runId, st.appId,
                         node.getId(), labelOf(node), node.nodeType())));
         NodeContext ctx = newContext(st, node);
@@ -351,6 +413,11 @@ public class WorkflowEngine {
         String fallbackText = ctx.cfgStr("errorFallback", "");
         String outputVar = ctx.cfgStr("outputVar");
 
+        // 取消恰发生在本节点已派发 started、尚未真正执行前：记录取消，不再执行
+        if (st.cancelled.get()) {
+            recordCancelledNode(st, node);
+            return;
+        }
         NodeExecutionPolicy.NodeOutcome outcome = executionPolicy.run(handler, ctx, retries, timeoutSeconds);
         NodeStatus status = outcome.getStatus();
         String output = outcome.getOutput();
@@ -399,7 +466,7 @@ public class WorkflowEngine {
                 .costMs(cost)
                 .build();
         st.trace.add(item);
-        dispatch(listener -> listener.onNodeFinished(
+        dispatch(st, listener -> listener.onNodeFinished(
                 new WorkflowEventListener.NodeFinished(st.runId, st.appId, item)));
 
         if (propagateSkip) {
@@ -442,6 +509,10 @@ public class WorkflowEngine {
      */
     private void releaseEdges(RunState st, WorkflowGraph.WorkflowNode node,
                               String selectedHandle, boolean propagateSkip) {
+        // 已取消：不再释放任何下游，避免取消后仍有节点被调度
+        if (st.cancelled.get()) {
+            return;
+        }
         for (WorkflowGraph.WorkflowEdge e : st.outEdges.getOrDefault(node.getId(), List.of())) {
             String target = e.getTarget();
             if (!st.reachable.contains(target)) {

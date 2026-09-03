@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { userApi } from '@/api/user'
+import { userApi } from '@/api/sys-user.ts'
 import type { SysUser } from '@/api/types'
 
 const loading = ref(false)

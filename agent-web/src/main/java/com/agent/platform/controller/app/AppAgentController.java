@@ -6,6 +6,7 @@ import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEngine;
+import com.agent.platform.orchestrator.WorkflowEventListener;
 import com.agent.platform.orchestrator.WorkflowGraph;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.service.app.AppAgentService;
@@ -14,12 +15,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 智能体应用（AppAgent）接口。
@@ -30,6 +39,7 @@ import java.util.Map;
  *              → 本类 AppAgentController → URL /api/app-agents（kebab-case 复数）
  * </pre>
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/app/agents")
 @RequiredArgsConstructor
@@ -39,6 +49,9 @@ public class AppAgentController {
     private final ChatConversationService conversationService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
+
+    /** SSE 流式运行专用线程池（长连接任务，避免占用 Web 工作线程） */
+    private final ExecutorService streamExecutor = Executors.newCachedThreadPool();
 
     @GetMapping
     public Result<Page<AppAgent>> page(@RequestParam(defaultValue = "1") long page,
@@ -151,6 +164,111 @@ public class AppAgentController {
         } catch (Exception e) {
             throw new BizException("工作流 DSL 解析失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 流式运行工作流（SSE 实时节点进度，供画布调试「实时监控」使用）
+     * <p>
+     * 事件协议（text/event-stream）：
+     * <ul>
+     *   <li>{@code run-started}：data = {"runId":"run_xxx","startedAt":...}（最先到达，供取消关联）</li>
+     *   <li>{@code node-started}：data = {"nodeId":"n1"}（节点进入执行，画布点亮运行中）</li>
+     *   <li>{@code node-finished}：data = TraceItem JSON（success / error / skipped / canceled）</li>
+     *   <li>{@code done}：data = RunResult JSON，随后连接关闭</li>
+     * </ul>
+     * 客户端断开时自动取消本次运行（{@link WorkflowEngine#cancel(String)}）。
+     */
+    @PostMapping(value = "/{id}/run-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter runStream(@PathVariable Long id, @RequestBody RunRequest request) {
+        String dsl = appAgentService.getRunWorkflow(id);
+        if (dsl == null || dsl.isBlank()) {
+            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
+        }
+        final WorkflowGraph graph;
+        try {
+            graph = objectMapper.readValue(dsl, WorkflowGraph.class);
+        } catch (Exception e) {
+            throw new BizException("工作流 DSL 解析失败: " + e.getMessage());
+        }
+        final String userInput = extractUserInput(request);
+        final SseEmitter emitter = new SseEmitter(600_000L);
+        final AtomicReference<String> runIdRef = new AtomicReference<>();
+        final AtomicBoolean finished = new AtomicBoolean();
+        WorkflowEventListener listener = new WorkflowEventListener() {
+            /** 推送统一帧：{"type":"node-started","data":...}，data 行 JSON 自描述，便于各端按同协议解析 */
+            private void send(String type, Object data) {
+                if (finished.get()) {
+                    return;
+                }
+                try {
+                    Map<String, Object> frame = new HashMap<>();
+                    frame.put("type", type);
+                    frame.put("data", data);
+                    emitter.send(frame);
+                } catch (IOException e) {
+                    // 客户端断开：终止本次运行，避免无谓消耗
+                    finished.set(true);
+                    String rid = runIdRef.get();
+                    if (rid != null) {
+                        workflowEngine.cancel(rid);
+                    }
+                    emitter.complete();
+                }
+            }
+
+            @Override
+            public void onFlowStarted(WorkflowEventListener.FlowStarted e) {
+                runIdRef.set(e.runId());
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("runId", e.runId());
+                payload.put("startedAt", e.startedAt() == null ? null : e.startedAt().toString());
+                send("run-started", payload);
+            }
+
+            @Override
+            public void onNodeStarted(WorkflowEventListener.NodeStarted e) {
+                send("node-started", Map.of("nodeId", e.nodeId()));
+            }
+
+            @Override
+            public void onNodeFinished(WorkflowEventListener.NodeFinished e) {
+                send("node-finished", e.traceItem());
+            }
+
+            @Override
+            public void onFlowFinished(WorkflowEventListener.FlowFinished e) {
+                if (finished.compareAndSet(false, true)) {
+                    try {
+                        emitter.send(SseEmitter.event().name("done").data(e.result()));
+                    } catch (IOException ex) {
+                        log.warn("推送工作流完成事件失败 runId={}: {}", e.result().getRunId(), ex.getMessage());
+                    } finally {
+                        emitter.complete();
+                    }
+                }
+            }
+        };
+        // 异步执行：方法立即返回 SseEmitter，引擎事件在节点线程驱动推送
+        streamExecutor.execute(() -> {
+            try {
+                workflowEngine.run(graph, userInput, id, null, List.of(listener));
+            } catch (Exception e) {
+                // 引擎意外抛错（正常失败会走 RunResult + done 事件，不会到此处）
+                log.warn("流式运行工作流失败 appId={}: {}", id, e.getMessage());
+                if (finished.compareAndSet(false, true)) {
+                    try {
+                        Map<String, Object> frame = new HashMap<>();
+                        frame.put("type", "run-error");
+                        frame.put("data", Map.of("message", String.valueOf(e.getMessage())));
+                        emitter.send(frame);
+                    } catch (IOException ignored) {
+                        // 客户端已断开
+                    }
+                    emitter.complete();
+                }
+            }
+        });
+        return emitter;
     }
 
     private String extractUserInput(RunRequest request) {

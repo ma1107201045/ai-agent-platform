@@ -145,6 +145,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { path: '/ops', title: '运行监控', icon: TrendCharts },
       { path: '/ops/conversations', title: '对话记录', icon: ChatDotRound },
+      { path: '/ops/runs', title: '运行记录', icon: Timer },
       { path: '/ops/usage', title: '用量统计', icon: Histogram },
       { path: '/ops/conversations/label', title: '对话标注', icon: CollectionTag, planned: true },
       { path: '/ops/billing', title: '费用账单', icon: CreditCard, planned: true },

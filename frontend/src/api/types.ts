@@ -263,7 +263,7 @@ export interface TraceItem {
   nodeId: string
   nodeType: string
   label: string
-  status: 'success' | 'skipped' | 'error'
+  status: 'success' | 'skipped' | 'error' | 'canceled'
   input?: string
   output?: string
   costMs: number
@@ -272,6 +272,14 @@ export interface TraceItem {
 
 /** 工作流运行结果 */
 export interface RunResult {
+  runId?: string
+  appId?: number
+  /** running / success / failed / canceled / timeout */
+  status?: string
+  startedAt?: string
+  finishedAt?: string
+  costMs?: number
+  error?: string
   answer: string
   trace: TraceItem[]
 }

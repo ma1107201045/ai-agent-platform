@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  * 工作流运行记录（运行监控页数据源，由引擎事件持久化）
  */
 @Data
-@TableName("agent_run")
-public class AgentRun {
+@TableName("chat_agent_run")
+public class ChatAgentRun {
 
     @TableId(type = IdType.AUTO)
     private Long id;

@@ -2,8 +2,8 @@
 import { nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Promotion, User } from '@element-plus/icons-vue'
-import { publicApi } from '@/api/public'
-import type { PublicAppInfo, PublicChatResult } from '@/api/public'
+import { publicApi } from '@/api/portal-public.ts'
+import type { PublicAppInfo, PublicChatResult } from '@/api/portal-public.ts'
 import type { AgentStep, TraceItem } from '@/api/types'
 
 const route = useRoute()

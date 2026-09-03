@@ -10,7 +10,7 @@ import {
   Refresh,
 } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
-import { usageApi } from '@/api/usage-stat'
+import { usageApi } from '@/api/chat-stat.ts'
 import type { UsageAppRow, UsageModelRow, UsageTrendPoint } from '@/api/types'
 
 // ---------- 日期与筛选 ----------

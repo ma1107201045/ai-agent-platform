@@ -466,7 +466,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 --   写入: 引擎 WorkflowEventListener 在 FlowStarted/FlowFinished 事件中
 --         insert(运行中) -> update(终态，含 trace/cost/错误)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `agent_run` (
+CREATE TABLE IF NOT EXISTS `chat_agent_run` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
     `run_id` varchar(48) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '引擎运行标识(全局唯一)',
     `app_id` bigint NOT NULL COMMENT '应用ID',
