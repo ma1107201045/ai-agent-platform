@@ -22,11 +22,11 @@
 | `agent-common` | 统一响应、异常、JWT、用户上下文 | `Result` / `GlobalExceptionHandler` / `JwtUtil` / `UserContext` |
 | `agent-llm` | 模型 SPI 抽象 + OpenAI 兼容实现 | `ChatModel`/`EmbeddingModel`/`RerankModel`，`LLMFactory`，`OpenAIChatModel` |
 | `agent-dao` | 实体 + Mapper（12 张表） | `AppAgent` / `KnowledgeChunk` / `ModelInfo` / `SysUser` 等 |
-| `agent-workflow` | **DAG 工作流引擎（核心资产）** | `WorkflowEngine` + 9 种 `NodeHandler` |
+| `agent-orchestrator` | **DAG 工作流引擎（核心资产）** | `WorkflowEngine` + 9 种 `NodeHandler` |
 | `agent-service` | 业务服务 | `AppAgentService`（含 ReAct 循环）/ `KnowledgeService` / `ModelService` / `ChatConversationService` |
 | `agent-web` | 启动器 + Controller | `AuthInterceptor`、8 个 Controller |
 
-### 工作流引擎（`agent-workflow`，成熟度最高）
+### 工作流引擎（`agent-orchestrator`，成熟度最高）
 
 - **DAG 并行调度**：入度拓扑序 + fork/join，固定池（4 线程）+ 弹性池（带超时的节点）
 - **9 种节点**：start / end / llm / agent / condition（排他分支）/ code / http / template / knowledge

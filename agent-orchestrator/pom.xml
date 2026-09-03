@@ -9,46 +9,39 @@
         <version>0.1.0</version>
     </parent>
 
-    <artifactId>agent-service</artifactId>
-    <name>agent-service</name>
-    <description>业务服务层：用户 / 应用 / 模型管理</description>
+    <artifactId>agent-orchestrator</artifactId>
+    <name>agent-workflow</name>
+    <description>工作流图引擎：DAG 调度、并行 fork/join、排他分支、节点处理器 SPI（不依赖业务层）</description>
 
     <dependencies>
         <dependency>
             <groupId>com.agent</groupId>
-            <artifactId>agent-dao</artifactId>
+            <artifactId>agent-common</artifactId>
         </dependency>
         <dependency>
             <groupId>com.agent</groupId>
             <artifactId>agent-llm</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.agent</groupId>
-            <artifactId>agent-orchestrator</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
-        <!-- BCrypt 密码加密（spring-security-crypto，不引入完整 Security） -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-crypto</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
-        <!-- 工具脚本执行（MVEL 表达式引擎，版本由父 POM 统一管理） -->
+        <!-- 代码节点 / 条件节点：MVEL 表达式求值 -->
         <dependency>
             <groupId>org.mvel</groupId>
             <artifactId>mvel2</artifactId>
-        </dependency>
-        <!-- PDF 文本提取 -->
-        <dependency>
-            <groupId>org.apache.pdfbox</groupId>
-            <artifactId>pdfbox</artifactId>
-        </dependency>
-        <!-- docx 文本提取 -->
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
         </dependency>
     </dependencies>
 </project>

@@ -24,7 +24,7 @@
         <module>agent-dao</module>
         <module>agent-service</module>
         <module>agent-web</module>
-        <module>agent-workflow</module>
+        <module>agent-orchestrator</module>
     </modules>
 
     <properties>
@@ -62,7 +62,7 @@
             </dependency>
             <dependency>
                 <groupId>com.agent</groupId>
-                <artifactId>agent-workflow</artifactId>
+                <artifactId>agent-orchestrator</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
