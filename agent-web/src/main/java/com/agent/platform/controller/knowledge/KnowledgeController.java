@@ -1,12 +1,14 @@
 package com.agent.platform.controller.knowledge;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.knowledge.KnowledgeCreateDocDTO;
+import com.agent.platform.dao.dto.knowledge.KnowledgeSearchDTO;
 import com.agent.platform.dao.entity.knowledge.KnowledgeChunk;
 import com.agent.platform.dao.entity.knowledge.KnowledgeDataset;
 import com.agent.platform.dao.entity.knowledge.KnowledgeDocument;
+import com.agent.platform.dao.vo.knowledge.SearchHitVO;
 import com.agent.platform.service.knowledge.KnowledgeService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -66,7 +68,7 @@ public class KnowledgeController {
 
     @PostMapping("/datasets/{datasetId}/documents")
     public Result<KnowledgeDocument> createDocument(@PathVariable Long datasetId,
-                                                    @RequestBody CreateDocReq req) {
+                                                    @RequestBody KnowledgeCreateDocDTO req) {
         return Result.ok(knowledgeService.createDocument(datasetId, req.getName(), req.getContent()));
     }
 
@@ -98,22 +100,9 @@ public class KnowledgeController {
     // ---------- 检索 ----------
 
     @PostMapping("/datasets/{datasetId}/search")
-    public Result<List<KnowledgeService.SearchHit>> search(@PathVariable Long datasetId,
-                                                           @RequestBody SearchReq req) {
+    public Result<List<SearchHitVO>> search(@PathVariable Long datasetId,
+                                            @RequestBody KnowledgeSearchDTO req) {
         int topK = req.getTopK() == null ? 3 : req.getTopK();
         return Result.ok(knowledgeService.search(datasetId, req.getQuery(), topK, req.getRerankModelId()));
-    }
-
-    @Data
-    public static class CreateDocReq {
-        private String name;
-        private String content;
-    }
-
-    @Data
-    public static class SearchReq {
-        private String query;
-        private Integer topK;
-        private Long rerankModelId;
     }
 }

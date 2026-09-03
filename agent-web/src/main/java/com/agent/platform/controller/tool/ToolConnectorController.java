@@ -1,11 +1,11 @@
 package com.agent.platform.controller.tool;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.tool.ToolConnectorStatusDTO;
 import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.dao.entity.tool.ToolConnector;
 import com.agent.platform.service.tool.ToolConnectorService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,7 +59,7 @@ public class ToolConnectorController {
 
     /** 启用 / 禁用 */
     @PostMapping("/{id}/status")
-    public Result<Void> updateStatus(@PathVariable Long id, @RequestBody StatusReq req) {
+    public Result<Void> updateStatus(@PathVariable Long id, @RequestBody ToolConnectorStatusDTO req) {
         connectorService.updateStatus(id, req.getStatus());
         return Result.ok();
     }
@@ -74,10 +74,5 @@ public class ToolConnectorController {
     @PostMapping("/{id}/as-tool")
     public Result<ToolInfo> asTool(@PathVariable Long id) {
         return Result.ok(connectorService.createHttpTool(id));
-    }
-
-    @Data
-    public static class StatusReq {
-        private Integer status;
     }
 }

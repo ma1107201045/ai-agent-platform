@@ -2,6 +2,7 @@ package com.agent.platform.controller.tool;
 
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.tool.ToolInfo;
+import com.agent.platform.dao.vo.tool.ToolTemplateVO;
 import com.agent.platform.service.tool.ToolMarketplaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class ToolMarketplaceController {
 
     /** 模板目录（含已安装标记），可按分类 / 关键字过滤 */
     @GetMapping("/templates")
-    public Result<List<ToolMarketplaceService.TemplateVO>> templates(
+    public Result<List<ToolTemplateVO>> templates(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword) {
         return Result.ok(marketplaceService.templates(category, keyword));

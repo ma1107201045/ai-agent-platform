@@ -1,11 +1,12 @@
 package com.agent.platform.controller.datastore;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.datastore.DataRecordReqDTO;
+import com.agent.platform.dao.dto.datastore.DataTableReqDTO;
 import com.agent.platform.dao.entity.datastore.DataTable;
+import com.agent.platform.dao.vo.datastore.DataRecordVO;
 import com.agent.platform.service.datastore.DataStoreService;
-import com.agent.platform.service.datastore.DataStoreService.RecordView;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -46,13 +47,13 @@ public class DataStoreController {
     }
 
     @PostMapping("/tables")
-    public Result<DataTable> createTable(@RequestBody TableReq req) {
+    public Result<DataTable> createTable(@RequestBody DataTableReqDTO req) {
         return Result.ok(dataStoreService.createTable(req.getName(), req.getLabel(),
                 req.getDescription(), req.getColumns()));
     }
 
     @PutMapping("/tables/{id}")
-    public Result<DataTable> updateTable(@PathVariable Long id, @RequestBody TableReq req) {
+    public Result<DataTable> updateTable(@PathVariable Long id, @RequestBody DataTableReqDTO req) {
         return Result.ok(dataStoreService.updateTable(id, req.getName(), req.getLabel(),
                 req.getDescription(), req.getColumns(), req.getStatus()));
     }
@@ -66,20 +67,20 @@ public class DataStoreController {
     // ---------- 行记录 ----------
 
     @GetMapping("/tables/{id}/records")
-    public Result<Page<RecordView>> recordPage(@PathVariable Long id,
-                                               @RequestParam(defaultValue = "1") long page,
-                                               @RequestParam(defaultValue = "20") long size,
-                                               @RequestParam(required = false) String keyword) {
+    public Result<Page<DataRecordVO>> recordPage(@PathVariable Long id,
+                                                 @RequestParam(defaultValue = "1") long page,
+                                                 @RequestParam(defaultValue = "20") long size,
+                                                 @RequestParam(required = false) String keyword) {
         return Result.ok(dataStoreService.pageRecords(id, page, size, keyword));
     }
 
     @PostMapping("/tables/{id}/records")
-    public Result<RecordView> createRecord(@PathVariable Long id, @RequestBody RecordReq req) {
+    public Result<DataRecordVO> createRecord(@PathVariable Long id, @RequestBody DataRecordReqDTO req) {
         return Result.ok(dataStoreService.createRecord(id, req.getData()));
     }
 
     @PutMapping("/records/{recordId}")
-    public Result<RecordView> updateRecord(@PathVariable Long recordId, @RequestBody RecordReq req) {
+    public Result<DataRecordVO> updateRecord(@PathVariable Long recordId, @RequestBody DataRecordReqDTO req) {
         return Result.ok(dataStoreService.updateRecord(recordId, req.getData()));
     }
 
@@ -116,19 +117,5 @@ public class DataStoreController {
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(csv);
-    }
-
-    @Data
-    public static class TableReq {
-        private String name;
-        private String label;
-        private String description;
-        private List<DataStoreService.ColumnDef> columns;
-        private Integer status;
-    }
-
-    @Data
-    public static class RecordReq {
-        private Map<String, Object> data;
     }
 }

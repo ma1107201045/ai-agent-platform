@@ -11,6 +11,9 @@ import com.agent.platform.dao.mapper.app.AppAgentVersionMapper;
 import com.agent.platform.dao.mapper.chat.ChatConversationMapper;
 import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
 import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
+import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.app.AgentStepVO;
+import com.agent.platform.dao.vo.knowledge.SearchHitVO;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -24,8 +27,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -279,7 +280,7 @@ public class AppAgentService {
      * @param history       历史消息（不含 system）
      * @param maxIterations 最大循环轮数
      */
-    public AgentResult chat(Long appId, Long modelId, String systemPrompt,
+    public AgentChatVO chat(Long appId, Long modelId, String systemPrompt,
                             List<ChatMessage> history, Integer maxIterations) {
         AppAgent app = getById(appId);
         return doChat(modelId, systemPrompt, loadTools(app.getToolIds()),
@@ -297,13 +298,13 @@ public class AppAgentService {
      * @param history        历史消息（不含 system）
      * @param maxIterations  最大循环轮数
      */
-    public AgentResult chat(Long modelId, String systemPrompt, List<ToolInfo> tools,
+    public AgentChatVO chat(Long modelId, String systemPrompt, List<ToolInfo> tools,
                             String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         return doChat(modelId, systemPrompt, tools, datasetIdsJson, history, maxIterations);
     }
 
     /** Agent 循环核心实现 */
-    private AgentResult doChat(Long modelId, String systemPrompt, List<ToolInfo> tools,
+    private AgentChatVO doChat(Long modelId, String systemPrompt, List<ToolInfo> tools,
                                String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
 
@@ -328,7 +329,7 @@ public class AppAgentService {
             }
         }
 
-        List<AgentStep> steps = new ArrayList<>();
+        List<AgentStepVO> steps = new ArrayList<>();
         String answer = null;
         long promptTokens = 0;
         long completionTokens = 0;
@@ -372,14 +373,14 @@ public class AppAgentService {
                     result = "工具执行异常: " + e.getMessage();
                 }
                 long cost = System.currentTimeMillis() - start;
-                steps.add(new AgentStep(tc.name(), tc.arguments(), result, cost));
+                steps.add(new AgentStepVO(tc.name(), tc.arguments(), result, cost));
                 messages.add(ChatMessage.tool(tc.id(), result));
             }
         }
         if (answer == null) {
             answer = "已达到最大迭代次数（" + maxIter + "），请调整问题或检查工具配置。";
         }
-        return new AgentResult(answer, steps, promptTokens, completionTokens, totalTokens);
+        return new AgentChatVO(answer, steps, promptTokens, completionTokens, totalTokens);
     }
 
     /** 取历史中最后一条用户消息作为知识库检索查询 */
@@ -409,8 +410,8 @@ public class AppAgentService {
             int idx = 1;
             for (Long id : ids) {
                 try {
-                    List<KnowledgeService.SearchHit> hits = knowledgeService.search(id, query, 3, null);
-                    for (KnowledgeService.SearchHit hit : hits) {
+                    List<SearchHitVO> hits = knowledgeService.search(id, query, 3, null);
+                    for (SearchHitVO hit : hits) {
                         sb.append("[").append(idx++).append("] ").append(hit.getContent()).append("\n\n");
                     }
                 } catch (Exception ignore) {
@@ -451,30 +452,4 @@ public class AppAgentService {
         }
     }
 
-    // ==================== 内部类 ====================
-
-    /** Agent 执行结果 */
-    @Data
-    @AllArgsConstructor
-    public static class AgentResult {
-        /** 最终回答 */
-        private String answer;
-        /** 工具调用步骤 */
-        private List<AgentStep> steps;
-        /** 输入 Token（含工具调用轮次累计） */
-        private long promptTokens;
-        /** 输出 Token（含工具调用轮次累计） */
-        private long completionTokens;
-        /** 全流程累计 Token 总量（含工具调用轮次） */
-        private long totalTokens;
-    }
-
-    @Data
-    @AllArgsConstructor
-    public static class AgentStep {
-        private String toolName;
-        private String arguments;
-        private String result;
-        private long costMs;
-    }
 }

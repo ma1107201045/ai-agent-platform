@@ -2,7 +2,11 @@ package com.agent.platform.controller.portal;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.portal.PortalPublicChatDTO;
 import com.agent.platform.dao.entity.app.AppAgent;
+import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.portal.PortalAppInfoVO;
+import com.agent.platform.dao.vo.portal.PortalChatResultVO;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEngine;
 import com.agent.platform.orchestrator.WorkflowGraph;
@@ -17,7 +21,6 @@ import com.agent.platform.service.chat.ChatUsageStatsService;
 import com.agent.platform.service.model.ModelRuntimeService;
 import com.agent.platform.service.model.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -45,9 +48,9 @@ public class PortalPublicController {
 
     /** 公开应用信息（仅已发布） */
     @GetMapping("/app-agents/{id}")
-    public Result<PublicAppInfo> appInfo(@PathVariable Long id) {
+    public Result<PortalAppInfoVO> appInfo(@PathVariable Long id) {
         AppAgent app = requirePublished(id);
-        PublicAppInfo info = new PublicAppInfo();
+        PortalAppInfoVO info = new PortalAppInfoVO();
         info.setId(app.getId());
         info.setName(app.getName());
         info.setType(app.getType());
@@ -67,10 +70,10 @@ public class PortalPublicController {
      * 则按「应用 API 密钥」校验（启用 / 未过期 / 限流），无鉴权信息时行为不变。
      */
     @PostMapping("/app-agents/{id}/chat")
-    public Result<PublicChatResult> chat(@PathVariable Long id,
-                                         @RequestHeader(value = "Authorization", required = false) String authorization,
-                                         @RequestHeader(value = "X-API-Key", required = false) String apiKeyHeader,
-                                         @RequestBody PublicChatReq req) {
+    public Result<PortalChatResultVO> chat(@PathVariable Long id,
+                                           @RequestHeader(value = "Authorization", required = false) String authorization,
+                                           @RequestHeader(value = "X-API-Key", required = false) String apiKeyHeader,
+                                           @RequestBody PortalPublicChatDTO req) {
         AppAgent app = requirePublished(id);
         String presentedKey = resolveApiKey(authorization, apiKeyHeader);
         if (presentedKey != null) {
@@ -105,7 +108,7 @@ public class PortalPublicController {
             if (modelId == null) {
                 throw new BizException("尚未配置可用的对话模型");
             }
-            AppAgentService.AgentResult result = appAgentService.chat(id, modelId, null, history, null);
+            AgentChatVO result = appAgentService.chat(id, modelId, null, history, null);
             answer = result.getAnswer();
             detail = result.getSteps();
             recordUsageSafely(app, modelId, new Usage(result.getPromptTokens(), result.getCompletionTokens(),
@@ -124,7 +127,7 @@ public class PortalPublicController {
             recordUsageSafely(app, modelId, response == null ? null : response.getUsage(), "direct");
         }
 
-        PublicChatResult result = new PublicChatResult();
+        PortalChatResultVO result = new PortalChatResultVO();
         result.setAnswer(answer);
         result.setDetail(detail);
         return Result.ok(result);
@@ -169,27 +172,5 @@ public class PortalPublicController {
             }
         }
         return null;
-    }
-
-    @Data
-    public static class PublicAppInfo {
-        private Long id;
-        private String name;
-        private String type;
-        private String description;
-        private String welcomeMessage;
-        private String openingQuestions;
-    }
-
-    @Data
-    public static class PublicChatReq {
-        private List<ChatMessage> messages;
-    }
-
-    @Data
-    public static class PublicChatResult {
-        private String answer;
-        /** workflow → 节点轨迹 Trace[]；agent → 工具步骤 AgentStep[]；chatflow → null */
-        private Object detail;
     }
 }

@@ -1,6 +1,8 @@
 package com.agent.platform.controller.model;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.model.ModelChatDTO;
+import com.agent.platform.dao.dto.model.ModelEmbedDTO;
 import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
@@ -9,7 +11,6 @@ import com.agent.platform.llm.model.EmbeddingResult;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.llm.spi.EmbeddingModel;
 import com.agent.platform.service.model.ModelRuntimeService;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -45,14 +46,14 @@ public class ModelInvokeController {
 
     /** 非流式对话 */
     @PostMapping("/chat")
-    public Result<ChatResponse> chat(@RequestBody ChatReq request) {
+    public Result<ChatResponse> chat(@RequestBody ModelChatDTO request) {
         ChatModel model = modelRuntimeService.chatModelOf(request.getModelId());
         return Result.ok(model.call(buildReq(request)));
     }
 
     /** 流式对话（SSE），SseEmitter 实现 */
     @PostMapping(value = "/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatStream(@RequestBody ChatReq request) {
+    public SseEmitter chatStream(@RequestBody ModelChatDTO request) {
         SseEmitter emitter = new SseEmitter(120_000L);
         streamExecutor.execute(() -> {
             try {
@@ -78,7 +79,7 @@ public class ModelInvokeController {
      * <p>与 {@code /chat-stream} 事件协议一致；模型流在 boundedElastic 调度器上执行，不占用容器线程。
      */
     @PostMapping(value = "/chat-stream/flux", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<?>> chatStreamFlux(@RequestBody ChatReq request) {
+    public Flux<ServerSentEvent<?>> chatStreamFlux(@RequestBody ModelChatDTO request) {
         ChatRequest chatRequest = buildReq(request);
         Flux<ChatChunk> chunks = Flux.<ChatChunk>create(sink -> {
                     try {
@@ -107,12 +108,12 @@ public class ModelInvokeController {
 
     /** 向量化 */
     @PostMapping("/embed")
-    public Result<EmbeddingResult> embed(@RequestBody EmbedReq request) {
+    public Result<EmbeddingResult> embed(@RequestBody ModelEmbedDTO request) {
         EmbeddingModel model = modelRuntimeService.embeddingModelOf(request.getModelId());
         return Result.ok(model.embed(request.getTexts()));
     }
 
-    private ChatRequest buildReq(ChatReq request) {
+    private ChatRequest buildReq(ModelChatDTO request) {
         ChatRequest.ChatRequestBuilder builder = ChatRequest.builder()
                 .model(request.getModel())
                 .temperature(request.getTemperature())
@@ -128,22 +129,5 @@ public class ModelInvokeController {
             messages.add(ChatMessage.user(request.getPrompt()));
         }
         return builder.messages(messages).build();
-    }
-
-    @Data
-    public static class ChatReq {
-        private Long modelId;
-        private String model;              // 可选，覆盖默认模型
-        private String systemPrompt;
-        private String prompt;
-        private List<ChatMessage> messages; // 可选，多轮历史
-        private Double temperature;
-        private Integer maxTokens;
-    }
-
-    @Data
-    public static class EmbedReq {
-        private Long modelId;
-        private List<String> texts;
     }
 }

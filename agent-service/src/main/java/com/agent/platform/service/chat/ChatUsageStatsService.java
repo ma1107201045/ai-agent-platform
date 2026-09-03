@@ -6,10 +6,12 @@ import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.mapper.app.AppAgentMapper;
 import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
 import com.agent.platform.dao.mapper.model.ModelInfoMapper;
+import com.agent.platform.dao.vo.chat.AppUsageVO;
+import com.agent.platform.dao.vo.chat.ModelUsageVO;
+import com.agent.platform.dao.vo.chat.TrendPointVO;
+import com.agent.platform.dao.vo.chat.UsageSummaryVO;
 import com.agent.platform.llm.model.Usage;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -108,7 +110,7 @@ public class ChatUsageStatsService {
      * @param from  起始日期（null 默认今天往前 6 天）
      * @param to    结束日期（null 默认今天）
      */
-    public UsageSummary summary(Long appId, LocalDate from, LocalDate to) {
+    public UsageSummaryVO summary(Long appId, LocalDate from, LocalDate to) {
         if (from == null) {
             from = LocalDate.now().minusDays(6);
         }
@@ -120,15 +122,15 @@ public class ChatUsageStatsService {
             from = to;
             to = swap;
         }
-        List<AppUsage> apps = queryByApp(appId, from, to);
-        List<ModelUsage> models = queryByModel(appId, from, to);
+        List<AppUsageVO> apps = queryByApp(appId, from, to);
+        List<ModelUsageVO> models = queryByModel(appId, from, to);
         long conversations = 0;
         long calls = 0;
         long inputTokens = 0;
         long outputTokens = 0;
         long totalTokens = 0;
         double cost = 0;
-        for (AppUsage app : apps) {
+        for (AppUsageVO app : apps) {
             conversations += app.getConversations();
             calls += app.getCalls();
             inputTokens += app.getInputTokens();
@@ -136,13 +138,13 @@ public class ChatUsageStatsService {
             totalTokens += app.getTotalTokens();
             cost += app.getCost();
         }
-        return new UsageSummary(conversations, calls, inputTokens, outputTokens, totalTokens, cost,
+        return new UsageSummaryVO(conversations, calls, inputTokens, outputTokens, totalTokens, cost,
                 from.format(DAY_FMT), to.format(DAY_FMT),
                 queryTrend(appId, from, to), apps, models);
     }
 
     /** 按日趋势：日期连续补 0 */
-    private List<TrendPoint> queryTrend(Long appId, LocalDate from, LocalDate to) {
+    private List<TrendPointVO> queryTrend(Long appId, LocalDate from, LocalDate to) {
         QueryWrapper<ChatUsage> qw = rangeFilter(appId, from, to);
         qw.select(DATE_SQL + " AS day_date",
                         "COUNT(*) AS call_cnt",
@@ -151,21 +153,21 @@ public class ChatUsageStatsService {
                         "COALESCE(SUM(total_tokens), 0) AS total_tokens")
                 .groupBy(DATE_SQL)
                 .orderByAsc("day_date");
-        Map<String, TrendPoint> indexed = new LinkedHashMap<>();
+        Map<String, TrendPointVO> indexed = new LinkedHashMap<>();
         for (Map<String, Object> r : usageMapper.selectMaps(qw)) {
-            indexed.put(str(r.get("day_date")), new TrendPoint(
+            indexed.put(str(r.get("day_date")), new TrendPointVO(
                     str(r.get("day_date")),
                     toLong(r.get("call_cnt")),
                     toLong(r.get("input_tokens")),
                     toLong(r.get("output_tokens")),
                     toLong(r.get("total_tokens"))));
         }
-        List<TrendPoint> result = new ArrayList<>();
+        List<TrendPointVO> result = new ArrayList<>();
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
             String key = d.format(DAY_FMT);
-            TrendPoint point = indexed.get(key);
+            TrendPointVO point = indexed.get(key);
             if (point == null) {
-                point = new TrendPoint(key, 0, 0, 0, 0);
+                point = new TrendPointVO(key, 0, 0, 0, 0);
             }
             result.add(point);
         }
@@ -173,7 +175,7 @@ public class ChatUsageStatsService {
     }
 
     /** 按应用排行（Token 降序） */
-    private List<AppUsage> queryByApp(Long appId, LocalDate from, LocalDate to) {
+    private List<AppUsageVO> queryByApp(Long appId, LocalDate from, LocalDate to) {
         QueryWrapper<ChatUsage> qw = rangeFilter(appId, from, to);
         qw.select("app_id",
                         "COUNT(*) AS call_cnt",
@@ -192,21 +194,21 @@ public class ChatUsageStatsService {
                 names.put(id, app == null ? null : app.getName());
             }
         }
-        List<AppUsage> result = new ArrayList<>();
+        List<AppUsageVO> result = new ArrayList<>();
         for (Map<String, Object> r : rows) {
             Long id = toLong(r.get("app_id"));
             String name = names.getOrDefault(id, null);
-            result.add(new AppUsage(id, name == null || name.isBlank() ? "应用 #" + id : name,
+            result.add(new AppUsageVO(id, name == null || name.isBlank() ? "应用 #" + id : name,
                     toLong(r.get("conv_cnt")), toLong(r.get("call_cnt")),
                     toLong(r.get("input_tokens")), toLong(r.get("output_tokens")),
                     toLong(r.get("total_tokens")), toDouble(r.get("cost"))));
         }
-        result.sort(Comparator.comparingLong(AppUsage::getTotalTokens).reversed());
+        result.sort(Comparator.comparingLong(AppUsageVO::getTotalTokens).reversed());
         return result;
     }
 
     /** 按模型排行（Token 降序） */
-    private List<ModelUsage> queryByModel(Long appId, LocalDate from, LocalDate to) {
+    private List<ModelUsageVO> queryByModel(Long appId, LocalDate from, LocalDate to) {
         QueryWrapper<ChatUsage> qw = rangeFilter(appId, from, to);
         qw.select("model_id",
                         "COUNT(*) AS call_cnt",
@@ -224,18 +226,18 @@ public class ChatUsageStatsService {
                 names.put(id, model == null ? null : model.getName());
             }
         }
-        List<ModelUsage> result = new ArrayList<>();
+        List<ModelUsageVO> result = new ArrayList<>();
         for (Map<String, Object> r : rows) {
             Long id = toLong(r.get("model_id"));
             String name = id == null ? "未知模型" : names.getOrDefault(id, null);
             if (name == null || name.isBlank()) {
                 name = "模型 #" + id;
             }
-            result.add(new ModelUsage(id, name, toLong(r.get("call_cnt")),
+            result.add(new ModelUsageVO(id, name, toLong(r.get("call_cnt")),
                     toLong(r.get("input_tokens")), toLong(r.get("output_tokens")),
                     toLong(r.get("total_tokens")), toDouble(r.get("cost"))));
         }
-        result.sort(Comparator.comparingLong(ModelUsage::getTotalTokens).reversed());
+        result.sort(Comparator.comparingLong(ModelUsageVO::getTotalTokens).reversed());
         return result;
     }
 
@@ -262,64 +264,4 @@ public class ChatUsageStatsService {
         return v == null ? "" : v.toString();
     }
 
-    // ---------- 返回 DTO ----------
-
-    @Data
-    @AllArgsConstructor
-    public static class UsageSummary {
-        /** 会话数（仅控制台会话去重） */
-        private long conversations;
-        /** 模型调用次数（用量事件数） */
-        private long calls;
-        private long inputTokens;
-        private long outputTokens;
-        private long totalTokens;
-        /** 估算成本（元） */
-        private double cost;
-        /** 查询起始日期 yyyy-MM-dd */
-        private String startDate;
-        /** 查询结束日期 yyyy-MM-dd */
-        private String endDate;
-        /** 按日趋势（连续日期，空值补 0） */
-        private List<TrendPoint> trend;
-        /** 应用维度排行 */
-        private List<AppUsage> apps;
-        /** 模型维度排行 */
-        private List<ModelUsage> models;
-    }
-
-    @Data
-    @AllArgsConstructor
-    public static class TrendPoint {
-        private String date;
-        private long calls;
-        private long inputTokens;
-        private long outputTokens;
-        private long totalTokens;
-    }
-
-    @Data
-    @AllArgsConstructor
-    public static class AppUsage {
-        private Long appId;
-        private String appName;
-        private long conversations;
-        private long calls;
-        private long inputTokens;
-        private long outputTokens;
-        private long totalTokens;
-        private double cost;
-    }
-
-    @Data
-    @AllArgsConstructor
-    public static class ModelUsage {
-        private Long modelId;
-        private String modelName;
-        private long calls;
-        private long inputTokens;
-        private long outputTokens;
-        private long totalTokens;
-        private double cost;
-    }
 }

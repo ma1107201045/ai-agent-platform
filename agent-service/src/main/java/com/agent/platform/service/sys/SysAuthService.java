@@ -6,8 +6,9 @@ import com.agent.platform.common.security.JwtUtil;
 import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.entity.sys.SysUser;
 import com.agent.platform.dao.mapper.sys.SysUserMapper;
+import com.agent.platform.dao.vo.sys.SysAuthLoginVO;
+import com.agent.platform.dao.vo.sys.UserProfileVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class SysAuthService {
     private final PasswordEncoder passwordEncoder;
 
     /** 登录，成功返回 Token + 用户信息 */
-    public LoginResult login(String username, String password) {
+    public SysAuthLoginVO login(String username, String password) {
         SysUser user = userMapper.selectOne(
                 new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
         if (user == null || !matches(password, user.getPassword())) {
@@ -37,11 +38,11 @@ public class SysAuthService {
         }
         upgradeLegacyPassword(user, password);
         String token = jwtUtil.createToken(user.getId(), user.getTenantId(), user.getUsername());
-        return new LoginResult(token, toProfile(user));
+        return new SysAuthLoginVO(token, toProfile(user));
     }
 
     /** 当前登录用户信息 */
-    public UserProfile me() {
+    public UserProfileVO me() {
         Long userId = UserContext.getUserId();
         if (userId == null) {
             throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "未登录");
@@ -79,8 +80,8 @@ public class SysAuthService {
         return pwd != null && (pwd.startsWith("$2a$") || pwd.startsWith("$2b$") || pwd.startsWith("$2y$"));
     }
 
-    private UserProfile toProfile(SysUser user) {
-        UserProfile p = new UserProfile();
+    private UserProfileVO toProfile(SysUser user) {
+        UserProfileVO p = new UserProfileVO();
         p.setId(user.getId());
         p.setTenantId(user.getTenantId());
         p.setUsername(user.getUsername());
@@ -89,27 +90,5 @@ public class SysAuthService {
         p.setAvatar(user.getAvatar());
         p.setStatus(user.getStatus());
         return p;
-    }
-
-    @Data
-    public static class LoginResult {
-        private String token;
-        private UserProfile user;
-
-        public LoginResult(String token, UserProfile user) {
-            this.token = token;
-            this.user = user;
-        }
-    }
-
-    @Data
-    public static class UserProfile {
-        private Long id;
-        private Long tenantId;
-        private String username;
-        private String nickname;
-        private String email;
-        private String avatar;
-        private Integer status;
     }
 }

@@ -1,14 +1,14 @@
 package com.agent.platform.controller.app;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.app.AppApiKeyCreateDTO;
+import com.agent.platform.dao.dto.app.AppApiKeyStatusDTO;
+import com.agent.platform.dao.dto.app.AppApiKeyUpdateDTO;
 import com.agent.platform.dao.entity.app.AppApiKey;
 import com.agent.platform.service.app.AppApiKeyService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
 
 /**
  * 应用 API 密钥（AppApiKey）管理接口。
@@ -38,21 +38,21 @@ public class AppApiKeyController {
     }
 
     @PostMapping
-    public Result<AppApiKey> create(@RequestBody CreateReq req) {
+    public Result<AppApiKey> create(@RequestBody AppApiKeyCreateDTO req) {
         return Result.ok(apiKeyService.create(
                 req.getAppId(), req.getName(), req.getExpiresAt(), req.getRateLimit(), req.getRemark()));
     }
 
     /** 更新基础信息（expiresAt/rateLimit/remark 为空即清除） */
     @PutMapping("/{id}")
-    public Result<AppApiKey> update(@PathVariable Long id, @RequestBody UpdateReq req) {
+    public Result<AppApiKey> update(@PathVariable Long id, @RequestBody AppApiKeyUpdateDTO req) {
         return Result.ok(apiKeyService.update(
                 id, req.getName(), req.getExpiresAt(), req.getRateLimit(), req.getRemark()));
     }
 
     /** 启用 / 禁用 */
     @PostMapping("/{id}/status")
-    public Result<Void> setStatus(@PathVariable Long id, @RequestBody StatusReq req) {
+    public Result<Void> setStatus(@PathVariable Long id, @RequestBody AppApiKeyStatusDTO req) {
         apiKeyService.setStatus(id, req.getStatus());
         return Result.ok();
     }
@@ -67,31 +67,5 @@ public class AppApiKeyController {
     public Result<Void> delete(@PathVariable Long id) {
         apiKeyService.delete(id);
         return Result.ok();
-    }
-
-    @Data
-    public static class CreateReq {
-        /** 关联应用 ID（必填） */
-        private Long appId;
-        /** 密钥名称（用途标识，必填） */
-        private String name;
-        /** 过期时间（空 = 永不过期） */
-        private LocalDateTime expiresAt;
-        /** 每分钟请求上限（空 = 不限流） */
-        private Integer rateLimit;
-        private String remark;
-    }
-
-    @Data
-    public static class UpdateReq {
-        private String name;
-        private LocalDateTime expiresAt;
-        private Integer rateLimit;
-        private String remark;
-    }
-
-    @Data
-    public static class StatusReq {
-        private Integer status;
     }
 }

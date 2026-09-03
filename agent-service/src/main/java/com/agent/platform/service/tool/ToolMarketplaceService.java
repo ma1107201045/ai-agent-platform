@@ -3,6 +3,7 @@ package com.agent.platform.service.tool;
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.dao.mapper.tool.ToolInfoMapper;
+import com.agent.platform.dao.vo.tool.ToolTemplateVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -52,20 +53,6 @@ public class ToolMarketplaceService {
     }
 
     /** 市场卡片视图：模板字段 + 是否已安装 */
-    @Data
-    public static class TemplateVO {
-        private String key;
-        private String name;
-        private String description;
-        private String category;
-        private String type;
-        private String method;
-        private String url;
-        private String code;
-        private String parameters;
-        private boolean installed;
-    }
-
     private static Template tpl(String key, String name, String description, String category,
                                 String type, String method, String url, String code, String parameters) {
         Template t = new Template();
@@ -142,7 +129,7 @@ public class ToolMarketplaceService {
     /**
      * 模板目录（含已安装标记）。可按分类 / 关键字过滤。
      */
-    public List<TemplateVO> templates(String category, String keyword) {
+    public List<ToolTemplateVO> templates(String category, String keyword) {
         Set<String> names = toolMapper.selectList(new LambdaQueryWrapper<ToolInfo>()
                         .select(ToolInfo::getName))
                 .stream().map(ToolInfo::getName).collect(Collectors.toSet());
@@ -155,8 +142,8 @@ public class ToolMarketplaceService {
                 .collect(Collectors.toList());
     }
 
-    private TemplateVO toVO(Template t, boolean installed) {
-        TemplateVO vo = new TemplateVO();
+    private ToolTemplateVO toVO(Template t, boolean installed) {
+        ToolTemplateVO vo = new ToolTemplateVO();
         vo.setKey(t.getKey());
         vo.setName(t.getName());
         vo.setDescription(t.getDescription());

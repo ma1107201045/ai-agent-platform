@@ -18,6 +18,11 @@
             <groupId>com.agent</groupId>
             <artifactId>agent-common</artifactId>
         </dependency>
+        <!-- Web 接口 DTO 引用 LLM 领域模型（如 ChatMessage） -->
+        <dependency>
+            <groupId>com.agent</groupId>
+            <artifactId>agent-llm</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>

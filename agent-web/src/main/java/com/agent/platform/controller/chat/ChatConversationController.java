@@ -2,11 +2,13 @@ package com.agent.platform.controller.chat;
 
 import com.agent.platform.common.result.Result;
 import com.agent.platform.common.security.UserContext;
+import com.agent.platform.dao.dto.chat.ConversationCreateDTO;
+import com.agent.platform.dao.dto.chat.ConversationRenameDTO;
+import com.agent.platform.dao.dto.chat.ConversationSendDTO;
 import com.agent.platform.dao.entity.chat.ChatConversation;
 import com.agent.platform.dao.entity.chat.ChatMessage;
 import com.agent.platform.service.chat.ChatConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -38,7 +40,7 @@ public class ChatConversationController {
 
     /** 创建会话 */
     @PostMapping
-    public Result<ChatConversation> create(@RequestBody CreateReq req) {
+    public Result<ChatConversation> create(@RequestBody ConversationCreateDTO req) {
         return Result.ok(conversationService.create(
                 req.getAppId(),
                 UserContext.getUserId(),
@@ -56,7 +58,7 @@ public class ChatConversationController {
 
     /** 重命名会话 */
     @PutMapping("/{id}")
-    public Result<Void> rename(@PathVariable Long id, @RequestBody RenameReq req) {
+    public Result<Void> rename(@PathVariable Long id, @RequestBody ConversationRenameDTO req) {
         conversationService.rename(id, UserContext.getUserId(), req.getTitle());
         return Result.ok();
     }
@@ -76,7 +78,7 @@ public class ChatConversationController {
 
     /** 发送消息（非流式；直连模型 / 工作流通用） */
     @PostMapping("/{id}/messages")
-    public Result<ChatMessage> send(@PathVariable Long id, @RequestBody SendReq req) {
+    public Result<ChatMessage> send(@PathVariable Long id, @RequestBody ConversationSendDTO req) {
         return Result.ok(conversationService.send(id, UserContext.getUserId(), req.getContent(), req.getModelId()));
     }
 
@@ -86,7 +88,7 @@ public class ChatConversationController {
      * 流结束后后端自动持久化完整回答。
      */
     @PostMapping(value = "/{id}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@PathVariable Long id, @RequestBody SendReq req) {
+    public SseEmitter stream(@PathVariable Long id, @RequestBody ConversationSendDTO req) {
         SseEmitter emitter = new SseEmitter(180_000L);
         Long userId = UserContext.getUserId(); // 线程池中拿不到 ThreadLocal，提前取出
         streamExecutor.execute(() -> {
@@ -105,24 +107,5 @@ public class ChatConversationController {
             }
         });
         return emitter;
-    }
-
-    @Data
-    public static class CreateReq {
-        private Long appId;
-        private String title;
-        private String mode;
-        private Long modelId;
-    }
-
-    @Data
-    public static class RenameReq {
-        private String title;
-    }
-
-    @Data
-    public static class SendReq {
-        private String content;
-        private Long modelId;
     }
 }

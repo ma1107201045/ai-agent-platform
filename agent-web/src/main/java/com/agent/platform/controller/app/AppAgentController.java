@@ -2,8 +2,13 @@ package com.agent.platform.controller.app;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.app.AppAgentChatDTO;
+import com.agent.platform.dao.dto.app.AppAgentPublishDTO;
+import com.agent.platform.dao.dto.app.AppAgentRunDTO;
 import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
+import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.chat.AppAgentStatsVO;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEngine;
 import com.agent.platform.orchestrator.WorkflowEventListener;
@@ -13,7 +18,6 @@ import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.chat.ChatConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -86,7 +90,7 @@ public class AppAgentController {
 
     /** 发布（保存版本快照） */
     @PostMapping("/{id}/publish")
-    public Result<AppAgentVersion> publish(@PathVariable Long id, @RequestBody PublishRequest request) {
+    public Result<AppAgentVersion> publish(@PathVariable Long id, @RequestBody AppAgentPublishDTO request) {
         return Result.ok(appAgentService.publish(id, request.getWorkflowJson(), request.getPromptConfig(), 1L));
     }
 
@@ -110,7 +114,7 @@ public class AppAgentController {
 
     /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
     @GetMapping("/batch/stats")
-    public Result<Map<Long, ChatConversationService.AppAgentStats>> batchStats(@RequestParam String ids) {
+    public Result<Map<Long, AppAgentStatsVO>> batchStats(@RequestParam String ids) {
         List<Long> idList = parseIds(ids);
         return Result.ok(conversationService.statsBatch(idList));
     }
@@ -150,7 +154,7 @@ public class AppAgentController {
 
     /** 运行应用工作流（按画布 DSL 执行） */
     @PostMapping("/{id}/run")
-    public Result<RunResult> run(@PathVariable Long id, @RequestBody RunRequest request) {
+    public Result<RunResult> run(@PathVariable Long id, @RequestBody AppAgentRunDTO request) {
         String dsl = appAgentService.getRunWorkflow(id);
         if (dsl == null || dsl.isBlank()) {
             throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
@@ -179,7 +183,7 @@ public class AppAgentController {
      * 客户端断开时自动取消本次运行（{@link WorkflowEngine#cancel(String)}）。
      */
     @PostMapping(value = "/{id}/run-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter runStream(@PathVariable Long id, @RequestBody RunRequest request) {
+    public SseEmitter runStream(@PathVariable Long id, @RequestBody AppAgentRunDTO request) {
         String dsl = appAgentService.getRunWorkflow(id);
         if (dsl == null || dsl.isBlank()) {
             throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
@@ -271,7 +275,7 @@ public class AppAgentController {
         return emitter;
     }
 
-    private String extractUserInput(RunRequest request) {
+    private String extractUserInput(AppAgentRunDTO request) {
         if (request == null || request.getMessages() == null || request.getMessages().isEmpty()) {
             throw new BizException("请输入消息");
         }
@@ -286,30 +290,11 @@ public class AppAgentController {
      * Agent 自主对话（非流式）：规划-工具调用-观察循环
      */
     @PostMapping("/{id}/agent/chat")
-    public Result<AppAgentService.AgentResult> agentChat(@PathVariable Long id, @RequestBody AgentChatRequest request) {
+    public Result<AgentChatVO> agentChat(@PathVariable Long id, @RequestBody AppAgentChatDTO request) {
         if (request.getModelId() == null) {
             throw new BizException("请选择对话模型");
         }
         return Result.ok(appAgentService.chat(id, request.getModelId(), request.getSystemPrompt(),
                 request.getMessages(), request.getMaxIterations()));
-    }
-
-    @Data
-    public static class RunRequest {
-        private List<ChatMessage> messages;
-    }
-
-    @Data
-    public static class PublishRequest {
-        private String workflowJson;
-        private String promptConfig;
-    }
-
-    @Data
-    public static class AgentChatRequest {
-        private Long modelId;
-        private String systemPrompt;
-        private List<ChatMessage> messages;
-        private Integer maxIterations;
     }
 }

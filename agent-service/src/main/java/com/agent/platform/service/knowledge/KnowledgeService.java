@@ -7,6 +7,7 @@ import com.agent.platform.dao.entity.knowledge.KnowledgeDocument;
 import com.agent.platform.dao.mapper.knowledge.KnowledgeChunkMapper;
 import com.agent.platform.dao.mapper.knowledge.KnowledgeDatasetMapper;
 import com.agent.platform.dao.mapper.knowledge.KnowledgeDocumentMapper;
+import com.agent.platform.dao.vo.knowledge.SearchHitVO;
 import com.agent.platform.llm.model.EmbeddingResult;
 import com.agent.platform.llm.model.RerankResult;
 import com.agent.platform.llm.spi.EmbeddingModel;
@@ -16,7 +17,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
@@ -298,7 +298,7 @@ public class KnowledgeService {
      * 向量检索：对 query 向量化 → 与数据集所有分块计算余弦相似度 → 取 topK。
      * 可选 rerankModelId 时，对 topK 候选再用 rerank 模型精排。
      */
-    public List<SearchHit> search(Long datasetId, String query, int topK, Long rerankModelId) {
+    public List<SearchHitVO> search(Long datasetId, String query, int topK, Long rerankModelId) {
         KnowledgeDataset ds = getDataset(datasetId);
         if (query == null || query.isBlank()) {
             return List.of();
@@ -308,32 +308,32 @@ public class KnowledgeService {
 
         List<KnowledgeChunk> all = chunkMapper.selectList(new LambdaQueryWrapper<KnowledgeChunk>()
                 .eq(KnowledgeChunk::getDatasetId, datasetId));
-        List<SearchHit> hits = new ArrayList<>();
+        List<SearchHitVO> hits = new ArrayList<>();
         for (KnowledgeChunk c : all) {
             float[] vec = fromJson(c.getVector());
             if (vec == null) {
                 continue;
             }
             double score = cosine(queryVec, vec);
-            hits.add(new SearchHit(c.getId(), c.getDocumentId(), c.getChunkIndex(), c.getContent(), score));
+            hits.add(new SearchHitVO(c.getId(), c.getDocumentId(), c.getChunkIndex(), c.getContent(), score));
         }
-        hits.sort(Comparator.comparingDouble(SearchHit::getScore).reversed());
-        List<SearchHit> top = hits.size() > topK ? hits.subList(0, topK) : hits;
+        hits.sort(Comparator.comparingDouble(SearchHitVO::getScore).reversed());
+        List<SearchHitVO> top = hits.size() > topK ? hits.subList(0, topK) : hits;
 
         // 可选 rerank 精排
         if (rerankModelId != null && !top.isEmpty()) {
             try {
                 RerankModel rerank = modelRuntimeService.rerankModelOf(rerankModelId);
                 List<String> docs = new ArrayList<>();
-                for (SearchHit h : top) {
+                for (SearchHitVO h : top) {
                     docs.add(h.getContent());
                 }
                 List<RerankResult> reranked = rerank.rerank(query, docs, top.size());
-                List<SearchHit> rerankedHits = new ArrayList<>();
+                List<SearchHitVO> rerankedHits = new ArrayList<>();
                 for (RerankResult r : reranked) {
                     if (r.index() >= 0 && r.index() < top.size()) {
-                        SearchHit origin = top.get(r.index());
-                        rerankedHits.add(new SearchHit(origin.getId(), origin.getDocumentId(),
+                        SearchHitVO origin = top.get(r.index());
+                        rerankedHits.add(new SearchHitVO(origin.getId(), origin.getDocumentId(),
                                 origin.getChunkIndex(), origin.getContent(), r.score()));
                     }
                 }
@@ -413,15 +413,4 @@ public class KnowledgeService {
         }
     }
 
-    /** 检索命中结果 */
-    @Data
-    @lombok.AllArgsConstructor
-    @lombok.NoArgsConstructor
-    public static class SearchHit {
-        private Long id;
-        private Long documentId;
-        private Integer chunkIndex;
-        private String content;
-        private double score;
-    }
 }

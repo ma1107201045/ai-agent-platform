@@ -1,11 +1,14 @@
 package com.agent.platform.controller.app;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.app.AppPromptExtractDTO;
+import com.agent.platform.dao.dto.app.AppPromptParseDTO;
+import com.agent.platform.dao.dto.app.AppPromptRenderDTO;
+import com.agent.platform.dao.dto.app.AppPromptRollbackDTO;
 import com.agent.platform.dao.entity.app.AppPromptTemplate;
 import com.agent.platform.dao.entity.app.AppPromptVersion;
 import com.agent.platform.service.app.AppPromptTemplateService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -76,7 +79,7 @@ public class AppPromptTemplateController {
 
     /** 回退到指定历史版本（生成新版本留痕） */
     @PostMapping("/{id}/rollback")
-    public Result<AppPromptTemplate> rollback(@PathVariable Long id, @RequestBody RollbackReq req) {
+    public Result<AppPromptTemplate> rollback(@PathVariable Long id, @RequestBody AppPromptRollbackDTO req) {
         return Result.ok(promptService.rollback(id, req.getVersion()));
     }
 
@@ -84,40 +87,19 @@ public class AppPromptTemplateController {
 
     /** 渲染模板正文（{{var}} 占位替换），用于在线调试 */
     @PostMapping("/render")
-    public Result<String> render(@RequestBody RenderReq req) {
+    public Result<String> render(@RequestBody AppPromptRenderDTO req) {
         return Result.ok(promptService.render(req.getContent(), req.getVariables()));
     }
 
     /** 提取正文中的变量占位名 */
     @PostMapping("/extract-variables")
-    public Result<List<String>> extractVariables(@RequestBody ExtractReq req) {
+    public Result<List<String>> extractVariables(@RequestBody AppPromptExtractDTO req) {
         return Result.ok(promptService.extractVariables(req.getContent()));
     }
 
     /** 解析变量定义 JSON 为 name→desc 映射（供试跑表单使用） */
     @PostMapping("/parse-variables")
-    public Result<Map<String, String>> parseVariables(@RequestBody ParseReq req) {
+    public Result<Map<String, String>> parseVariables(@RequestBody AppPromptParseDTO req) {
         return Result.ok(promptService.parseVariableDefs(req.getVariables()));
-    }
-
-    @Data
-    public static class RollbackReq {
-        private Integer version;
-    }
-
-    @Data
-    public static class RenderReq {
-        private String content;
-        private Map<String, Object> variables;
-    }
-
-    @Data
-    public static class ExtractReq {
-        private String content;
-    }
-
-    @Data
-    public static class ParseReq {
-        private String variables;
     }
 }

@@ -1,10 +1,10 @@
 package com.agent.platform.controller.tool;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.tool.ToolTestDTO;
 import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.service.tool.ToolInfoService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,12 +63,7 @@ public class ToolInfoController {
 
     /** 工具执行测试 */
     @PostMapping("/{id}/test")
-    public Result<String> test(@PathVariable Long id, @RequestBody TestReq req) {
+    public Result<String> test(@PathVariable Long id, @RequestBody ToolTestDTO req) {
         return Result.ok(toolService.execute(toolService.getById(id), req.getArguments()));
-    }
-
-    @Data
-    public static class TestReq {
-        private String arguments;
     }
 }

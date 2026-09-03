@@ -1,10 +1,10 @@
 package com.agent.platform.controller.asset;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.dao.dto.asset.AssetUpdateDTO;
 import com.agent.platform.dao.entity.asset.AssetFile;
 import com.agent.platform.service.asset.AssetService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -46,7 +46,7 @@ public class AssetController {
     }
 
     @PutMapping("/{id}")
-    public Result<AssetFile> update(@PathVariable Long id, @RequestBody UpdateReq req) {
+    public Result<AssetFile> update(@PathVariable Long id, @RequestBody AssetUpdateDTO req) {
         return Result.ok(assetService.updateMeta(id, req.getName(), req.getCategory(), req.getStatus()));
     }
 
@@ -73,12 +73,5 @@ public class AssetController {
     private String encode(String name) {
         return java.net.URLEncoder.encode(name == null ? "file" : name, java.nio.charset.StandardCharsets.UTF_8)
                 .replace("+", "%20");
-    }
-
-    @Data
-    public static class UpdateReq {
-        private String name;
-        private String category;
-        private Integer status;
     }
 }
