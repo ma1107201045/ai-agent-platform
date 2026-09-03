@@ -1,6 +1,7 @@
 package com.agent.platform.controller.model;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -11,8 +12,11 @@ import com.agent.platform.service.model.ModelRuntimeService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,7 +25,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 模型调用接口：非流式对话、流式对话（SSE）、向量化，直接面向配置好的 LLM 供应商
+ * 模型调用接口：非流式对话、流式对话（SSE）、向量化，直接面向配置好的 LLM 供应商。
+ * 流式对话提供两种并行实现，协议一致（message 事件携带 ChatChunk JSON，done 事件携带 [DONE]）：
+ * <ul>
+ *     <li>{@code /chat-stream}：基于 SseEmitter + 线程池</li>
+ *     <li>{@code /chat-stream/flux}：基于 Spring Flux（Reactor）响应式流式输出</li>
+ * </ul>
  * <p>模型管理接口（供应商/模型 CRUD、可用列表）见 {@link ModelController}
  */
 @RestController
@@ -41,9 +50,7 @@ public class ModelInvokeController {
         return Result.ok(model.call(buildReq(request)));
     }
 
-    /**
-     * 流式对话（SSE）。事件：message 携带 ChatChunk JSON，结束事件 done 携带 [DONE]
-     */
+    /** 流式对话（SSE），SseEmitter 实现 */
     @PostMapping(value = "/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestBody ChatReq request) {
         SseEmitter emitter = new SseEmitter(120_000L);
@@ -64,6 +71,35 @@ public class ModelInvokeController {
             }
         });
         return emitter;
+    }
+
+    /**
+     * 流式对话（SSE），基于 Spring Flux（Reactor）实现流式输出。
+     * <p>与 {@code /chat-stream} 事件协议一致；模型流在 boundedElastic 调度器上执行，不占用容器线程。
+     */
+    @PostMapping(value = "/chat-stream/flux", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<?>> chatStreamFlux(@RequestBody ChatReq request) {
+        ChatRequest chatRequest = buildReq(request);
+        Flux<ChatChunk> chunks = Flux.<ChatChunk>create(sink -> {
+                    try {
+                        ChatModel model = modelRuntimeService.chatModelOf(request.getModelId());
+                        model.stream(chatRequest, chunk -> {
+                            if (!sink.isCancelled()) {
+                                sink.next(chunk);
+                            }
+                        });
+                        sink.complete();
+                    } catch (Exception e) {
+                        sink.error(e);
+                    }
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+
+        Flux<ServerSentEvent<?>> messageEvents = chunks.map(
+                chunk -> (ServerSentEvent<?>) ServerSentEvent.builder(chunk).event("message").build());
+        Flux<ServerSentEvent<?>> doneEvent = Flux.just(
+                (ServerSentEvent<?>) ServerSentEvent.builder("[DONE]").event("done").build());
+        return messageEvents.concatWith(doneEvent);
     }
 
     /** 向量化 */
