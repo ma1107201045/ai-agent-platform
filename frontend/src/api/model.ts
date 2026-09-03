@@ -11,7 +11,7 @@ import type {
 } from './types'
 
 export const modelApi = {
-  providerPage(params: { page?: number; size?: number }) {
+  providerPage(params: { page?: number; size?: number; keyword?: string }) {
     return request.get<never, PageResult<ModelProvider>>('/model/providers', { params })
   },
   createProvider(data: Partial<ModelProvider>) {
@@ -28,6 +28,9 @@ export const modelApi = {
   },
   createModel(providerId: number, data: Partial<ModelInfo>) {
     return request.post<never, ModelInfo>(`/model/providers/${providerId}/models`, data)
+  },
+  updateModel(id: number, data: Partial<ModelInfo>) {
+    return request.put<never, void>(`/model/models/${id}`, data)
   },
   removeModel(id: number) {
     return request.delete<never, void>(`/model/models/${id}`)

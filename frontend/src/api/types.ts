@@ -303,12 +303,19 @@ export interface AppAgentVersion {
 
 export interface ModelProvider {
   id: number
+  tenantId?: number
+  /** 供应商名称（展示用） */
   name: string
+  /** 供应商类型：openai-compatible / anthropic / ... */
   type: string
+  /** API 基础地址 */
   baseUrl?: string
+  /** API Key */
   apiKey?: string
+  /** 状态：0禁用 1启用 */
   status: number
   createTime?: string
+  updateTime?: string
 }
 
 export type ModelType = 'llm' | 'embedding' | 'rerank' | 'tts' | 'asr' | 'image'
@@ -316,12 +323,19 @@ export type ModelType = 'llm' | 'embedding' | 'rerank' | 'tts' | 'asr' | 'image'
 export interface ModelInfo {
   id: number
   providerId: number
+  /** 模型名（调用 API 时使用） */
   name: string
   modelType: ModelType
+  /** 上下文窗口 */
   contextWindow?: number
+  /** 最大输出 Token */
   maxTokens?: number
+  /** 能力标签（JSON 数组字符串，如 ["function_call","vision"]） */
   capabilities?: string
+  /** 状态：0禁用 1启用 */
   status: number
+  createTime?: string
+  updateTime?: string
 }
 
 /** 知识库数据集 */

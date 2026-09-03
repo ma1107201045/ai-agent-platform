@@ -25,8 +25,9 @@ public class ModelController {
 
     @GetMapping("/providers")
     public Result<Page<ModelProvider>> providerPage(@RequestParam(defaultValue = "1") long page,
-                                                    @RequestParam(defaultValue = "20") long size) {
-        return Result.ok(modelService.providerPage(page, size));
+                                                    @RequestParam(defaultValue = "20") long size,
+                                                    @RequestParam(required = false) String keyword) {
+        return Result.ok(modelService.providerPage(page, size, keyword));
     }
 
     @PostMapping("/providers")
@@ -58,6 +59,13 @@ public class ModelController {
     public Result<ModelInfo> createModel(@PathVariable Long providerId, @RequestBody ModelInfo model) {
         model.setProviderId(providerId);
         return Result.ok(modelService.createModel(model));
+    }
+
+    @PutMapping("/models/{id}")
+    public Result<Void> updateModel(@PathVariable Long id, @RequestBody ModelInfo model) {
+        model.setId(id);
+        modelService.updateModel(model);
+        return Result.ok();
     }
 
     @DeleteMapping("/models/{id}")

@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,9 +29,14 @@ public class ModelService {
 
     // ---------- 供应商 ----------
 
-    public Page<ModelProvider> providerPage(long page, long size) {
-        return providerMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<ModelProvider>().orderByDesc(ModelProvider::getId));
+    public Page<ModelProvider> providerPage(long page, long size, String keyword) {
+        LambdaQueryWrapper<ModelProvider> qw = new LambdaQueryWrapper<ModelProvider>()
+                .and(StringUtils.hasText(keyword),
+                        w -> w.like(ModelProvider::getName, keyword)
+                                .or().like(ModelProvider::getType, keyword)
+                                .or().like(ModelProvider::getBaseUrl, keyword))
+                .orderByDesc(ModelProvider::getId);
+        return providerMapper.selectPage(new Page<>(page, size), qw);
     }
 
     public ModelProvider getProvider(Long id) {
@@ -83,6 +89,14 @@ public class ModelService {
         model.setUpdateTime(now);
         modelInfoMapper.insert(model);
         return model;
+    }
+
+    public void updateModel(ModelInfo model) {
+        if (modelInfoMapper.selectById(model.getId()) == null) {
+            throw new BizException("模型不存在: " + model.getId());
+        }
+        model.setUpdateTime(LocalDateTime.now());
+        modelInfoMapper.updateById(model);
     }
 
     public void deleteModel(Long id) {
