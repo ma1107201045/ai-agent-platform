@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, Refresh, Search, View } from '@element-plus/icons-vue'
+import { Download, Operation, Refresh, Search, View } from '@element-plus/icons-vue'
 import { toolMarketplaceApi } from '@/api/tool-marketplace'
 import type { ToolTemplate } from '@/api/types'
 
@@ -20,6 +21,12 @@ const categoryLabels: Record<string, string> = { basic: '通用', text: '文本�
 const typeLabels: Record<string, string> = { http: 'HTTP 请求', code: '代码脚本' }
 
 const installedCount = computed(() => list.value.filter((t) => t.installed).length)
+
+const router = useRouter()
+
+function goTools() {
+  router.push('/tool/infos')
+}
 
 async function load() {
   loading.value = true
@@ -104,12 +111,22 @@ onMounted(load)
       <div>
         <h2 class="head-title">插件市场</h2>
         <p class="head-desc">
-          内置常用工具模板，一键安装即成为可被智能体调用的真实工具 ·
+          内置常用工具模板，零配置安装即用 ·
           当前展示 {{ list.length }} 个模板，已安装 {{ installedCount }} 个
         </p>
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
     </div>
+
+    <el-alert type="info" :closable="false" class="mp-banner">
+      <div class="mp-banner-inner">
+        <span>
+          一键安装的工具会进入「工具管理」，可继续调试 / 调整；随后即可在
+          <el-link type="primary" @click="router.push('/app/agents')">应用 → 智能体</el-link>
+          编排中选择启用。
+        </span>
+      </div>
+    </el-alert>
 
     <!-- 筛选工具栏 -->
     <div class="mp-toolbar">
@@ -167,10 +184,10 @@ onMounted(load)
               type="success"
               size="small"
               plain
-              disabled
-              class="installed-btn"
+              :icon="Operation"
+              @click="goTools"
             >
-              <el-icon><Download /></el-icon>&nbsp;已安装
+              已安装 · 去工具管理
             </el-button>
             <el-button
               v-else
@@ -261,6 +278,14 @@ onMounted(load)
 .mp-page {
   max-width: 1400px;
   margin: 0 auto;
+}
+.mp-banner {
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+}
+.mp-banner-inner {
+  line-height: 1.7;
+  font-size: 13px;
 }
 .mp-head {
   display: flex;

@@ -3,7 +3,10 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, EditPen, MagicStick, Plus, Search, VideoPlay } from '@element-plus/icons-vue'
 import { toolConnectorApi } from '@/api/tool-connector'
-import type { ToolConnector } from '@/api/types'
+import { appAgentToolApi } from '@/api/tool-info'
+import type { AppAgentTool, ToolConnector } from '@/api/types'
+import HeadersEditor from '@/components/tool/HeadersEditor.vue'
+import ParamsSchemaEditor from '@/components/tool/ParamsSchemaEditor.vue'
 
 const loading = ref(false)
 const list = ref<ToolConnector[]>([])
@@ -237,8 +240,7 @@ const generating = ref<number | null>(null)
 async function genTool(row: ToolConnector) {
   try {
     await ElMessageBox.confirm(
-      `将基于连接器「${row.name}」创建一个同名 HTTP 工具（继承地址 / Headers / 鉴权）。` +
-        '创建后请在「工具管理」中补充参数 Schema，即可在智能体对话与工作流编排中调用该 API。',
+      `将基于连接器「${row.name}」创建一个 HTTP 工具（继承地址 / Headers / 鉴权）。创建完成后可直接在本页补齐参数，无需跳转其他页面。`,
       '生成工具',
       { type: 'info', confirmButtonText: '生成', cancelButtonText: '取消' }
     )
@@ -247,10 +249,60 @@ async function genTool(row: ToolConnector) {
   }
   generating.value = row.id
   try {
-    await toolConnectorApi.asTool(row.id)
-    ElMessage.success(`工具「${row.name}」生成成功，已加入工具管理`)
+    const created = await toolConnectorApi.asTool(row.id)
+    ElMessage.success(`工具「${row.name}」已生成`)
+    openGenGuide(created)
   } finally {
     generating.value = null
+  }
+}
+
+/* ---- 生成工具后的同页参数配置引导 ---- */
+const genVisible = ref(false)
+const genSaving = ref(false)
+const genToolInfo = ref<AppAgentTool | null>(null)
+const genParams = ref('')
+const genDescription = ref('')
+
+function openGenGuide(tool: AppAgentTool) {
+  genToolInfo.value = tool
+  genDescription.value = tool.description || ''
+  genParams.value = tool.parameters || ''
+  genVisible.value = true
+}
+
+async function saveGenTool() {
+  const tool = genToolInfo.value
+  if (!tool) return
+  const p = genParams.value.trim()
+  if (p) {
+    try {
+      const parsed = JSON.parse(p)
+      if (!parsed || typeof parsed !== 'object' || parsed.type !== 'object') throw new Error()
+    } catch {
+      return ElMessage.warning('参数 Schema 必须是合法 JSON 对象')
+    }
+  }
+  genSaving.value = true
+  try {
+    await appAgentToolApi.update(tool.id, {
+      id: tool.id,
+      name: tool.name,
+      description: genDescription.value.trim() || tool.description,
+      type: 'http',
+      url: tool.url,
+      method: tool.method || 'GET',
+      headers: tool.headers || '',
+      authType: tool.authType || 'none',
+      authToken: tool.authToken,
+      parameters: p,
+      status: 1
+    })
+    genVisible.value = false
+    ElMessage.success('工具配置完成，可在「应用 → 智能体」编排中选择该工具')
+    load()
+  } finally {
+    genSaving.value = false
   }
 }
 
@@ -269,6 +321,16 @@ onMounted(load)
       </div>
       <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新建连接器</el-button>
     </div>
+
+    <el-alert type="info" :closable="false" class="int-banner">
+      <div class="banner-steps">
+        <span class="banner-step"><b>1</b> 配置下方连接，先点「测试」确认能通</span>
+        <i class="banner-arrow">→</i>
+        <span class="banner-step"><b>2</b> 点击「生成工具」自动创建 HTTP 工具</span>
+        <i class="banner-arrow">→</i>
+        <span class="banner-step"><b>3</b> 补齐参数后，即可在智能体/工作流中调用</span>
+      </div>
+    </el-alert>
 
     <el-card shadow="never" class="int-card">
       <!-- 筛选工具栏 -->
@@ -436,13 +498,8 @@ onMounted(load)
             </div>
           </div>
           <div class="field-group">
-            <div class="field-label">自定义请求头 Headers</div>
-            <el-input
-              v-model="headersText"
-              type="textarea"
-              :rows="2"
-              placeholder='JSON 对象，如 {"X-Requested-By":"agent-platform"}'
-            />
+            <div class="field-label">自定义请求头 Headers（可选）</div>
+            <HeadersEditor v-model="headersText" />
           </div>
         </template>
 
@@ -488,6 +545,39 @@ onMounted(load)
       />
       <template #footer>
         <el-button type="primary" @click="testVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 生成工具后的参数配置引导（同页完成，无需跳转工具管理） -->
+    <el-dialog v-model="genVisible" :title="`配置工具 - ${genToolInfo?.name || ''}`" width="640px" :close-on-click-modal="false">
+      <el-alert type="success" :closable="false" class="gen-tip">
+        HTTP 工具已创建并启用。补齐下方描述与参数说明后即可在智能体对话 / 工作流编排中调用该 API。
+      </el-alert>
+      <div class="gen-body">
+        <div class="field-group">
+          <div class="field-label">请求地址</div>
+          <code class="gen-url">{{ genToolInfo?.url }}</code>
+        </div>
+        <div class="field-group">
+          <div class="field-label">描述（给智能体的说明）</div>
+          <el-input
+            v-model="genDescription"
+            type="textarea"
+            :rows="2"
+            placeholder="用大白话说明它做什么、何时调用。如：根据城市名称查询实时天气"
+          />
+        </div>
+        <div class="field-group">
+          <div class="field-label">参数说明（可选）</div>
+          <ParamsSchemaEditor v-model="genParams" />
+        </div>
+        <p class="field-tip">
+          参数说明用于让模型知道调用时应传哪些入参。若该接口无需入参（如 GET 健康检查），保持为空直接保存即可。
+        </p>
+      </div>
+      <template #footer>
+        <el-button @click="genVisible = false">暂不配置</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="genSaving" @click="saveGenTool">保存并投入使用</el-button>
       </template>
     </el-dialog>
   </div>
@@ -619,6 +709,57 @@ onMounted(load)
   font-size: 12px;
   color: var(--text-tertiary);
   line-height: 1.6;
+}
+.int-banner {
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+}
+.banner-steps {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.banner-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.banner-step b {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  color: #fff;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.banner-arrow {
+  color: var(--text-tertiary);
+  font-style: normal;
+}
+.gen-tip {
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+}
+.gen-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gen-url {
+  display: block;
+  font-size: 12px;
+  word-break: break-all;
+  background: var(--fill-light);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
 }
 /* 测试对话框 */
 .test-result-head {
