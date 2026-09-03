@@ -2,9 +2,9 @@ package com.agent.platform.controller.chat;
 
 import com.agent.platform.common.result.Result;
 import com.agent.platform.common.security.UserContext;
-import com.agent.platform.dao.dto.chat.ConversationCreateDTO;
-import com.agent.platform.dao.dto.chat.ConversationRenameDTO;
-import com.agent.platform.dao.dto.chat.ConversationSendDTO;
+import com.agent.platform.dao.dto.chat.ChatConversationCreateDTO;
+import com.agent.platform.dao.dto.chat.ChatConversationRenameDTO;
+import com.agent.platform.dao.dto.chat.ChatConversationSendDTO;
 import com.agent.platform.dao.entity.chat.ChatConversation;
 import com.agent.platform.dao.entity.chat.ChatMessage;
 import com.agent.platform.service.chat.ChatConversationService;
@@ -40,7 +40,7 @@ public class ChatConversationController {
 
     /** 创建会话 */
     @PostMapping
-    public Result<ChatConversation> create(@RequestBody ConversationCreateDTO req) {
+    public Result<ChatConversation> create(@RequestBody ChatConversationCreateDTO req) {
         return Result.ok(conversationService.create(
                 req.getAppId(),
                 UserContext.getUserId(),
@@ -58,7 +58,7 @@ public class ChatConversationController {
 
     /** 重命名会话 */
     @PutMapping("/{id}")
-    public Result<Void> rename(@PathVariable Long id, @RequestBody ConversationRenameDTO req) {
+    public Result<Void> rename(@PathVariable Long id, @RequestBody ChatConversationRenameDTO req) {
         conversationService.rename(id, UserContext.getUserId(), req.getTitle());
         return Result.ok();
     }
@@ -78,7 +78,7 @@ public class ChatConversationController {
 
     /** 发送消息（非流式；直连模型 / 工作流通用） */
     @PostMapping("/{id}/messages")
-    public Result<ChatMessage> send(@PathVariable Long id, @RequestBody ConversationSendDTO req) {
+    public Result<ChatMessage> send(@PathVariable Long id, @RequestBody ChatConversationSendDTO req) {
         return Result.ok(conversationService.send(id, UserContext.getUserId(), req.getContent(), req.getModelId()));
     }
 
@@ -88,7 +88,7 @@ public class ChatConversationController {
      * 流结束后后端自动持久化完整回答。
      */
     @PostMapping(value = "/{id}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@PathVariable Long id, @RequestBody ConversationSendDTO req) {
+    public SseEmitter stream(@PathVariable Long id, @RequestBody ChatConversationSendDTO req) {
         SseEmitter emitter = new SseEmitter(180_000L);
         Long userId = UserContext.getUserId(); // 线程池中拿不到 ThreadLocal，提前取出
         streamExecutor.execute(() -> {

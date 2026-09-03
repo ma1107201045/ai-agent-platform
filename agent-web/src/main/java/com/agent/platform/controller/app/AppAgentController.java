@@ -8,7 +8,7 @@ import com.agent.platform.dao.dto.app.AppAgentRunDTO;
 import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
 import com.agent.platform.dao.vo.app.AgentChatVO;
-import com.agent.platform.dao.vo.chat.AppAgentStatsVO;
+import com.agent.platform.dao.vo.chat.ChatAppAgentStatsVO;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEngine;
 import com.agent.platform.orchestrator.WorkflowEventListener;
@@ -114,7 +114,7 @@ public class AppAgentController {
 
     /** 批量会话统计（对外访问/运营数据）：ids 逗号分隔 */
     @GetMapping("/batch/stats")
-    public Result<Map<Long, AppAgentStatsVO>> batchStats(@RequestParam String ids) {
+    public Result<Map<Long, ChatAppAgentStatsVO>> batchStats(@RequestParam String ids) {
         List<Long> idList = parseIds(ids);
         return Result.ok(conversationService.statsBatch(idList));
     }

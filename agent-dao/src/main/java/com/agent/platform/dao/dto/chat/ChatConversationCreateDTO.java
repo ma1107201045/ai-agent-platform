@@ -6,7 +6,7 @@ import lombok.Data;
  * 创建聊天会话入参
  */
 @Data
-public class ConversationCreateDTO {
+public class ChatConversationCreateDTO {
     private Long appId;
     private String title;
     /** direct / agent / workflow */

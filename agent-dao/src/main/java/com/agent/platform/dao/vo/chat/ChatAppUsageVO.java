@@ -4,13 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
- * 用量模型维度排行项
+ * 用量应用维度排行项
  */
 @Data
 @AllArgsConstructor
-public class ModelUsageVO {
-    private Long modelId;
-    private String modelName;
+public class ChatAppUsageVO {
+    private Long appId;
+    private String appName;
+    private long conversations;
     private long calls;
     private long inputTokens;
     private long outputTokens;

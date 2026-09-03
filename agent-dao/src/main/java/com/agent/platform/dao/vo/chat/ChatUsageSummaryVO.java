@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @AllArgsConstructor
-public class UsageSummaryVO {
+public class ChatUsageSummaryVO {
     /** 会话数（仅控制台会话去重） */
     private long conversations;
     /** 模型调用次数（用量事件数） */
@@ -25,9 +25,9 @@ public class UsageSummaryVO {
     /** 查询结束日期 yyyy-MM-dd */
     private String endDate;
     /** 按日趋势（连续日期，空值补 0） */
-    private List<TrendPointVO> trend;
+    private List<ChatTrendPointVO> trend;
     /** 应用维度排行 */
-    private List<AppUsageVO> apps;
+    private List<ChatAppUsageVO> apps;
     /** 模型维度排行 */
-    private List<ModelUsageVO> models;
+    private List<ChatModelUsageVO> models;
 }

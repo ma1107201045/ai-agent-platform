@@ -8,7 +8,7 @@ import com.agent.platform.dao.mapper.chat.ChatConversationMapper;
 import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
 import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
 import com.agent.platform.dao.vo.app.AgentChatVO;
-import com.agent.platform.dao.vo.chat.AppAgentStatsVO;
+import com.agent.platform.dao.vo.chat.ChatAppAgentStatsVO;
 import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -121,7 +121,7 @@ public class ChatConversationService {
     // ---------- 统计 ----------
 
     /** 应用会话统计：会话数 + 消息数（用于对外访问/运营数据展示） */
-    public AppAgentStatsVO stats(Long appId) {
+    public ChatAppAgentStatsVO stats(Long appId) {
         appAgentService.getById(appId);
         List<Long> convIds = conversationMapper.selectList(new LambdaQueryWrapper<ChatConversation>()
                         .select(ChatConversation::getId)
@@ -137,12 +137,12 @@ public class ChatConversationService {
                     .eq(ChatMessage::getStatus, 1)
                     .in(ChatMessage::getConversationId, convIds));
         }
-        return new AppAgentStatsVO(conversationCount, messageCount);
+        return new ChatAppAgentStatsVO(conversationCount, messageCount);
     }
 
     /** 批量统计多个应用的会话/消息数，避免逐个查询造成 N+1 */
-    public Map<Long, AppAgentStatsVO> statsBatch(List<Long> appIds) {
-        Map<Long, AppAgentStatsVO> result = new HashMap<>();
+    public Map<Long, ChatAppAgentStatsVO> statsBatch(List<Long> appIds) {
+        Map<Long, ChatAppAgentStatsVO> result = new HashMap<>();
         if (appIds == null || appIds.isEmpty()) {
             return result;
         }
@@ -174,7 +174,7 @@ public class ChatConversationService {
             }
         }
         for (Long appId : appIds) {
-            result.put(appId, new AppAgentStatsVO(
+            result.put(appId, new ChatAppAgentStatsVO(
                     convCount.getOrDefault(appId, 0L),
                     msgCount.getOrDefault(appId, 0L)));
         }

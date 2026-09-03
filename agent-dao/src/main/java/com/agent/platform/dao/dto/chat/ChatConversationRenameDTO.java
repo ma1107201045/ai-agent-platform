@@ -6,6 +6,6 @@ import lombok.Data;
  * 重命名聊天会话入参
  */
 @Data
-public class ConversationRenameDTO {
+public class ChatConversationRenameDTO {
     private String title;
 }

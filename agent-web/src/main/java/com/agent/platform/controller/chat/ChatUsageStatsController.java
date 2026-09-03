@@ -2,7 +2,7 @@ package com.agent.platform.controller.chat;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.vo.chat.UsageSummaryVO;
+import com.agent.platform.dao.vo.chat.ChatUsageSummaryVO;
 import com.agent.platform.service.chat.ChatUsageStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +34,7 @@ public class ChatUsageStatsController {
      * @param endDate   结束日期 yyyy-MM-dd（空 = 今天）
      */
     @GetMapping("/usage")
-    public Result<UsageSummaryVO> usage(@RequestParam(required = false) Long appId,
+    public Result<ChatUsageSummaryVO> usage(@RequestParam(required = false) Long appId,
                                       @RequestParam(required = false) String startDate,
                                       @RequestParam(required = false) String endDate) {
         LocalDate from = parseDate(startDate, false);

@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
-public class AppAgentStatsVO {
+public class ChatAppAgentStatsVO {
     private Long conversationCount;
     private Long messageCount;
 }

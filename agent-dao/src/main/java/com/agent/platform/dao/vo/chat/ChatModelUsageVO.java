@@ -4,14 +4,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
- * 用量按日趋势点
+ * 用量模型维度排行项
  */
 @Data
 @AllArgsConstructor
-public class TrendPointVO {
-    private String date;
+public class ChatModelUsageVO {
+    private Long modelId;
+    private String modelName;
     private long calls;
     private long inputTokens;
     private long outputTokens;
     private long totalTokens;
+    private double cost;
 }
