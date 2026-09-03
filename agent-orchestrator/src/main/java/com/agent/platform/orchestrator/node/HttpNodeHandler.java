@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,6 +44,38 @@ public class HttpNodeHandler implements NodeHandler {
     @Override
     public NodeType type() {
         return NodeType.HTTP;
+    }
+
+    @Override
+    public List<NodeField> fields() {
+        List<NodeField> base = List.of(
+                NodeField.text("url", "请求地址").description("支持 {{变量}} 替换").required(true)
+                        .placeholder("https://api.example.com/v1/chat"),
+                NodeField.builder().key("method").label("请求方式").type("select")
+                        .options(List.of(NodeField.option("GET", "GET"), NodeField.option("POST", "POST"),
+                                NodeField.option("PUT", "PUT"), NodeField.option("PATCH", "PATCH"),
+                                NodeField.option("DELETE", "DELETE")))
+                        .defaultValue("GET").build(),
+                NodeField.json("headers", "请求头").description("JSON 对象，值支持变量替换"),
+                NodeField.builder().key("authType").label("鉴权方式").type("select")
+                        .options(List.of(NodeField.option("无", "none"), NodeField.option("Bearer Token", "bearer"),
+                                NodeField.option("Basic", "basic")))
+                        .defaultValue("none").build(),
+                NodeField.text("authToken", "Token").description("Bearer 鉴权 Token"),
+                NodeField.text("authUsername", "用户名").description("Basic 鉴权用户名"),
+                NodeField.text("authPassword", "密码").description("Basic 鉴权密码"),
+                NodeField.builder().key("bodyType").label("请求体类型").type("select")
+                        .options(List.of(NodeField.option("无", "none"), NodeField.option("JSON", "json"),
+                                NodeField.option("表单", "form"), NodeField.option("纯文本", "raw")))
+                        .defaultValue("none").build(),
+                NodeField.textarea("bodyTemplate", "请求体模板").description("按 bodyType 使用；支持变量替换"),
+                NodeField.builder().key("responseType").label("响应处理").type("select")
+                        .options(List.of(NodeField.option("原文", "text"), NodeField.option("JSON 解析", "json")))
+                        .defaultValue("text").build(),
+                NodeField.text("jsonPath", "JSON 字段路径").description("如 data.list[0].title，支持 $ 开头"),
+                NodeField.number("timeoutSeconds", "请求超时（秒）").defaultValue(30),
+                NodeField.bool("ignoreStatus", "忽略非 2xx 状态码"));
+        return base;
     }
 
     @Override

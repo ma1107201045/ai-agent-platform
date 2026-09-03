@@ -2,6 +2,8 @@ package com.agent.platform.orchestrator.node;
 
 import com.agent.platform.orchestrator.NodeType;
 
+import java.util.List;
+
 /**
  * 节点处理器 SPI（扩展点）
  * <p>
@@ -9,6 +11,7 @@ import com.agent.platform.orchestrator.NodeType;
  * <ol>
  *   <li>在 {@link NodeType} 中增加枚举值</li>
  *   <li>实现本接口，{@link #type()} 返回对应枚举</li>
+ *   <li>实现 {@link #fields()} 声明配置字段（前端自动渲染 + 默认值）</li>
  *   <li>交给 Spring 管理（{@code @Component}）</li>
  * </ol>
  * {@link NodeHandlerRegistry} 会自动收集并注册，无需改动 {@code WorkflowEngine}。
@@ -45,5 +48,15 @@ public interface NodeHandler {
      */
     default String describeInput(NodeContext ctx) {
         return null;
+    }
+
+    /**
+     * 节点配置字段描述（节点 Schema 单源化，可选实现）。
+     * <p>
+     * 返回的字段描述用于：前端自动渲染配置表单 / 生成默认配置 / 后端必填校验。
+     * 未配置字段的处理器等价于无配置项（如 start 无 variables 时），返回空列表即可。
+     */
+    default List<NodeField> fields() {
+        return List.of();
     }
 }

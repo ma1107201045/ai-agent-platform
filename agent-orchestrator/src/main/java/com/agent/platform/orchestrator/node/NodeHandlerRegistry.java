@@ -2,6 +2,7 @@ package com.agent.platform.orchestrator.node;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.orchestrator.NodeType;
+import com.agent.platform.orchestrator.WorkflowGraph;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -68,5 +69,53 @@ public class NodeHandlerRegistry {
     /** 已注册的全部处理器（快照） */
     public Collection<NodeHandler> all() {
         return List.copyOf(handlers.values());
+    }
+
+    /**
+     * 按处理器声明的 schema 补齐节点配置默认值（不覆盖已存在的配置值）。
+     * <p>
+     * 「默认配置」由 handler {@link #fields()} 单源生成，前端新建节点与引擎运行时行为天然一致。
+     */
+    public WorkflowGraph.WorkflowNode applyDefaults(WorkflowGraph.WorkflowNode node) {
+        if (node == null) {
+            return node;
+        }
+        NodeHandler h = handlers.get(node.nodeType());
+        if (h == null) {
+            return node;
+        }
+        Map<String, Object> cfg = node.getConfig() == null
+                ? new java.util.HashMap<>()
+                : new java.util.HashMap<>(node.getConfig());
+        for (NodeField f : h.fields()) {
+            if (f.getDefaultValue() != null && !cfg.containsKey(f.getKey())) {
+                cfg.put(f.getKey(), f.getDefaultValue());
+            }
+        }
+        node.setConfig(cfg);
+        return node;
+    }
+
+    /**
+     * 节点类型 Schema 列表（按 NodeType 枚举顺序稳定输出）。
+     * 前端节点面板 / 配置表单据此渲染，单一事实来源。
+     */
+    public List<NodeTypeSchema> schemas() {
+        List<NodeTypeSchema> list = new java.util.ArrayList<>();
+        for (NodeType t : NodeType.values()) {
+            NodeHandler h = handlers.get(t);
+            if (h == null) {
+                continue;
+            }
+            list.add(NodeTypeSchema.builder()
+                    .code(t.getCode())
+                    .label(t.getLabel())
+                    .branch(t.isBranch())
+                    .source(t != NodeType.END)
+                    .target(t != NodeType.START)
+                    .fields(h.fields())
+                    .build());
+        }
+        return list;
     }
 }

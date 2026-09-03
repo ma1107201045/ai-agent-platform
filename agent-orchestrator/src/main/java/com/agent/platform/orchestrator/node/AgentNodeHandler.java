@@ -30,6 +30,21 @@ public class AgentNodeHandler implements NodeHandler {
     }
 
     @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.builder().key("modelId").label("对话模型").type("model")
+                        .description("Agent 推理模型").required(true).build(),
+                NodeField.textarea("systemPrompt", "系统提示词").defaultValue(""),
+                NodeField.textarea("userPrompt", "用户提示词").defaultValue("{{input}}"),
+                NodeField.builder().key("toolIds").label("节点级工具").type("tools")
+                        .description("留空回退到应用绑定工具").build(),
+                NodeField.builder().key("datasetIds").label("节点级数据集").type("datasets")
+                        .description("留空回退到应用绑定数据集").build(),
+                NodeField.number("maxIterations", "最大循环轮数").defaultValue(6),
+                NodeField.bool("includeSteps", "输出中附带工具调用过程"));
+    }
+
+    @Override
     public String validate(NodeContext ctx) {
         if (ctx.cfgLong("modelId") == null) {
             return "Agent 节点「" + ctx.label() + "」未配置模型";

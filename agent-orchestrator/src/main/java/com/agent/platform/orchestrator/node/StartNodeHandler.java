@@ -3,6 +3,7 @@ package com.agent.platform.orchestrator.node;
 import com.agent.platform.orchestrator.NodeType;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,6 +22,13 @@ public class StartNodeHandler implements NodeHandler {
     @Override
     public NodeType type() {
         return NodeType.START;
+    }
+
+    @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.json("variables", "流程变量").description("键值对；值支持 {{input}} / {{节点id}} 替换，渲染后下游用 {{变量名}} 引用"),
+                NodeField.text("welcome", "开场白").description("仅前端聊天页展示使用"));
     }
 
     @Override

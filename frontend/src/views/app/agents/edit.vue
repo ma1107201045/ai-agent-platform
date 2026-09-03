@@ -46,7 +46,8 @@ import type {
   WorkflowNodeType
 } from '@/api/types.ts'
 import type {VarItem} from '@/utils/flow.ts'
-import {branchHandlesOf, defaultConfig, dslToFlow, flowToDsl, genNodeId, NODE_TYPE_META} from '@/utils/flow.ts'
+import {branchHandlesOf, dslToFlow, flowToDsl, genNodeId, NODE_TYPE_META} from '@/utils/flow.ts'
+import {buildInitialConfig, loadNodeSchemas} from '@/utils/nodeSchema.ts'
 import NodeConfigPanel from './components/NodeConfigPanel.vue'
 import {useThemeStore} from '@/stores/theme.ts'
 
@@ -218,7 +219,7 @@ function ensureStartEnd() {
       id,
       type: 'flow-node',
       position: {x, y},
-      data: {label: NODE_TYPE_META[type].label, nodeType: type, config: defaultConfig(type)}
+      data: {label: NODE_TYPE_META[type].label, nodeType: type, config: buildInitialConfig(type)}
     })
     return id
   }
@@ -286,7 +287,7 @@ function addNodeFromSource(sourceId: string, sourceHandle: string | null, type: 
     data: {
       label: NODE_TYPE_META[type].label,
       nodeType: type,
-      config: defaultConfig(type)
+      config: buildInitialConfig(type)
     }
   })
   const endNode = nodes.value.find((n) => n.data.nodeType === 'end')
@@ -1272,6 +1273,8 @@ onMounted(() => {
   loadModels()
   loadDatasets()
   loadTools()
+  // 加载后端节点 Schema（默认配置/必填校验/元数据融合；失败自动回退静态定义）
+  loadNodeSchemas()
 })
 
 onUnmounted(() => {

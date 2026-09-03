@@ -35,6 +35,16 @@ public class ConditionNodeHandler implements NodeHandler {
     }
 
     @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.builder().key("branches").label("分支规则").type("branches")
+                        .description("自上而下求值，命中即选中对应出边；全部不成立走 else")
+                        .defaultValue(List.of()).build(),
+                NodeField.textarea("expression", "表达式（旧版单条件）")
+                        .description("兼容旧流程：为真走 true，为假走 false；使用 branches 时忽略"));
+    }
+
+    @Override
     public NodeResult execute(NodeContext ctx) {
         List<Map<String, Object>> branches = readBranches(ctx);
         if (!branches.isEmpty()) {

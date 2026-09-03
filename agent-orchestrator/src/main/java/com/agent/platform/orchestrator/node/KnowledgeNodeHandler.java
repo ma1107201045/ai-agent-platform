@@ -36,6 +36,23 @@ public class KnowledgeNodeHandler implements NodeHandler {
     }
 
     @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.builder().key("datasetId").label("数据集").type("knowledge").required(true).build(),
+                NodeField.text("queryTemplate", "检索词模板").description("按模板渲染后作为检索词").defaultValue("{{input}}"),
+                NodeField.number("topK", "召回数量").defaultValue(3),
+                NodeField.builder().key("rerankModelId").label("重排模型").type("model").description("可选").build(),
+                NodeField.number("scoreThreshold", "相似度阈值").description("0~1，低于阈值片段丢弃").defaultValue(0),
+                NodeField.builder().key("outputFormat").label("输出格式").type("select")
+                        .options(List.of(NodeField.option("文本（按模板拼接）", "text"), NodeField.option("JSON 数组", "json")))
+                        .defaultValue("text").build(),
+                NodeField.textarea("itemTemplate", "单条片段模板")
+                        .description("支持 {{index}} {{content}} {{score}} {{documentId}}")
+                        .defaultValue(DEFAULT_ITEM_TEMPLATE),
+                NodeField.text("separator", "片段分隔符").defaultValue("\n\n"));
+    }
+
+    @Override
     public String validate(NodeContext ctx) {
         if (ctx.cfgLong("datasetId") == null) {
             return "知识库检索节点「" + ctx.label() + "」未选择数据集";

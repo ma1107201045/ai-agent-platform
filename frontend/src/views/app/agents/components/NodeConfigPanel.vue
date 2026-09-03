@@ -8,6 +8,7 @@ import {
 } from '@/utils/flow.ts'
 import type { VarItem } from '@/utils/flow.ts'
 import { appPromptApi } from '@/api/app-prompt'
+import { fillSchemaDefaults, schemaIssues, schemaOf } from '@/utils/nodeSchema.ts'
 import type { AppAgentTool, ChatModelInfo, KnowledgeDataset, PromptTemplate, WorkflowNodeType } from '@/api/types.ts'
 
 /** 节点配置面板：按节点类型渲染差异化配置 + 通用执行策略 */
@@ -26,6 +27,11 @@ const props = defineProps<{
 
 const type = computed<WorkflowNodeType>(() => props.node?.data?.nodeType)
 const meta = computed(() => NODE_TYPE_META[type.value])
+
+/** Schema 必填校验（与后端 NodeExecutionPolicy 同规则；字段与校验逻辑由后端单源声明） */
+const schemaErrors = computed<string[]>(() =>
+    type.value ? schemaIssues(cfg.value, type.value) : []
+)
 
 // ---------- 配置对象（与 node.data.config 双向绑定） ----------
 const cfg = ref<Record<string, any>>({})
@@ -63,6 +69,8 @@ watch(
     if (!data) return
     if (!data.config || typeof data.config !== 'object') data.config = {}
     cfg.value = data.config
+    // 与引擎一致：schema 默认值仅补齐缺失键（后端新增配置键时，老 DSL 打开即自动对齐）
+    fillSchemaDefaults(cfg.value, data.nodeType)
     // 补齐执行策略默认值（起止节点无执行策略）
     if (data.nodeType !== 'start' && data.nodeType !== 'end') {
       for (const [k, v] of Object.entries(DEFAULT_ADVANCED)) {
@@ -82,6 +90,17 @@ watch(
     if (props.node?.data) props.node.data.config = v
   },
   { deep: true, immediate: true }
+)
+
+// Schema 异步加载完成后，为当前节点补齐缺失的默认键
+watch(
+  () => type.value && schemaOf(type.value),
+  (schema) => {
+    if (schema && cfg.value && type.value) {
+      fillSchemaDefaults(cfg.value, type.value)
+    }
+  },
+  { immediate: true }
 )
 
 // ---------- 从提示词库选择模板 ----------
@@ -225,6 +244,15 @@ const TIP_BRANCH_OFF = '表达式为真走「是」分支，为假走「否」�
     </div>
 
     <el-form label-position="top" size="small">
+      <!-- Schema 必填校验提示：缺失的必填配置项将按后端声明高亮 -->
+      <el-alert
+          v-if="schemaErrors.length"
+          :title="`缺少必填配置：${schemaErrors.join('、')}`"
+          type="error"
+          show-icon
+          :closable="false"
+          class="schema-alert"
+      />
       <el-form-item label="节点名称">
         <el-input v-model="node.data.label" />
       </el-form-item>
@@ -694,6 +722,9 @@ const TIP_BRANCH_OFF = '表达式为真走「是」分支，为假走「否」�
 </template>
 
 <style scoped>
+.schema-alert {
+  margin-bottom: 12px;
+}
 .config-node-head {
   display: flex;
   align-items: center;

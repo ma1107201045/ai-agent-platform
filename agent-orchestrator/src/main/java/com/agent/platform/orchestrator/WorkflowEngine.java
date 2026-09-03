@@ -1,36 +1,31 @@
 package com.agent.platform.orchestrator;
 
-import com.agent.platform.common.exception.BizException;
-import com.agent.platform.orchestrator.node.*;
+import com.agent.platform.orchestrator.node.NodeContext;
+import com.agent.platform.orchestrator.node.NodeHandler;
+import com.agent.platform.orchestrator.node.NodeHandlerRegistry;
 import com.agent.platform.orchestrator.spi.AgentRunner;
 import com.agent.platform.orchestrator.spi.KnowledgeProvider;
 import com.agent.platform.orchestrator.spi.ModelProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
-import java.util.ArrayDeque;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
- * 工作流执行引擎（v4：DAG 拓扑序 + 并行 fork/join + 节点处理器 SPI + 节点级执行策略）
+ * 工作流执行引擎（v5：DAG 拓扑序 + 并行 fork/join + 节点处理器 SPI + 节点级执行策略）
  * <p>
  * 引擎只负责调度（依赖解析、并行控制、分支释放、执行策略、轨迹与结果归集），
  * 具体节点语义由 {@link NodeHandler} 实现，通过 {@link NodeHandlerRegistry} 按类型查找。
@@ -39,33 +34,35 @@ import java.util.stream.Collectors;
  * 内置节点：start / end / llm / agent / condition / code / http / template / knowledge
  * 变量：{{input}} 用户输入；{{节点id}} 取该节点输出文本；{{别名}} 取节点的输出变量别名
  * <p>
+ * <b>职责拆分（v5）</b>：
+ * <ul>
+ *   <li>图校验（可达性 / 环路）→ {@link GraphValidator}</li>
+ *   <li>单节点调用策略（重试 / 超时 / 退避）→ {@link NodeExecutionPolicy}</li>
+ *   <li>最终回答组装 → {@link AnswerAssembler}</li>
+ *   <li>运行参数 → {@link WorkflowSettings}（由装配层注入，不再硬编码）</li>
+ * </ul>
+ * 本类不再持有 Spring 注解；由 {@code WorkflowEngineConfiguration} 装配为 Bean，
+ * 线程池生命周期由容器 {@code destroyMethod="shutdown"} 统一管理。
+ * <p>
  * 执行模型：
  * <ul>
  *   <li>节点按依赖拓扑序执行：全部上游完成后才执行（join 等齐）；普通节点多条出边并行 fork</li>
  *   <li>排他分支（condition 等）：仅释放选中的出边，未选中分支整链跳过（skipped）</li>
  *   <li>节点级执行策略：重试（retries）、超时（timeoutSeconds）、
  *       错误处理（onError = fail / continue / fallback）、输出变量别名（outputVar）</li>
- *   <li>节点出错时按 onError 决定下游是否连锁跳过，最终回答返回第一条错误</li>
- *   <li>执行前做可达性与环路检测，环形/不可达结构直接报错</li>
+ *   <li>节点出错时按 onError 决定下游是否连锁跳过</li>
+ *   <li>执行前做可达性与环路检测，环形/不可达结构直接失败返回</li>
+ *   <li>回答与错误分离：answer 面向用户；技术性错误进入 error / trace</li>
  * </ul>
  */
-@Component
-@RequiredArgsConstructor
 public class WorkflowEngine {
 
-    /** DAG 并行执行线程数 */
-    private static final int PARALLELISM = 4;
-    /** 兜底超时（环检测已防死等，此值仅作保险） */
-    private static final long RUN_TIMEOUT_SECONDS = 300;
-    /** 单节点默认超时（秒）；0 表示不限制 */
-    private static final int DEFAULT_NODE_TIMEOUT = 0;
-    /** 轨迹中输出/输入的截断长度 */
-    private static final int TRACE_LIMIT = 300;
+    /** 面向用户的失败兜底话术（不暴露内部细节） */
+    private static final String USER_FACING_FAILED = "抱歉，工作流执行未完成，请稍后重试。";
+    /** 面向用户的 DSL 非法话术 */
+    private static final String USER_FACING_INVALID = "工作流配置有误，无法执行。";
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM);
-    /** 配置了节点超时的任务使用弹性池，避免超时等待占满固定池导致调度饥饿 */
-    private final ExecutorService elasticExecutor = Executors.newCachedThreadPool();
-
+    private final WorkflowSettings settings;
     private final NodeHandlerRegistry registry;
     private final VariableRenderer renderer;
     private final ModelProvider modelProvider;
@@ -73,33 +70,62 @@ public class WorkflowEngine {
     private final AgentRunner agentRunner;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 一次 run 的图索引与执行状态（线程安全） */
-    private static class RunState {
-        final Map<String, WorkflowGraph.WorkflowNode> nodeById = new ConcurrentHashMap<>();
-        final Map<String, List<WorkflowGraph.WorkflowEdge>> outEdges = new HashMap<>();
-        final Map<String, List<WorkflowGraph.WorkflowEdge>> inEdges = new HashMap<>();
-        /** 从 start 可达的节点集合（BFS，condition 两条分支均算可达） */
-        final Set<String> reachable = new HashSet<>();
-        /** 剩余未释放的入边数（所有边计入，含 condition 两条分支） */
-        final Map<String, Integer> indegree = new ConcurrentHashMap<>();
-        /** 各节点收到「正常释放」的次数，>0 表示至少一个上游正常完成 */
-        final Map<String, AtomicInteger> normalHits = new ConcurrentHashMap<>();
-        final List<RunResult.TraceItem> trace = Collections.synchronizedList(new ArrayList<>());
-        final Map<String, String> outputs = new ConcurrentHashMap<>();
-        final AtomicInteger pending = new AtomicInteger();
-        final CompletableFuture<Void> done = new CompletableFuture<>();
-        String userInput = "";
-        Long appId;
+    /** DAG 并行执行线程池 */
+    private final ExecutorService executor;
+    /** 配置了节点超时的任务使用弹性池，避免超时等待占满固定池导致调度饥饿 */
+    private final ExecutorService elasticExecutor;
+    private final NodeExecutionPolicy executionPolicy;
+
+    /** 生命周期监听器（运行记录 / SSE 进度 / 计量等） */
+    private final List<WorkflowEventListener> eventListeners;
+
+    /** 运行中的执行状态（runId → RunState），供取消 / 运行记录 / 监控使用 */
+    private final Map<String, RunState> activeRuns = new ConcurrentHashMap<>();
+
+    public WorkflowEngine(WorkflowSettings settings,
+                          NodeHandlerRegistry registry,
+                          VariableRenderer renderer,
+                          ModelProvider modelProvider,
+                          KnowledgeProvider knowledgeProvider,
+                          AgentRunner agentRunner) {
+        this(settings, registry, renderer, modelProvider, knowledgeProvider, agentRunner, List.of());
     }
 
-    /**
-     * 执行工作流（DAG 拓扑序 + 并行 fork/join）
-     *
-     * @param graph      DSL 图
-     * @param userInput  用户最新输入
-     */
+    public WorkflowEngine(WorkflowSettings settings,
+                          NodeHandlerRegistry registry,
+                          VariableRenderer renderer,
+                          ModelProvider modelProvider,
+                          KnowledgeProvider knowledgeProvider,
+                          AgentRunner agentRunner,
+                          List<WorkflowEventListener> eventListeners) {
+        this.settings = settings == null ? WorkflowSettings.defaults() : settings;
+        this.registry = registry;
+        this.renderer = renderer;
+        this.modelProvider = modelProvider;
+        this.knowledgeProvider = knowledgeProvider;
+        this.agentRunner = agentRunner;
+        this.executor = Executors.newFixedThreadPool(this.settings.parallelism());
+        this.elasticExecutor = Executors.newCachedThreadPool();
+        this.executionPolicy = new NodeExecutionPolicy(elasticExecutor, this.settings.retryBackoffBaseMs());
+        this.eventListeners = eventListeners == null ? List.of() : List.copyOf(eventListeners);
+    }
+
+    /** 关闭线程池（由装配层 {@code destroyMethod} 调用） */
+    public void shutdown() {
+        executor.shutdownNow();
+        elasticExecutor.shutdownNow();
+    }
+
+    // ==================== 对外入口 ====================
+
+    /** 执行工作流（不指定 runId，自动生成） */
     public RunResult run(WorkflowGraph graph, String userInput) {
-        return run(graph, userInput, null);
+        return run(graph, userInput, null, null);
+    }
+
+    /** 执行工作流（不指定 runId，自动生成） */
+    public RunResult run(WorkflowGraph graph, String userInput, Long appId) {
+        return run(graph, userInput, appId, null);
     }
 
     /**
@@ -108,15 +134,64 @@ public class WorkflowEngine {
      * @param graph     DSL 图
      * @param userInput 用户最新输入
      * @param appId     所属应用 ID（Agent 节点回退应用绑定配置时使用，可为 null）
+     * @param runId     运行标识（可为 null，自动生成；显式传入便于与运行记录 / 取消接口关联）
      */
-    public RunResult run(WorkflowGraph graph, String userInput, Long appId) {
+    public RunResult run(WorkflowGraph graph, String userInput, Long appId, String runId) {
+        String rid = runId == null || runId.isBlank() ? newRunId() : runId;
+        LocalDateTime startedAt = LocalDateTime.now();
         if (graph == null || graph.getNodes() == null || graph.getNodes().isEmpty()) {
-            return RunResult.builder().answer("").trace(new ArrayList<>()).build();
+            RunResult empty = RunResult.builder()
+                    .runId(rid)
+                    .appId(appId)
+                    .status(RunStatus.SUCCESS)
+                    .startedAt(startedAt)
+                    .finishedAt(LocalDateTime.now())
+                    .costMs(0L)
+                    .answer("")
+                    .trace(new ArrayList<>())
+                    .build();
+            dispatchFlowFinished(empty);
+            return empty;
         }
         RunState st = new RunState();
+        st.runId = rid;
+        st.startedAt = startedAt;
         st.userInput = userInput == null ? "" : userInput;
         st.appId = appId;
+        activeRuns.put(rid, st);
+        dispatch(listener -> listener.onFlowStarted(
+                new WorkflowEventListener.FlowStarted(rid, appId, st.userInput, startedAt)));
 
+        RunResult result;
+        try {
+            result = doRun(st, graph);
+        } catch (Exception e) {
+            result = finish(st, RunStatus.FAILED, "工作流执行异常：" + e.getMessage(), USER_FACING_FAILED);
+        } finally {
+            activeRuns.remove(rid);
+        }
+        dispatchFlowFinished(result);
+        return result;
+    }
+
+    /** 统一派发运行结束事件（持久化 / 推送最终状态），实现异常不影响调用方 */
+    private void dispatchFlowFinished(RunResult result) {
+        dispatch(listener -> listener.onFlowFinished(new WorkflowEventListener.FlowFinished(result)));
+    }
+
+    /** 安全派发：任一监听器异常仅记录，不阻断流程 */
+    private void dispatch(java.util.function.Consumer<WorkflowEventListener> callback) {
+        for (WorkflowEventListener listener : eventListeners) {
+            try {
+                callback.accept(listener);
+            } catch (Exception ex) {
+                org.slf4j.LoggerFactory.getLogger(WorkflowEngine.class)
+                        .warn("工作流事件监听器执行异常: {}", ex.getMessage());
+            }
+        }
+    }
+
+    private RunResult doRun(RunState st, WorkflowGraph graph) {
         // 1) 建索引
         for (WorkflowGraph.WorkflowNode n : graph.getNodes()) {
             st.nodeById.put(n.getId(), n);
@@ -135,15 +210,13 @@ public class WorkflowEngine {
                 .orElse(graph.getNodes().getFirst());
 
         // 3) 可达性 BFS（排他分支的所有出边都算可达）
-        bfsReachable(st, start.getId());
+        st.reachable = GraphValidator.bfsReachable(st.nodeById, st.outEdges, start.getId());
 
         // 4) 环路检测（Kahn，reachable 子图）
-        List<String> cyclic = detectCycle(st);
+        List<String> cyclic = GraphValidator.detectCycle(st.reachable, st.inEdges, st.outEdges);
         if (!cyclic.isEmpty()) {
-            return RunResult.builder()
-                    .answer("流程存在循环依赖或不可达节点：" + String.join("、", cyclic))
-                    .trace(new ArrayList<>())
-                    .build();
+            return finish(st, RunStatus.FAILED,
+                    "流程存在循环依赖或不可达节点：" + String.join("、", cyclic), USER_FACING_INVALID);
         }
 
         // 5) 入度：reachable 内节点，统计来自 reachable 的入边（指向 start 的边不计数）
@@ -163,18 +236,72 @@ public class WorkflowEngine {
         // 6) 执行（并行）
         processNode(st, start.getId());
         try {
-            st.done.get(RUN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (settings.runTimeoutSeconds() > 0) {
+                st.done.get(settings.runTimeoutSeconds(), TimeUnit.SECONDS);
+            } else {
+                st.done.get();
+            }
+        } catch (java.util.concurrent.TimeoutException e) {
+            return finish(st, RunStatus.TIMEOUT, "工作流执行超过整体兜底超时（"
+                    + settings.runTimeoutSeconds() + "s）", USER_FACING_FAILED);
         } catch (Exception e) {
-            return RunResult.builder()
-                    .answer("工作流执行超时或异常：" + e.getMessage())
-                    .trace(new ArrayList<>(st.trace))
-                    .build();
+            return finish(st, RunStatus.FAILED,
+                    "工作流执行异常：" + e.getMessage(), USER_FACING_FAILED);
         }
 
-        return RunResult.builder()
-                .answer(computeAnswer(st))
-                .trace(new ArrayList<>(st.trace))
-                .build();
+        // 7) 组装最终回答（存在致命错误时整场 FAILED）
+        String fatal = st.fatalError.get();
+        if (fatal != null) {
+            return finish(st, RunStatus.FAILED, fatal, USER_FACING_FAILED);
+        }
+        String answer = AnswerAssembler.assemble(new ArrayList<>(st.trace), st.nodeById,
+                st.inEdges, st.outputs, st.userInput);
+        return finish(st, RunStatus.SUCCESS, null, answer);
+    }
+
+    /** 统一收尾：记录结束时间 / 耗时并构造结果 */
+    private RunResult finish(RunState st, RunStatus status, String error, String answer) {
+        LocalDateTime finishedAt = LocalDateTime.now();
+        RunResult.RunResultBuilder builder = RunResult.builder()
+                .runId(st.runId)
+                .appId(st.appId)
+                .status(status)
+                .startedAt(st.startedAt)
+                .finishedAt(finishedAt)
+                .costMs(java.time.Duration.between(st.startedAt, finishedAt).toMillis())
+                .error(error)
+                .answer(answer == null ? "" : answer)
+                .trace(new ArrayList<>(st.trace));
+        return builder.build();
+    }
+
+    private String newRunId() {
+        return "run_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    }
+
+    // ==================== 调度 ====================
+
+    /** 一次 run 的图索引与执行状态（线程安全） */
+    private static class RunState {
+        final Map<String, WorkflowGraph.WorkflowNode> nodeById = new ConcurrentHashMap<>();
+        final Map<String, List<WorkflowGraph.WorkflowEdge>> outEdges = new HashMap<>();
+        final Map<String, List<WorkflowGraph.WorkflowEdge>> inEdges = new HashMap<>();
+        /** 从 start 可达的节点集合（BFS，condition 两条分支均算可达） */
+        Set<String> reachable = new HashSet<>();
+        /** 剩余未释放的入边数（所有边计入，含 condition 两条分支） */
+        final Map<String, Integer> indegree = new ConcurrentHashMap<>();
+        /** 各节点收到「正常释放」的次数，>0 表示至少一个上游正常完成 */
+        final Map<String, AtomicInteger> normalHits = new ConcurrentHashMap<>();
+        final List<RunResult.TraceItem> trace = Collections.synchronizedList(new ArrayList<>());
+        final Map<String, String> outputs = new ConcurrentHashMap<>();
+        final AtomicInteger pending = new AtomicInteger();
+        final CompletableFuture<Void> done = new CompletableFuture<>();
+        /** 第一个「致命」节点错误（onError=fail 触发下游连锁跳过）；被 continue/fallback 容忍的错误不算 */
+        final java.util.concurrent.atomic.AtomicReference<String> fatalError = new java.util.concurrent.atomic.AtomicReference<>();
+        String runId;
+        LocalDateTime startedAt;
+        String userInput = "";
+        Long appId;
     }
 
     /** 提交节点异步执行。每个真实执行节点占用一个 pending 计数。 */
@@ -194,75 +321,44 @@ public class WorkflowEngine {
     /** 跳过节点：不执行，记录 skipped，出边连锁跳过 */
     private void skipNode(RunState st, String nodeId) {
         WorkflowGraph.WorkflowNode node = st.nodeById.get(nodeId);
-        st.trace.add(RunResult.TraceItem.builder()
+        RunResult.TraceItem item = RunResult.TraceItem.builder()
                 .nodeId(nodeId)
                 .nodeType(node.nodeType())
                 .label(labelOf(node))
                 .status(NodeStatus.SKIPPED)
-                .build());
+                .build();
+        st.trace.add(item);
+        dispatch(listener -> listener.onNodeFinished(
+                new WorkflowEventListener.NodeFinished(st.runId, st.appId, item)));
         releaseEdges(st, node, null, true);
     }
 
     /**
      * 在线程池中执行节点并记录轨迹，随后释放出边。
-     * <p>
-     * 执行策略（节点级，全部可选）：
-     * <ul>
-     *   <li>{@code retries}：失败重试次数，退避 300ms * (n+1)</li>
-     *   <li>{@code timeoutSeconds}：单节点超时，超时按失败处理</li>
-     *   <li>{@code onError}：fail（下游跳过，默认）/ continue（忽略错误继续）/ fallback（用兜底文本继续）</li>
-     *   <li>{@code outputVar}：输出变量别名，下游可用 {{别名}} 引用本节点输出</li>
-     * </ul>
+     * 调用语义交给 {@link NodeExecutionPolicy}，本方法只负责依据结果记录轨迹并决定下游释放策略。
      */
     private void executeWithTrace(RunState st, String nodeId) {
         WorkflowGraph.WorkflowNode node = st.nodeById.get(nodeId);
         NodeHandler handler = registry.required(node.nodeType());
+        dispatch(listener -> listener.onNodeStarted(
+                new WorkflowEventListener.NodeStarted(st.runId, st.appId,
+                        node.getId(), labelOf(node), node.nodeType())));
         NodeContext ctx = newContext(st, node);
 
         int retries = Math.max(0, ctx.cfgInt("retries", 0));
-        int timeoutSeconds = ctx.cfgInt("timeoutSeconds", DEFAULT_NODE_TIMEOUT);
+        int timeoutSeconds = ctx.cfgInt("timeoutSeconds", settings.defaultNodeTimeoutSeconds());
         String onError = ctx.cfgStr("onError", "fail");
         String fallbackText = ctx.cfgStr("errorFallback", "");
         String outputVar = ctx.cfgStr("outputVar");
 
-        long start = System.currentTimeMillis();
-        NodeStatus status = NodeStatus.SUCCESS;
-        String error = null;
-        String output = null;
-        String selected = null;
+        NodeExecutionPolicy.NodeOutcome outcome = executionPolicy.run(handler, ctx, retries, timeoutSeconds);
+        NodeStatus status = outcome.getStatus();
+        String output = outcome.getOutput();
+        String selected = outcome.getSelectedHandle();
+        String error = outcome.getError();
+        long cost = outcome.getCostMs();
 
-        for (int attempt = 0; ; attempt++) {
-            try {
-                // 执行前配置校验（扩展点，未实现时无开销）
-                String invalid = handler.validate(ctx);
-                if (invalid != null && !invalid.isBlank()) {
-                    throw new ConfigException(invalid);
-                }
-                NodeResult result = invoke(handler, ctx, timeoutSeconds);
-                if (result != null) {
-                    output = result.getOutput();
-                    selected = result.getSelectedHandle();
-                }
-                status = NodeStatus.SUCCESS;
-                error = null;
-                break;
-            } catch (ConfigException e) {
-                // 配置问题重试无意义，直接失败
-                status = NodeStatus.ERROR;
-                error = e.getMessage();
-                break;
-            } catch (Exception e) {
-                status = NodeStatus.ERROR;
-                error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-                if (attempt >= retries || Thread.currentThread().isInterrupted()) {
-                    break;
-                }
-                sleepBackoff(attempt);
-            }
-        }
-        long cost = System.currentTimeMillis() - start;
-
-        // 错误处理策略
+        // 错误处理策略：决定下游是否连锁跳过
         boolean propagateSkip = false;
         if (status.isError()) {
             if ("continue".equalsIgnoreCase(onError)) {
@@ -289,14 +385,10 @@ public class WorkflowEngine {
             } catch (Exception ignore) {
                 // 摘要仅用于展示，失败不影响流程
             }
-            if (input != null && input.length() > TRACE_LIMIT) {
-                input = input.substring(0, TRACE_LIMIT) + "...";
-            }
+            input = truncate(input);
         }
-        if (output != null && output.length() > TRACE_LIMIT) {
-            output = output.substring(0, TRACE_LIMIT) + "...";
-        }
-        st.trace.add(RunResult.TraceItem.builder()
+        output = truncate(output);
+        RunResult.TraceItem item = RunResult.TraceItem.builder()
                 .nodeId(node.getId())
                 .nodeType(node.nodeType())
                 .label(labelOf(node))
@@ -305,10 +397,17 @@ public class WorkflowEngine {
                 .output(output)
                 .error(error)
                 .costMs(cost)
-                .build());
+                .build();
+        st.trace.add(item);
+        dispatch(listener -> listener.onNodeFinished(
+                new WorkflowEventListener.NodeFinished(st.runId, st.appId, item)));
 
         if (propagateSkip) {
-            // 出错且策略为中断：下游连锁跳过
+            // 出错且策略为中断：下游连锁跳过，整场记为首个致命错误
+            if (status.isError()) {
+                st.fatalError.compareAndSet(null,
+                        error == null ? "节点「" + labelOf(node) + "」执行失败" : error);
+            }
             releaseEdges(st, node, null, true);
         } else {
             // selected 非空 = 排他分支（由处理器通过 NodeResult 指定）
@@ -316,36 +415,9 @@ public class WorkflowEngine {
         }
     }
 
-    /** 调用处理器，必要时施加超时控制 */
-    private NodeResult invoke(NodeHandler handler, NodeContext ctx, int timeoutSeconds) throws Exception {
-        if (timeoutSeconds <= 0) {
-            return handler.execute(ctx);
-        }
-        Future<NodeResult> future = elasticExecutor.submit(() -> handler.execute(ctx));
-        try {
-            return future.get(timeoutSeconds, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            future.cancel(true);
-            throw new BizException("节点「" + ctx.label() + "」执行超时（" + timeoutSeconds + "s）");
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof Exception ex) {
-                throw ex;
-            }
-            throw new BizException(String.valueOf(cause == null ? "未知错误" : cause.getMessage()));
-        }
-    }
-
-    private void sleepBackoff(int attempt) {
-        try {
-            Thread.sleep(300L * (attempt + 1));
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /** 构造节点执行上下文 */
+    /** 构造节点执行上下文（先应用 schema 默认值，保证新旧 DSL 行为一致） */
     private NodeContext newContext(RunState st, WorkflowGraph.WorkflowNode node) {
+        registry.applyDefaults(node);
         return new NodeContext(node, st.appId, st.userInput, st.outputs, renderer,
                 modelProvider, knowledgeProvider, agentRunner, objectMapper);
     }
@@ -393,119 +465,13 @@ public class WorkflowEngine {
         }
     }
 
-    /** 从 start 出发 BFS 标记可达节点（排他分支的所有出边都走） */
-    private void bfsReachable(RunState st, String startId) {
-        Deque<String> queue = new ArrayDeque<>();
-        queue.add(startId);
-        st.reachable.add(startId);
-        while (!queue.isEmpty()) {
-            String id = queue.poll();
-            for (WorkflowGraph.WorkflowEdge e : st.outEdges.getOrDefault(id, List.of())) {
-                if (st.reachable.add(e.getTarget())) {
-                    queue.add(e.getTarget());
-                }
-            }
+    private String truncate(String s) {
+        if (s == null) {
+            return null;
         }
-    }
-
-    /** Kahn 拓扑排序检测环，返回环上/被环阻塞的节点 id */
-    private List<String> detectCycle(RunState st) {
-        Map<String, Integer> deg = new HashMap<>();
-        for (String id : st.reachable) {
-            int d = 0;
-            for (WorkflowGraph.WorkflowEdge e : st.inEdges.getOrDefault(id, List.of())) {
-                if (st.reachable.contains(e.getSource())) {
-                    d++;
-                }
-            }
-            deg.put(id, d);
+        if (s.length() > settings.traceLimit()) {
+            return s.substring(0, settings.traceLimit()) + "...";
         }
-        Deque<String> queue = new ArrayDeque<>();
-        for (Map.Entry<String, Integer> en : deg.entrySet()) {
-            if (en.getValue() == 0) {
-                queue.add(en.getKey());
-            }
-        }
-        int processed = 0;
-        while (!queue.isEmpty()) {
-            String id = queue.poll();
-            processed++;
-            for (WorkflowGraph.WorkflowEdge e : st.outEdges.getOrDefault(id, List.of())) {
-                String t = e.getTarget();
-                if (st.reachable.contains(t)) {
-                    int nd = deg.get(t) - 1;
-                    deg.put(t, nd);
-                    if (nd == 0) {
-                        queue.add(t);
-                    }
-                }
-            }
-        }
-        if (processed == st.reachable.size()) {
-            return List.of();
-        }
-        return deg.entrySet().stream()
-                .filter(en -> en.getValue() > 0)
-                .map(Map.Entry::getKey)
-                .sorted()
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 计算最终回答，优先级：
-     * 1. 第一条错误节点的错误信息；
-     * 2. end 节点配置的回答模板输出；
-     * 3. end 节点直接上游中「最后完成且有输出」的节点输出（并行多分支取最后完成的）；
-     * 4. 最后一个成功执行的 LLM / Agent 输出；
-     * 5. 用户原始输入。
-     */
-    private String computeAnswer(RunState st) {
-        // 1) 第一条错误节点的错误信息
-        for (RunResult.TraceItem t : st.trace) {
-            if (t.getStatus() == NodeStatus.ERROR) {
-                return "节点执行失败：" + t.getLabel() + " - " + t.getError();
-            }
-        }
-        // 2) end 节点输出（配置了回答模板时为渲染结果）
-        WorkflowGraph.WorkflowNode end = st.nodeById.values().stream()
-                .filter(n -> n.nodeType() == NodeType.END)
-                .findFirst()
-                .orElse(null);
-        if (end != null) {
-            String endOutput = st.outputs.get(end.getId());
-            if (endOutput != null && !endOutput.isBlank()) {
-                return endOutput;
-            }
-            // 3) end 节点直接上游中「最后完成且有输出」的节点输出
-            Set<String> sources = st.inEdges.getOrDefault(end.getId(), List.of()).stream()
-                    .map(WorkflowGraph.WorkflowEdge::getSource)
-                    .collect(Collectors.toSet());
-            for (int i = st.trace.size() - 1; i >= 0; i--) {
-                RunResult.TraceItem t = st.trace.get(i);
-                if (t.getStatus() == NodeStatus.SUCCESS
-                        && sources.contains(t.getNodeId())
-                        && t.getOutput() != null && !t.getOutput().isBlank()) {
-                    return t.getOutput();
-                }
-            }
-        }
-        // 4) 最后一个成功执行的 LLM / Agent 输出
-        for (int i = st.trace.size() - 1; i >= 0; i--) {
-            RunResult.TraceItem t = st.trace.get(i);
-            if (t.getStatus() == NodeStatus.SUCCESS
-                    && (t.getNodeType() == NodeType.LLM || t.getNodeType() == NodeType.AGENT)
-                    && t.getOutput() != null) {
-                return t.getOutput();
-            }
-        }
-        // 5) 兜底：用户原始输入
-        return st.userInput;
-    }
-
-    /** 配置类错误：与运行时错误区分，不参与重试 */
-    private static class ConfigException extends RuntimeException {
-        ConfigException(String message) {
-            super(message);
-        }
+        return s;
     }
 }

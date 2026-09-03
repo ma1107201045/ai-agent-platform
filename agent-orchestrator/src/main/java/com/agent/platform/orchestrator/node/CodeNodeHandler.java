@@ -6,6 +6,7 @@ import org.mvel2.MVEL;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,6 +21,14 @@ public class CodeNodeHandler implements NodeHandler {
     @Override
     public NodeType type() {
         return NodeType.CODE;
+    }
+
+    @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.builder().key("code").label("MVEL 表达式").type("code").required(true)
+                        .description("可用变量：input（用户输入）、outputs（全部输出）、节点 id（其输出值）；return 返回文本")
+                        .build());
     }
 
     @Override

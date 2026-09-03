@@ -4,6 +4,8 @@ import com.agent.platform.common.exception.BizException;
 import com.agent.platform.orchestrator.NodeType;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * 模板节点：对模板内容做 {{input}} / {{节点id}} 变量插值后输出。
  * 常用于拼装 prompt、格式化文本，输出可被下游节点引用。
@@ -14,6 +16,14 @@ public class TemplateNodeHandler implements NodeHandler {
     @Override
     public NodeType type() {
         return NodeType.TEMPLATE;
+    }
+
+    @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.textarea("template", "模板内容").required(true)
+                        .description("支持 {{input}} / {{节点id}} 变量插值，常用于拼装 prompt")
+                        .placeholder("你是资深分析师，请基于 {{knowledge1}} 回答：{{input}}"));
     }
 
     @Override

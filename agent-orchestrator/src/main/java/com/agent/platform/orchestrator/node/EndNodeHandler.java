@@ -3,6 +3,8 @@ package com.agent.platform.orchestrator.node;
 import com.agent.platform.orchestrator.NodeType;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * 结束节点：流程出口，可选配置回答模板。
  * <p>
@@ -14,6 +16,13 @@ public class EndNodeHandler implements NodeHandler {
     @Override
     public NodeType type() {
         return NodeType.END;
+    }
+
+    @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.textarea("answerTemplate", "回答模板").description("留空时自动选取上游节点输出")
+                        .placeholder("已完成，结果为：{{llm1}}"));
     }
 
     @Override

@@ -39,6 +39,30 @@ public class LlmNodeHandler implements NodeHandler {
     }
 
     @Override
+    public List<NodeField> fields() {
+        return List.of(
+                NodeField.builder().key("modelId").label("对话模型").type("model")
+                        .description("应用绑定的对话模型").required(true).build(),
+                NodeField.textarea("systemPrompt", "系统提示词").defaultValue("You are a helpful assistant."),
+                NodeField.textarea("userPrompt", "用户提示词").description("支持 {{input}} / {{节点id}} 变量")
+                        .defaultValue("{{input}}"),
+                NodeField.number("temperature", "Temperature").description("采样温度，留空使用模型默认"),
+                NodeField.number("topP", "Top P").description("核采样概率，留空使用模型默认"),
+                NodeField.number("maxTokens", "最大 Token 数").description("单次回复上限，0 表示模型默认"),
+                NodeField.builder().key("outputFormat").label("输出格式").type("select")
+                        .options(List.of(NodeField.option("纯文本", "text"), NodeField.option("JSON 对象", "json")))
+                        .defaultValue("text").build(),
+                NodeField.builder().key("datasetId").label("知识库增强").type("knowledge")
+                        .description("配置后自动检索相关片段拼入上下文").build(),
+                NodeField.text("queryTemplate", "检索词模板").defaultValue("{{input}}"),
+                NodeField.number("topK", "召回数量").defaultValue(3),
+                NodeField.builder().key("rerankModelId").label("重排模型").type("model").description("可选").build(),
+                NodeField.number("scoreThreshold", "相似度阈值").description("0~1，低于阈值片段丢弃").defaultValue(0),
+                NodeField.textarea("knowledgeTemplate", "上下文模板")
+                        .description("{{context}} 替换为命中片段").defaultValue(DEFAULT_KNOWLEDGE_TEMPLATE));
+    }
+
+    @Override
     public String validate(NodeContext ctx) {
         if (ctx.cfgLong("modelId") == null) {
             return "LLM 节点「" + ctx.label() + "」未配置模型";

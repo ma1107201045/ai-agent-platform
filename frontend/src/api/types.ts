@@ -111,6 +111,52 @@ export type WorkflowNodeType =
   | 'template'
   | 'knowledge'
 
+/** 节点配置字段控件类型（与后端 orchestrator NodeField.type 一致） */
+export type NodeFieldType =
+  | 'text'
+  | 'textarea'
+  | 'code'
+  | 'password'
+  | 'number'
+  | 'boolean'
+  | 'select'
+  | 'model'
+  | 'knowledge'
+  | 'tools'
+  | 'datasets'
+  | 'json'
+  | 'branches'
+
+/** select 下拉选项 */
+export interface NodeFieldOption {
+  label: string
+  value: string
+}
+
+/** 节点配置字段描述（后端 orchestrator NodeField） */
+export interface NodeFieldSchema {
+  key: string
+  label: string
+  type: NodeFieldType
+  description?: string
+  defaultValue?: unknown
+  required?: boolean
+  placeholder?: string
+  options?: NodeFieldOption[]
+}
+
+/** 节点类型 Schema（后端 /api/orchestrator/node-types 返回） */
+export interface NodeTypeSchema {
+  code: WorkflowNodeType
+  label: string
+  branch: boolean
+  /** 该类型节点是否允许出边 */
+  source: boolean
+  /** 该类型节点是否允许入边 */
+  target: boolean
+  fields: NodeFieldSchema[]
+}
+
 /** DSL 节点定义 */
 export interface WorkflowNode {
   id: string

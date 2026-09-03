@@ -459,3 +459,29 @@ INSERT INTO `chat_usage` (`tenant_id`, `app_id`, `conversation_id`, `user_id`, `
 (1, 9, NULL, NULL, 4, 'public', 'direct', 3100, 950, 4050, 0.027600, DATE_SUB(NOW(), INTERVAL 12 DAY));
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- 增量补丁: 工作流运行记录表 agent_run（运行监控页）
+--   幂等: CREATE TABLE IF NOT EXISTS，可重复执行
+--   写入: 引擎 WorkflowEventListener 在 FlowStarted/FlowFinished 事件中
+--         insert(运行中) -> update(终态，含 trace/cost/错误)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `agent_run` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `run_id` varchar(48) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '引擎运行标识(全局唯一)',
+    `app_id` bigint NOT NULL COMMENT '应用ID',
+    `conversation_id` bigint NULL DEFAULT NULL COMMENT '会话ID(公开调用为空)',
+    `mode` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'workflow' COMMENT '运行模式: workflow/agent',
+    `input` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '用户输入',
+    `answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '最终回答',
+    `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'running' COMMENT '运行状态: running/success/failed/canceled/timeout',
+    `error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '技术性错误',
+    `trace_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '节点轨迹(JSON数组)',
+    `cost_ms` bigint NULL DEFAULT 0 COMMENT '总耗时(毫秒)',
+    `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
+    `finish_time` datetime NULL DEFAULT NULL COMMENT '结束时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `uk_run_id`(`run_id` ASC) USING BTREE,
+    INDEX `idx_app_time`(`app_id` ASC, `create_time` ASC) USING BTREE,
+    INDEX `idx_conv_time`(`conversation_id` ASC, `create_time` ASC) USING BTREE
+) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '工作流运行记录' ROW_FORMAT = Dynamic;
