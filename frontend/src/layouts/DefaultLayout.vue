@@ -32,19 +32,8 @@ const activeMenu = computed(() => {
   )
 })
 
-/** 当前路由所属分组 key：以一级路径前缀匹配（详情页 / 隐藏页如账号安全也归组） */
-const activeGroupKey = computed(
-  () => menuGroups.find((g) => g.key === route.path.split('/')[1])?.key ?? null
-)
-
-/**
- * 以 key 重挂载菜单，保证跨分组跳转 / 折叠复位后自动展开当前分组：
- * - key 变化 → default-openeds 重新生效，展开所属分组
- * - 同一分组内跳转不重挂载，保留用户手动展开的其它分组
- */
-const menuKey = computed(() =>
-  collapsed.value ? 'menu-collapsed' : activeGroupKey.value ?? 'menu'
-)
+/** 菜单 key：切换折叠状态时强制重渲染，保证 Element Plus collapse 样式正确复位 */
+const menuKey = computed(() => (collapsed.value ? 'menu-collapsed' : 'menu'))
 
 function onMenuSelect(index: string) {
   router.push(index)
@@ -104,30 +93,28 @@ if (import.meta.env.DEV) {
         <el-menu
           :key="menuKey"
           :default-active="activeMenu"
-          :default-openeds="activeGroupKey ? [activeGroupKey] : []"
           :collapse="collapsed"
           :collapse-transition="false"
-          unique-opened
           class="sidebar-menu"
           @select="onMenuSelect"
         >
-          <el-sub-menu v-for="g in menuGroups" :key="g.key" :index="g.key">
-            <template #title>
-              <el-icon :size="17"><component :is="g.icon" /></el-icon>
-              <span>{{ g.title }}</span>
-            </template>
+          <el-menu-item-group
+            v-for="g in menuGroups"
+            :key="g.key"
+            :title="g.title"
+          >
             <el-menu-item
               v-for="item in g.items"
               :key="item.path"
               :index="item.path"
             >
-              <el-icon :size="15"><component :is="item.icon" /></el-icon>
+              <el-icon :size="18"><component :is="item.icon" /></el-icon>
               <template #title>
                 <span class="item-label">{{ item.title }}</span>
                 <span v-if="item.planned" class="planned-badge">规划</span>
               </template>
             </el-menu-item>
-          </el-sub-menu>
+          </el-menu-item-group>
         </el-menu>
       </div>
 
@@ -284,33 +271,53 @@ if (import.meta.env.DEV) {
   --el-menu-hover-text-color: var(--text-primary);
   --el-menu-hover-bg-color: var(--fill-light);
   --el-menu-active-color: var(--brand-1);
-  --el-menu-item-height: 42px;
-  --el-menu-sub-item-height: 36px;
+  --el-menu-item-height: 40px;
+  --el-menu-sub-item-height: 40px;
   border-right: none;
 }
-.menu-scroll :deep(.el-sub-menu__title) {
-  margin-bottom: 2px;
-  border-radius: 8px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-primary);
+
+/* 分组标题 */
+.menu-scroll :deep(.el-menu-item-group__title) {
+  padding: 18px 16px 8px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.2px;
+  line-height: 1;
+  background: transparent;
 }
+.menu-scroll :deep(.el-menu-item-group__title:first-child) {
+  padding-top: 10px;
+}
+
+/* 菜单项 */
 .menu-scroll :deep(.el-menu-item) {
   margin-bottom: 2px;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
 }
-.menu-scroll :deep(.el-sub-menu__title:hover),
 .menu-scroll :deep(.el-menu-item:hover) {
   background: var(--fill-light);
+  color: var(--text-primary);
 }
 .menu-scroll :deep(.el-menu-item.is-active) {
-  background: var(--brand-gradient-soft);
+  background: var(--el-color-primary-light-9);
   color: var(--brand-1);
   font-weight: 600;
 }
 .menu-scroll :deep(.el-menu-item .el-icon) {
   flex-shrink: 0;
+  margin-right: 12px;
+  color: inherit;
+}
+.menu-scroll :deep(.el-menu-item .item-label) {
+  color: inherit;
+}
+
+/* 折叠状态隐藏分组标题 */
+.sidebar.collapsed .menu-scroll :deep(.el-menu-item-group__title) {
+  display: none;
 }
 
 /* ---------- 底部折叠按钮 ---------- */

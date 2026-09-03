@@ -769,8 +769,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  background: var(--bg-tertiary, #f1f3f5);
-  color: #6b7280;
+  background: var(--fill-light);
+  color: var(--text-secondary);
 }
 .stat-icon.on {
   background: rgba(52, 199, 123, 0.14);
@@ -854,8 +854,8 @@ onMounted(async () => {
   width: 100%;
 }
 .data-table :deep(th.el-table__cell) {
-  background: var(--bg-table-head, #fafafa);
-  color: var(--text-secondary, #4a4e57);
+  background: var(--fill-light);
+  color: var(--text-secondary);
   font-size: 12px;
 }
 .item-content {
