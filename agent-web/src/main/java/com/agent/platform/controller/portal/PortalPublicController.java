@@ -14,6 +14,7 @@ import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.app.AppApiKeyService;
 import com.agent.platform.service.chat.ChatUsageStatsService;
+import com.agent.platform.service.model.ModelRuntimeService;
 import com.agent.platform.service.model.ModelService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
@@ -37,6 +38,7 @@ public class PortalPublicController {
     private final AppAgentService appAgentService;
     private final AppApiKeyService appApiKeyService;
     private final ModelService modelService;
+    private final ModelRuntimeService modelRuntimeService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
     private final ChatUsageStatsService usageStatsService;
@@ -114,7 +116,7 @@ public class PortalPublicController {
             if (modelId == null) {
                 throw new BizException("尚未配置可用的对话模型");
             }
-            ChatModel model = modelService.chatModelOf(modelId);
+            ChatModel model = modelRuntimeService.chatModelOf(modelId);
             List<ChatMessage> all = new ArrayList<>(history);
             all.add(last);
             ChatResponse response = model.call(ChatRequest.builder().messages(all).build());

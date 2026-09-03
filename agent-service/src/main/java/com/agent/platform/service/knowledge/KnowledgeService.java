@@ -11,7 +11,7 @@ import com.agent.platform.llm.model.EmbeddingResult;
 import com.agent.platform.llm.model.RerankResult;
 import com.agent.platform.llm.spi.EmbeddingModel;
 import com.agent.platform.llm.spi.RerankModel;
-import com.agent.platform.service.model.ModelService;
+import com.agent.platform.service.model.ModelRuntimeService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,7 +54,7 @@ public class KnowledgeService {
     private final KnowledgeDatasetMapper datasetMapper;
     private final KnowledgeDocumentMapper documentMapper;
     private final KnowledgeChunkMapper chunkMapper;
-    private final ModelService modelService;
+    private final ModelRuntimeService modelRuntimeService;
     private final ObjectMapper objectMapper;
 
     // ---------- 数据集 ----------
@@ -146,7 +146,7 @@ public class KnowledgeService {
 
         try {
             List<String> chunks = splitText(content, ds.getChunkSize(), ds.getChunkOverlap());
-            EmbeddingModel embedModel = modelService.embeddingModelOf(ds.getEmbeddingModel());
+            EmbeddingModel embedModel = modelRuntimeService.embeddingModelOf(ds.getEmbeddingModel());
             // 分批向量化，避免单次请求过大
             int batchSize = 16;
             int index = 0;
@@ -303,7 +303,7 @@ public class KnowledgeService {
         if (query == null || query.isBlank()) {
             return List.of();
         }
-        EmbeddingModel embedModel = modelService.embeddingModelOf(ds.getEmbeddingModel());
+        EmbeddingModel embedModel = modelRuntimeService.embeddingModelOf(ds.getEmbeddingModel());
         float[] queryVec = embedModel.embed(List.of(query)).vectors().get(0);
 
         List<KnowledgeChunk> all = chunkMapper.selectList(new LambdaQueryWrapper<KnowledgeChunk>()
@@ -323,7 +323,7 @@ public class KnowledgeService {
         // 可选 rerank 精排
         if (rerankModelId != null && !top.isEmpty()) {
             try {
-                RerankModel rerank = modelService.rerankModelOf(rerankModelId);
+                RerankModel rerank = modelRuntimeService.rerankModelOf(rerankModelId);
                 List<String> docs = new ArrayList<>();
                 for (SearchHit h : top) {
                     docs.add(h.getContent());

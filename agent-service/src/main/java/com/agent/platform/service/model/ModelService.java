@@ -5,11 +5,6 @@ import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.mapper.model.ModelInfoMapper;
 import com.agent.platform.dao.mapper.model.ModelProviderMapper;
-import com.agent.platform.llm.model.ModelConfig;
-import com.agent.platform.llm.spi.ChatModel;
-import com.agent.platform.llm.spi.EmbeddingModel;
-import com.agent.platform.llm.spi.LLMFactory;
-import com.agent.platform.llm.spi.RerankModel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
@@ -30,7 +25,6 @@ public class ModelService {
 
     private final ModelProviderMapper providerMapper;
     private final ModelInfoMapper modelInfoMapper;
-    private final LLMFactory llmFactory;
 
     // ---------- 供应商 ----------
 
@@ -97,7 +91,7 @@ public class ModelService {
         }
     }
 
-    // ---------- LLM 实例 ----------
+    // ---------- 可用模型列表（供前端下拉 / 默认模型选择） ----------
 
     /**
      * 可用的对话模型列表（供应商启用 + 模型启用），供前端下拉选择
@@ -124,45 +118,6 @@ public class ModelService {
     public Long defaultChatModelId() {
         List<ChatModelInfo> list = chatModels();
         return list.isEmpty() ? null : list.get(0).getId();
-    }
-
-    /**
-     * 根据模型记录创建 ChatModel 实例
-     */
-    public ChatModel chatModelOf(Long modelId) {
-        ModelInfo info = modelInfoMapper.selectById(modelId);
-        if (info == null) {
-            throw new BizException("模型不存在: " + modelId);
-        }
-        ModelProvider provider = getProvider(info.getProviderId());
-        if (provider.getStatus() == null || provider.getStatus() != 1) {
-            throw new BizException("模型供应商已禁用: " + provider.getName());
-        }
-        return llmFactory.createChatModel(buildConfig(provider, info));
-    }
-
-    /**
-     * 根据模型记录创建 EmbeddingModel 实例
-     */
-    public EmbeddingModel embeddingModelOf(Long modelId) {
-        ModelInfo info = modelInfoMapper.selectById(modelId);
-        if (info == null) {
-            throw new BizException("模型不存在: " + modelId);
-        }
-        ModelProvider provider = getProvider(info.getProviderId());
-        return llmFactory.createEmbeddingModel(buildConfig(provider, info));
-    }
-
-    /**
-     * 根据模型记录创建 RerankModel 实例
-     */
-    public RerankModel rerankModelOf(Long modelId) {
-        ModelInfo info = modelInfoMapper.selectById(modelId);
-        if (info == null) {
-            throw new BizException("模型不存在: " + modelId);
-        }
-        ModelProvider provider = getProvider(info.getProviderId());
-        return llmFactory.createRerankModel(buildConfig(provider, info));
     }
 
     /**
@@ -201,15 +156,6 @@ public class ModelService {
             result.add(new ChatModelInfo(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
-    }
-
-    private ModelConfig buildConfig(ModelProvider provider, ModelInfo info) {
-        return ModelConfig.builder()
-                .provider(provider.getType())
-                .baseUrl(provider.getBaseUrl())
-                .apiKey(provider.getApiKey())
-                .modelName(info.getName())
-                .build();
     }
 
     @Data

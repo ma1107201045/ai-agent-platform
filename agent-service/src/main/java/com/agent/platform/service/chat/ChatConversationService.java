@@ -13,7 +13,7 @@ import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.model.Usage;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.app.AppAgentService;
-import com.agent.platform.service.model.ModelService;
+import com.agent.platform.service.model.ModelRuntimeService;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEngine;
 import com.agent.platform.orchestrator.WorkflowGraph;
@@ -46,7 +46,7 @@ public class ChatConversationService {
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
     private final AppAgentService appAgentService;
-    private final ModelService modelService;
+    private final ModelRuntimeService modelRuntimeService;
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
     private final ChatUsageStatsService usageStatsService;
@@ -221,7 +221,7 @@ public class ChatConversationService {
                 throw new BizException("请选择对话模型");
             }
             List<ChatMessage> history = messages(conversationId, userId);
-            ChatModel model = modelService.chatModelOf(mid);
+            ChatModel model = modelRuntimeService.chatModelOf(mid);
             ChatResponse response = model.call(buildChatRequest(conv, history, content, mid));
             answer = response == null ? "" : response.getContent();
             usage = response == null ? null : response.getUsage();
@@ -249,7 +249,7 @@ public class ChatConversationService {
         }
         List<ChatMessage> history = messages(conversationId, userId);
         saveMessage(conversationId, "user", content, null, 0);
-        ChatModel model = modelService.chatModelOf(mid);
+        ChatModel model = modelRuntimeService.chatModelOf(mid);
         StringBuilder sb = new StringBuilder();
         long[] tokens = {0};
         Usage[] usage = {null};

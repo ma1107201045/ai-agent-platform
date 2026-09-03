@@ -17,7 +17,7 @@ import com.agent.platform.llm.model.ChatResponse;
 import com.agent.platform.llm.model.ToolCall;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.knowledge.KnowledgeService;
-import com.agent.platform.service.model.ModelService;
+import com.agent.platform.service.model.ModelRuntimeService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -66,7 +66,7 @@ public class AppAgentService {
     private final ChatConversationMapper chatConversationMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final ChatUsageMapper chatUsageMapper;
-    private final ModelService modelService;
+    private final ModelRuntimeService modelRuntimeService;
     private final AppAgentToolService appToolService;
     private final KnowledgeService knowledgeService;
     private final ObjectMapper objectMapper;
@@ -306,7 +306,7 @@ public class AppAgentService {
                                String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
 
-        ChatModel chatModel = modelService.chatModelOf(modelId);
+        ChatModel chatModel = modelRuntimeService.chatModelOf(modelId);
 
         // 组装消息
         String finalSystemPrompt = systemPrompt == null || systemPrompt.isBlank()
