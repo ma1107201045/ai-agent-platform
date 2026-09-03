@@ -9,7 +9,7 @@ import java.util.List;
  * 节点类型描述（对外 Schema）
  * <p>
  * 由引擎侧注册表统一生成，前端据此渲染节点面板与默认配置，
- * 与后端 {@link NodeType} + handler 保持单源一致。
+ * 与后端 {@link NodeTypeSchema} + handler 保持单源一致。
  */
 @Data
 @Builder

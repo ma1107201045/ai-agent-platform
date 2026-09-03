@@ -48,7 +48,7 @@ public class HttpNodeHandler implements NodeHandler {
 
     @Override
     public List<NodeField> fields() {
-        List<NodeField> base = List.of(
+        return List.of(
                 NodeField.text("url", "请求地址").description("支持 {{变量}} 替换").required(true)
                         .placeholder("https://api.example.com/v1/chat"),
                 NodeField.builder().key("method").label("请求方式").type("select")
@@ -75,7 +75,6 @@ public class HttpNodeHandler implements NodeHandler {
                 NodeField.text("jsonPath", "JSON 字段路径").description("如 data.list[0].title，支持 $ 开头"),
                 NodeField.number("timeoutSeconds", "请求超时（秒）").defaultValue(30),
                 NodeField.bool("ignoreStatus", "忽略非 2xx 状态码"));
-        return base;
     }
 
     @Override
@@ -183,7 +182,7 @@ public class HttpNodeHandler implements NodeHandler {
             JsonNode node = ctx.objectMapper().readTree(text);
             StringBuilder sb = new StringBuilder();
             node.fieldNames().forEachRemaining(name -> {
-                if (sb.length() > 0) {
+                if (!sb.isEmpty()) {
                     sb.append('&');
                 }
                 sb.append(URLEncoder.encode(name, StandardCharsets.UTF_8))
