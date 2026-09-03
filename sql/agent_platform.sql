@@ -1,17 +1,17 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : localhost
+ Source Server         : mysql
  Source Server Type    : MySQL
- Source Server Version : 80046 (8.0.46)
+ Source Server Version : 80030 (8.0.30)
  Source Host           : localhost:3306
  Source Schema         : agent_platform
 
  Target Server Type    : MySQL
- Target Server Version : 80046 (8.0.46)
+ Target Server Version : 80030 (8.0.30)
  File Encoding         : 65001
 
- Date: 03/09/2026 22:33:09
+ Date: 03/09/2026 23:06:46
 */
 
 SET NAMES utf8mb4;
@@ -45,10 +45,8 @@ CREATE TABLE `app_agent`  (
 -- Records of app_agent
 -- ----------------------------
 INSERT INTO `app_agent` VALUES (6, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:34:35', '2026-08-28 01:34:35');
-INSERT INTO `app_agent` VALUES (7, 1, '1111', '', 'chatflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:40:53', '2026-08-28 01:40:53');
 INSERT INTO `app_agent` VALUES (8, 1, '多语言翻译助手', '中英互译与术语润色，支持行业术语定制', 'workflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:41:06', '2026-08-28 01:41:06');
 INSERT INTO `app_agent` VALUES (9, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, '{\"nodes\":[],\"edges\":[]}', NULL, NULL, NULL, '2026-08-28 01:42:44', '2026-08-28 03:25:50');
-INSERT INTO `app_agent` VALUES (10, 1, '11', '', 'chatflow', NULL, NULL, NULL, 1, NULL, NULL, NULL, 1, '2026-08-29 22:42:00', '2026-09-02 17:17:37');
 
 -- ----------------------------
 -- Table structure for app_agent_tool
@@ -100,7 +98,6 @@ CREATE TABLE `app_agent_version`  (
 -- ----------------------------
 -- Records of app_agent_version
 -- ----------------------------
-INSERT INTO `app_agent_version` VALUES (1, 10, 1, '{\"nodes\":[{\"id\":\"node-1788340652792-7\",\"type\":\"start\",\"label\":\"开始\",\"position\":{\"x\":120,\"y\":260},\"config\":{\"variables\":[],\"welcome\":\"\"}},{\"id\":\"node-1788340652792-8\",\"type\":\"end\",\"label\":\"结束\",\"position\":{\"x\":460,\"y\":260},\"config\":{\"answerTemplate\":\"\"}}],\"edges\":[{\"id\":\"edge-1788340652792-9\",\"source\":\"node-1788340652792-7\",\"target\":\"node-1788340652792-8\"}]}', '', 1, 1, '2026-09-02 17:17:36');
 
 -- ----------------------------
 -- Table structure for app_api_key
@@ -207,11 +204,12 @@ CREATE TABLE `chat_agent_run`  (
   UNIQUE INDEX `uk_run_id`(`run_id` ASC) USING BTREE,
   INDEX `idx_app_time`(`app_id` ASC, `create_time` ASC) USING BTREE,
   INDEX `idx_conv_time`(`conversation_id` ASC, `create_time` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '工作流运行记录' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '工作流运行记录' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of chat_agent_run
 -- ----------------------------
+INSERT INTO `chat_agent_run` VALUES (1, 'run_ac85656d37be41a2', 9, NULL, 'workflow', '如何创建一个智能体应用？', '', 'success', NULL, '[]', 5, '2026-09-03 23:00:28', '2026-09-03 23:00:28');
 
 -- ----------------------------
 -- Table structure for chat_conversation
@@ -230,12 +228,12 @@ CREATE TABLE `chat_conversation`  (
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_app`(`user_id` ASC, `app_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '聊天会话' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '聊天会话' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of chat_conversation
 -- ----------------------------
-INSERT INTO `chat_conversation` VALUES (1, 1, 1, 9, '11', 'agent', 3, 0, '2026-08-28 01:54:37', '2026-08-28 02:59:40');
+INSERT INTO `chat_conversation` VALUES (4, 1, 1, 9, '如何创建一个智能体应用？', 'workflow', NULL, 0, '2026-09-03 23:00:28', '2026-09-03 23:00:35');
 
 -- ----------------------------
 -- Table structure for chat_message
@@ -252,10 +250,39 @@ CREATE TABLE `chat_message`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_conversation`(`conversation_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '聊天消息' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '聊天消息' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of chat_message
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for chat_usage
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_usage`;
+CREATE TABLE `chat_usage`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID',
+  `conversation_id` bigint NULL DEFAULT NULL COMMENT '会话ID(公开调用为空)',
+  `user_id` bigint NULL DEFAULT NULL COMMENT '用户ID(公开调用为空)',
+  `model_id` bigint NULL DEFAULT NULL COMMENT '模型ID',
+  `channel` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'console' COMMENT '来源: console控制台会话/public公开API',
+  `mode` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '会话模式: direct/agent/workflow',
+  `prompt_tokens` int NOT NULL DEFAULT 0 COMMENT '输入Token',
+  `completion_tokens` int NOT NULL DEFAULT 0 COMMENT '输出Token',
+  `total_tokens` int NOT NULL DEFAULT 0 COMMENT '总Token(输入+输出)',
+  `cost` decimal(14, 6) NOT NULL DEFAULT 0.000000 COMMENT '估算成本(元)，按模型单价计算',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_app_time`(`app_id` ASC, `create_time` ASC) USING BTREE,
+  INDEX `idx_model_time`(`model_id` ASC, `create_time` ASC) USING BTREE,
+  INDEX `idx_conv`(`conversation_id` ASC) USING BTREE,
+  INDEX `idx_create_time`(`create_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型用量事件' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of chat_usage
 -- ----------------------------
 
 -- ----------------------------
@@ -343,13 +370,13 @@ CREATE TABLE `model_info`  (
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_provider`(`provider_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型信息' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型信息' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of model_info
 -- ----------------------------
 INSERT INTO `model_info` VALUES (5, 2, 'qwen3.8-27b', 'llm', NULL, NULL, '[\"stream\"]', 1, '2026-09-03 17:34:31', '2026-09-03 17:34:31');
-INSERT INTO `model_info` VALUES (6, 2, 'qwen3.7-text-embedding-flash', 'embedding', NULL, NULL, NULL, 1, '2026-09-03 17:37:18', '2026-09-03 17:37:18');
+INSERT INTO `model_info` VALUES (6, 2, 'qwen3.7-text-embedding-flash', 'embedding', NULL, NULL, '[\"stream\",\"json_mode\",\"reasoning\"]', 1, '2026-09-03 17:37:18', '2026-09-03 22:51:52');
 
 -- ----------------------------
 -- Table structure for model_provider
