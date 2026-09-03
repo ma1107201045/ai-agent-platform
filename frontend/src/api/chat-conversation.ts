@@ -30,7 +30,10 @@ export const conversationApi = {
   },
   /**
    * 发送消息（SSE 流式，仅直连模型）
+   * @param id
+   * @param data
    * @param onChunk 每收到一个增量块回调
+   * @param signal
    */
   async streamMessage(
     id: number,

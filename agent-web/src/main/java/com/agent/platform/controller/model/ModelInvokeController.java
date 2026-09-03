@@ -95,10 +95,13 @@ public class ModelInvokeController {
                 })
                 .subscribeOn(Schedulers.boundedElastic());
 
-        Flux<ServerSentEvent<?>> messageEvents = chunks.map(
-                chunk -> (ServerSentEvent<?>) ServerSentEvent.builder(chunk).event("message").build());
-        Flux<ServerSentEvent<?>> doneEvent = Flux.just(
-                (ServerSentEvent<?>) ServerSentEvent.builder("[DONE]").event("done").build());
+        Flux<ServerSentEvent<?>> messageEvents = chunks.map(chunk -> ServerSentEvent
+                .builder(chunk)
+                .event("message")
+                .build());
+        Flux<ServerSentEvent<?>> doneEvent = Flux.just(ServerSentEvent.builder("[DONE]")
+                .event("done")
+                .build());
         return messageEvents.concatWith(doneEvent);
     }
 

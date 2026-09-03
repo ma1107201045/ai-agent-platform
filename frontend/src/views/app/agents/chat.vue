@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ChatDotRound, Delete, EditPen, Promotion, User } from '@element-plus/icons-vue'
@@ -257,7 +257,8 @@ async function send() {
   }
   input.value = ''
   messages.value.push({ role: 'user', content: text })
-  const assistant: ChatItem = { role: 'assistant', content: '', loading: true }
+  // 用 reactive 创建 assistant：SSE 回调中直接改其属性可触发视图增量渲染
+  const assistant = reactive<ChatItem>({ role: 'assistant', content: '', loading: true })
   messages.value.push(assistant)
   sending.value = true
   scrollToBottom()

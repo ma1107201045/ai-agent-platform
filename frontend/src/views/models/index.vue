@@ -92,6 +92,20 @@ const keyword = ref('')
 
 const expandedModels = reactive<Record<number, ModelInfo[]>>({})
 const expandedLoading = reactive<Record<number, boolean>>({})
+/** 当前展开的供应商行 id（与 el-table 的 expand-row-keys 受控同步） */
+const expandKeys = ref<number[]>([])
+
+/** 拉取某供应商下的模型并写入展开缓存 */
+async function loadModels(providerId: number) {
+  expandedLoading[providerId] = true
+  try {
+    expandedModels[providerId] = await modelApi.modelsOf(providerId)
+  } catch {
+    expandedModels[providerId] = []
+  } finally {
+    expandedLoading[providerId] = false
+  }
+}
 
 async function load() {
   loading.value = true
@@ -103,31 +117,38 @@ async function load() {
     })
     providers.value = data.records
     total.value = data.total
-    clearExpand()
+
+    // 只保留仍存在于当前页的展开行，避免过期 id 残留
+    const liveIds = new Set(data.records.map((p) => p.id))
+    expandKeys.value = expandKeys.value.filter((id) => liveIds.has(id))
+
+    // 清理已不在当前页的模型缓存
+    for (const k of Object.keys(expandedModels)) {
+      if (!liveIds.has(Number(k))) delete expandedModels[Number(k)]
+    }
+    for (const k of Object.keys(expandedLoading)) {
+      if (!liveIds.has(Number(k))) delete expandedLoading[Number(k)]
+    }
+
+    // 对仍处于展开状态的供应商重新拉取模型，避免刷新后模型列表丢失
+    for (const id of expandKeys.value) {
+      loadModels(id)
+    }
   } finally {
     loading.value = false
   }
-}
-function clearExpand() {
-  for (const k of Object.keys(expandedModels)) delete expandedModels[Number(k)]
-  for (const k of Object.keys(expandedLoading)) delete expandedLoading[Number(k)]
 }
 function onSearch() {
   page.value = 1
   load()
 }
 
-async function onProviderExpand(row: ModelProvider, expandedRows: ModelProvider[]) {
+function onProviderExpand(row: ModelProvider, expandedRows: ModelProvider[]) {
+  // 同步受控展开状态
+  expandKeys.value = expandedRows.map((r) => r.id)
   const expanded = expandedRows.some((r) => r.id === row.id)
   if (expanded && !expandedModels[row.id]) {
-    expandedLoading[row.id] = true
-    try {
-      expandedModels[row.id] = await modelApi.modelsOf(row.id)
-    } catch {
-      expandedModels[row.id] = []
-    } finally {
-      expandedLoading[row.id] = false
-    }
+    loadModels(row.id)
   }
 }
 async function refreshModels(providerId: number) {
@@ -475,6 +496,7 @@ onMounted(load)
         v-loading="loading"
         :data="providers"
         row-key="id"
+        :expand-row-keys="expandKeys"
         class="providers-table"
         @expand-change="onProviderExpand"
       >
