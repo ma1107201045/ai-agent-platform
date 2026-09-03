@@ -37,7 +37,7 @@ async function load() {
   loading.value = true
   try {
     const type = filterType.value || undefined
-    const status = filterStatus.value === undefined || filterStatus.value === '' ? undefined : filterStatus.value
+    const status = filterStatus.value == null ? undefined : filterStatus.value
     const data = await toolConnectorApi.page({
       page: page.value,
       size: size.value,
@@ -149,14 +149,14 @@ async function save() {
   } else {
     headers = undefined
   }
-  const payload = {
+  const payload: Partial<ToolConnector> = {
     name: form.name.trim(),
     description: form.description.trim() || undefined,
     type: form.type,
     url: form.url.trim(),
     method: form.type === 'http' ? form.method : undefined,
     headers: form.type === 'http' ? headers : undefined,
-    authType: form.type === 'http' ? form.authType : 'none',
+    authType: form.type === 'http' ? (form.authType as ToolConnector['authType']) : 'none',
     authToken: form.type === 'http' && form.authType === 'bearer' && form.authToken.trim() ? form.authToken.trim() : undefined,
     authUsername: form.authUsername.trim() || undefined,
     authPassword: form.authPassword ? form.authPassword : undefined
@@ -187,6 +187,11 @@ async function toggleStatus(row: ToolConnector, val: boolean) {
   } catch {
     // 单向 model-value，失败时刷新还原
   }
+}
+
+/** el-switch 的 change 值类型为 string | number | boolean，统一收敛为布尔 */
+function onStatusChange(row: ToolConnector, val: string | number | boolean) {
+  void toggleStatus(row, val === true || val === 1)
 }
 
 /* ---------------- 删除 ---------------- */
@@ -321,7 +326,7 @@ onMounted(load)
               inline-prompt
               active-text="启用"
               inactive-text="禁用"
-              @change="(val) => toggleStatus(row, val === true)"
+              @change="onStatusChange(row, $event)"
             />
           </template>
         </el-table-column>
