@@ -117,13 +117,13 @@ export const menuGroups: MenuGroup[] = [
     ]
   },
   {
-    key: 'tools',
+    key: 'tool',
     title: '工具',
     icon: Tools,
     items: [
-      { path: '/tools', title: '工具管理', icon: Operation },
-      { path: '/tools/marketplace', title: '插件市场', icon: ShoppingCart },
-      { path: '/tools/integrations', title: '数据集成', icon: Link }
+      { path: '/tool/infos', title: '工具管理', icon: Operation },
+      { path: '/tool/marketplace', title: '插件市场', icon: ShoppingCart },
+      { path: '/tool/integrations', title: '数据集成', icon: Link }
     ]
   },
   {

@@ -1,9 +1,9 @@
 package com.agent.platform.service.tool;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.dao.entity.app.AppAgentTool;
+import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.dao.entity.tool.ToolConnector;
-import com.agent.platform.dao.mapper.app.AppAgentToolMapper;
+import com.agent.platform.dao.mapper.tool.ToolInfoMapper;
 import com.agent.platform.dao.mapper.tool.ToolConnectorMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -35,7 +35,7 @@ public class ToolConnectorService {
     private static final String DEFAULT_SCHEMA = "{\"type\":\"object\",\"properties\":{}}";
 
     private final ToolConnectorMapper connectorMapper;
-    private final AppAgentToolMapper toolMapper;
+    private final ToolInfoMapper toolMapper;
     private final ObjectMapper objectMapper;
 
     // ---------- CRUD ----------
@@ -227,17 +227,17 @@ public class ToolConnectorService {
     /**
      * 将 HTTP 连接器一键生成为可被智能体调用的 HTTP 工具（app_agent_tool），打通「数据集成 → 工具 → 模型调用」。
      */
-    public AppAgentTool createHttpTool(Long connectorId) {
+    public ToolInfo createHttpTool(Long connectorId) {
         ToolConnector connector = getById(connectorId);
         if (!"http".equals(connector.getType())) {
             throw new BizException("仅 HTTP 类型连接器可直接生成工具；MySQL 连接器可在「工具管理」中编写数据库查询脚本使用");
         }
-        Long exists = toolMapper.selectCount(new LambdaQueryWrapper<AppAgentTool>()
-                .eq(AppAgentTool::getName, connector.getName()));
+        Long exists = toolMapper.selectCount(new LambdaQueryWrapper<ToolInfo>()
+                .eq(ToolInfo::getName, connector.getName()));
         if (exists != null && exists > 0) {
             throw new BizException("已存在同名工具「" + connector.getName() + "」，可在工具管理中直接使用或重命名连接器后再生成");
         }
-        AppAgentTool tool = new AppAgentTool();
+        ToolInfo tool = new ToolInfo();
         tool.setTenantId(1L);
         tool.setName(connector.getName());
         tool.setDescription(connector.getDescription() == null || connector.getDescription().isBlank()

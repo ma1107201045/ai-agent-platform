@@ -1,7 +1,7 @@
 package com.agent.platform.controller.tool;
 
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.entity.app.AppAgentTool;
+import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.service.tool.ToolMarketplaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +31,7 @@ public class ToolMarketplaceController {
 
     /** 一键安装模板：以模板内容创建真实工具 */
     @PostMapping("/templates/{key}/install")
-    public Result<AppAgentTool> install(@PathVariable String key) {
+    public Result<ToolInfo> install(@PathVariable String key) {
         return Result.ok(marketplaceService.install(key));
     }
 }

@@ -1,7 +1,7 @@
 package com.agent.platform.controller.tool;
 
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.entity.app.AppAgentTool;
+import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.dao.entity.tool.ToolConnector;
 import com.agent.platform.service.tool.ToolConnectorService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -72,7 +72,7 @@ public class ToolConnectorController {
 
     /** 一键将 HTTP 连接器生成为可被智能体调用的 HTTP 工具 */
     @PostMapping("/{id}/as-tool")
-    public Result<AppAgentTool> asTool(@PathVariable Long id) {
+    public Result<ToolInfo> asTool(@PathVariable Long id) {
         return Result.ok(connectorService.createHttpTool(id));
     }
 

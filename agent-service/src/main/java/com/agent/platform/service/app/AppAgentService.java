@@ -2,7 +2,7 @@ package com.agent.platform.service.app;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.dao.entity.app.AppAgent;
-import com.agent.platform.dao.entity.app.AppAgentTool;
+import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
 import com.agent.platform.dao.entity.chat.ChatConversation;
 import com.agent.platform.dao.entity.chat.ChatUsage;
@@ -18,6 +18,7 @@ import com.agent.platform.llm.model.ToolCall;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.knowledge.KnowledgeService;
 import com.agent.platform.service.model.ModelRuntimeService;
+import com.agent.platform.service.tool.ToolInfoService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -67,7 +68,7 @@ public class AppAgentService {
     private final ChatMessageMapper chatMessageMapper;
     private final ChatUsageMapper chatUsageMapper;
     private final ModelRuntimeService modelRuntimeService;
-    private final AppAgentToolService appToolService;
+    private final ToolInfoService appToolService;
     private final KnowledgeService knowledgeService;
     private final ObjectMapper objectMapper;
 
@@ -296,13 +297,13 @@ public class AppAgentService {
      * @param history        历史消息（不含 system）
      * @param maxIterations  最大循环轮数
      */
-    public AgentResult chat(Long modelId, String systemPrompt, List<AppAgentTool> tools,
+    public AgentResult chat(Long modelId, String systemPrompt, List<ToolInfo> tools,
                             String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         return doChat(modelId, systemPrompt, tools, datasetIdsJson, history, maxIterations);
     }
 
     /** Agent 循环核心实现 */
-    private AgentResult doChat(Long modelId, String systemPrompt, List<AppAgentTool> tools,
+    private AgentResult doChat(Long modelId, String systemPrompt, List<ToolInfo> tools,
                                String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
 
@@ -358,7 +359,7 @@ public class AppAgentService {
                 long start = System.currentTimeMillis();
                 String result;
                 try {
-                    AppAgentTool tool = tools.stream()
+                    ToolInfo tool = tools.stream()
                             .filter(t -> t.getName().equals(tc.name()))
                             .findFirst()
                             .orElse(null);
@@ -428,17 +429,17 @@ public class AppAgentService {
     /**
      * 解析工具 ID JSON 数组并加载启用的工具（应用绑定或节点级配置均可）
      */
-    public List<AppAgentTool> loadTools(String toolIdsJson) {
+    public List<ToolInfo> loadTools(String toolIdsJson) {
         if (toolIdsJson == null || toolIdsJson.isBlank() || "null".equals(toolIdsJson.trim())) {
             return List.of();
         }
         try {
             List<Long> ids = objectMapper.readValue(toolIdsJson, new TypeReference<List<Long>>() {
             });
-            List<AppAgentTool> result = new ArrayList<>();
+            List<ToolInfo> result = new ArrayList<>();
             if (ids != null) {
                 for (Long id : ids) {
-                    AppAgentTool tool = appToolService.getById(id);
+                    ToolInfo tool = appToolService.getById(id);
                     if (tool.getStatus() != null && tool.getStatus() == 1) {
                         result.add(tool);
                     }

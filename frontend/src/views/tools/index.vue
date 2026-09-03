@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, EditPen, Plus, VideoPlay } from '@element-plus/icons-vue'
-import { appAgentToolApi } from '@/api/app-agent-tool'
+import { appAgentToolApi } from '@/api/tool-info.ts'
 import type { AppAgentTool } from '@/api/types'
 
 const loading = ref(false)

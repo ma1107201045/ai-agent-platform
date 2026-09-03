@@ -35,7 +35,7 @@ import '@vue-flow/core/dist/theme-default.css'
 import {appAgentApi} from '@/api/app-agent.ts'
 import {knowledgeApi} from '@/api/knowledge.ts'
 import {modelApi} from '@/api/model.ts'
-import {appAgentToolApi} from '@/api/app-agent-tool.ts'
+import {appAgentToolApi} from '@/api/tool-info.ts'
 import type {
   AppAgentTool,
   AppAgentVersion,

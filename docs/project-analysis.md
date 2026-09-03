@@ -76,7 +76,7 @@
 
 一次**全局命名规范化重构：`App` → `AppAgent`**，遵循「表名 → 实体 → Mapper → Service → Controller → URL」对齐规则：
 
-- 后端：`AppService` → `AppAgentService`（删除旧类）、`AppToolService` → `AppAgentToolService`、`AppController` → `AppAgentController`、`AppToolController` → `AppAgentToolController`，URL 统一为 `/api/app-agents`
+- 后端：`AppService` → `AppAgentService`（删除旧类）、`AppToolService` → `ToolInfoService`、`AppController` → `AppAgentController`、`AppToolController` → `ToolInfoController`，URL 统一为 `/api/app-agents`
 - 前端：`api/app.ts` → `api/app-agent.ts`、`api/tool.ts` → `api/app-agent-tool.ts`；`views/apps/` → `views/app-agents/`（新增，旧目录待删除）
 - 同步更新：`router/index.ts`、`config/menu.ts`、`utils/flow.ts`、`api/public.ts`、`api/types.ts`
 - 新增未跟踪目录：`docs/`、`frontend/src/views/app-agents/`

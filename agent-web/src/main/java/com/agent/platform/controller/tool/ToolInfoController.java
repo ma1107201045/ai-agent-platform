@@ -1,8 +1,8 @@
-package com.agent.platform.controller.app;
+package com.agent.platform.controller.tool;
 
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.entity.app.AppAgentTool;
-import com.agent.platform.service.app.AppAgentToolService;
+import com.agent.platform.dao.entity.tool.ToolInfo;
+import com.agent.platform.service.tool.ToolInfoService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -21,35 +21,35 @@ import java.util.List;
  * </pre>
  */
 @RestController
-@RequestMapping("/api/app/agent-tools")
+@RequestMapping("/api/tool/infos")
 @RequiredArgsConstructor
-public class AppAgentToolController {
+public class ToolInfoController {
 
-    private final AppAgentToolService toolService;
+    private final ToolInfoService toolService;
 
     @GetMapping
-    public Result<Page<AppAgentTool>> page(@RequestParam(defaultValue = "1") long page,
-                                        @RequestParam(defaultValue = "20") long size) {
+    public Result<Page<ToolInfo>> page(@RequestParam(defaultValue = "1") long page,
+                                       @RequestParam(defaultValue = "20") long size) {
         return Result.ok(toolService.page(page, size));
     }
 
     @GetMapping("/enabled")
-    public Result<List<AppAgentTool>> enabled() {
+    public Result<List<ToolInfo>> enabled() {
         return Result.ok(toolService.listEnabled());
     }
 
     @GetMapping("/{id}")
-    public Result<AppAgentTool> getById(@PathVariable Long id) {
+    public Result<ToolInfo> getById(@PathVariable Long id) {
         return Result.ok(toolService.getById(id));
     }
 
     @PostMapping
-    public Result<AppAgentTool> create(@RequestBody AppAgentTool tool) {
+    public Result<ToolInfo> create(@RequestBody ToolInfo tool) {
         return Result.ok(toolService.create(tool));
     }
 
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody AppAgentTool tool) {
+    public Result<Void> update(@PathVariable Long id, @RequestBody ToolInfo tool) {
         tool.setId(id);
         toolService.update(tool);
         return Result.ok();

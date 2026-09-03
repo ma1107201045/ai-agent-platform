@@ -1,8 +1,8 @@
 package com.agent.platform.service.tool;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.dao.entity.app.AppAgentTool;
-import com.agent.platform.dao.mapper.app.AppAgentToolMapper;
+import com.agent.platform.dao.entity.tool.ToolInfo;
+import com.agent.platform.dao.mapper.tool.ToolInfoMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * 插件市场服务：内置工具模板目录 + 一键安装到当前工作空间。
  *
  * <p>模板定义由服务端内置维护（随版本更新补充），安装即创建一条真实的
- * {@link AppAgentTool} 记录，复用既有 HTTP / 代码工具执行能力，模型可立即调用。
+ * {@link ToolInfo} 记录，复用既有 HTTP / 代码工具执行能力，模型可立即调用。
  *
  * <p>约定：Template.name 即安装后的工具名（英文标识符）；目录中与现有工具同名的模板视为「已安装」。
  */
@@ -30,7 +30,7 @@ public class ToolMarketplaceService {
     /** 内置模板目录（category：basic 通用 / text 文本处理 / web 网络数据） */
     private static final List<Template> TEMPLATES = buildTemplates();
 
-    private final AppAgentToolMapper toolMapper;
+    private final ToolInfoMapper toolMapper;
 
     // ---------- 模板定义 ----------
 
@@ -143,9 +143,9 @@ public class ToolMarketplaceService {
      * 模板目录（含已安装标记）。可按分类 / 关键字过滤。
      */
     public List<TemplateVO> templates(String category, String keyword) {
-        Set<String> names = toolMapper.selectList(new LambdaQueryWrapper<AppAgentTool>()
-                        .select(AppAgentTool::getName))
-                .stream().map(AppAgentTool::getName).collect(Collectors.toSet());
+        Set<String> names = toolMapper.selectList(new LambdaQueryWrapper<ToolInfo>()
+                        .select(ToolInfo::getName))
+                .stream().map(ToolInfo::getName).collect(Collectors.toSet());
         return TEMPLATES.stream()
                 .filter(t -> category == null || category.isBlank() || category.equals(t.getCategory()))
                 .filter(t -> keyword == null || keyword.isBlank()
@@ -173,17 +173,17 @@ public class ToolMarketplaceService {
     /**
      * 按模板一键安装：以模板内容创建一条真实工具记录。
      */
-    public AppAgentTool install(String key) {
+    public ToolInfo install(String key) {
         Template t = TEMPLATES.stream()
                 .filter(x -> x.getKey().equals(key))
                 .findFirst()
                 .orElseThrow(() -> new BizException("模板不存在: " + key));
-        Long exists = toolMapper.selectCount(new LambdaQueryWrapper<AppAgentTool>()
-                .eq(AppAgentTool::getName, t.getName()));
+        Long exists = toolMapper.selectCount(new LambdaQueryWrapper<ToolInfo>()
+                .eq(ToolInfo::getName, t.getName()));
         if (exists != null && exists > 0) {
             throw new BizException("「" + t.getName() + "」已存在于工具管理中，无需重复安装，可直接前往工具管理编辑使用");
         }
-        AppAgentTool tool = new AppAgentTool();
+        ToolInfo tool = new ToolInfo();
         tool.setTenantId(1L);
         tool.setName(t.getName());
         tool.setDescription(t.getDescription());

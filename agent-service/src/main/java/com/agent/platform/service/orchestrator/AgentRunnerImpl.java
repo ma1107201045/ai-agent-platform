@@ -1,7 +1,7 @@
 package com.agent.platform.service.orchestrator;
 
 import com.agent.platform.dao.entity.app.AppAgent;
-import com.agent.platform.dao.entity.app.AppAgentTool;
+import com.agent.platform.dao.entity.tool.ToolInfo;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.orchestrator.spi.AgentRunner;
@@ -43,7 +43,7 @@ public class AgentRunnerImpl implements AgentRunner {
             datasetIdsJson = app.getDatasetIds();
         }
 
-        List<AppAgentTool> tools = appAgentService.loadTools(toJsonArray(toolIds));
+        List<ToolInfo> tools = appAgentService.loadTools(toJsonArray(toolIds));
         List<ChatMessage> history = List.of(ChatMessage.user(
                 task.userMessage() == null ? "" : task.userMessage()));
 
