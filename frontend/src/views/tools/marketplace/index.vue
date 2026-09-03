@@ -89,7 +89,7 @@ async function install(tpl: ToolTemplate) {
   try {
     await toolMarketplaceApi.install(tpl.key)
     ElMessage.success(`「${tpl.name}」安装成功，已加入工具管理`)
-    load()
+    await load()
   } finally {
     installing.value = null
   }
