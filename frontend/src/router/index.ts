@@ -146,38 +146,24 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/knowledge/index.vue'),
         meta: { title: '知识库' }
       },
-      planned('data/memory', 'DataMemory', {
-        title: '记忆管理',
-        phase: 'P0',
-        desc: '管理智能体的长期记忆与知识沉淀，让对话越用越懂用户',
-        features: [
-          { name: '会话变量', detail: '跨会话保存用户偏好与上下文变量' },
-          { name: '长期记忆', detail: '自动抽取事实并沉淀为可检索的记忆库' },
-          { name: '记忆策略', detail: '配置记忆写入、更新与遗忘策略' }
-        ],
-        dependency: '需后端新增记忆存储与抽取服务'
-      }),
-      planned('data/storage', 'DataStorage', {
-        title: '数据存储',
-        phase: 'P1',
-        desc: '维护智能体使用的业务数据表，与记忆/知识库能力互补',
-        features: [
-          { name: '数据表管理', detail: '建表、增删改查业务数据' },
-          { name: '关联记忆', detail: '数据表内容作为对话上下文来源' },
-          { name: '数据导入', detail: '批量导入与导出数据' }
-        ],
-        dependency: '需后端新增结构化数据存储服务'
-      }),
-      planned('data/assets', 'DataAssets', {
-        title: '素材管理',
-        phase: 'P2',
-        desc: '统一管理上传的图片与文件，供应用与知识库复用',
-        features: [
-          { name: '文件上传', detail: '图片、文档统一存储与管理' },
-          { name: '素材引用', detail: '在应用对话与知识库中引用素材' }
-        ],
-        dependency: '需后端新增素材存储与引用接口'
-      }),
+      {
+        path: 'data/memory',
+        name: 'DataMemory',
+        component: () => import('@/views/memory/index.vue'),
+        meta: { title: '记忆管理' }
+      },
+      {
+        path: 'data/storage',
+        name: 'DataStorage',
+        component: () => import('@/views/storage/index.vue'),
+        meta: { title: '数据存储' }
+      },
+      {
+        path: 'data/assets',
+        name: 'DataAssets',
+        component: () => import('@/views/assets/index.vue'),
+        meta: { title: '素材管理' }
+      },
 
       /* ---------------- 工具 /tools ---------------- */
       {

@@ -25,7 +25,7 @@
           :class="{ active: categoryFilter === c.value }"
           @click="changeCategory(c.value)"
         >
-          <el-icon v-if="c.value !== ''" class="cat-icon">{{ c.icon }}</el-icon>
+          <el-icon v-if="c.value !== ''" class="cat-icon"><component :is="c.icon" /></el-icon>
           {{ c.label }}
         </button>
       </div>
@@ -45,7 +45,9 @@
       <div v-else class="asset-grid">
         <div v-for="asset in assets" :key="asset.id" class="asset-card hover-card" @click="openDetail(asset)">
           <div class="asset-preview" :class="`cat-${asset.category}`">
-            <el-icon v-if="categoryIconComp(asset.category)">{{ categoryIconComp(asset.category) }}</el-icon>
+            <el-icon v-if="categoryIconComp(asset.category)">
+              <component :is="categoryIconComp(asset.category)" />
+            </el-icon>
             <span v-if="asset.ext" class="ext-badge">{{ asset.ext }}</span>
           </div>
           <div class="asset-info">
@@ -150,7 +152,9 @@
             <audio :src="previewUrl" controls class="preview-audio" />
           </div>
           <div class="preview-area file-preview" v-else>
-            <el-icon class="file-preview-icon">{{ categoryIconComp(detail.category) }}</el-icon>
+            <el-icon class="file-preview-icon">
+              <component :is="categoryIconComp(detail.category)" />
+            </el-icon>
             <span class="file-preview-ext">{{ detail.ext || 'FILE' }}</span>
           </div>
 
@@ -214,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, type Component } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Delete,
@@ -226,7 +230,6 @@ import {
   Link,
   Paperclip,
   Picture,
-  Plus,
   Refresh,
   Search,
   Upload,
@@ -304,7 +307,7 @@ const uploadCategory = ref('')
 const pendingFiles = ref<File[]>([])
 const uploading = ref(false)
 
-function onFilesChange(file: { raw?: File }, files: { raw?: File }[]) {
+function onFilesChange(_file: { raw?: File }, files: { raw?: File }[]) {
   pendingFiles.value = files
     .map((f) => f.raw)
     .filter((f): f is File => !!f)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Clock,
@@ -49,6 +49,8 @@ const categoryColor: Record<string, string> = {
   business: '#10b981',
   custom: '#5b6cff'
 }
+const categoryColorOf = (c?: string) => (c ? categoryColor[c] ?? '#64748b' : '#64748b')
+const categoryLabelOf = (c?: string) => (c ? categoryLabels[c] || c : '')
 
 async function load() {
   loading.value = true
@@ -418,7 +420,7 @@ onMounted(load)
     <div v-loading="loading" class="prompt-grid">
       <div v-for="row in list" :key="row.id" class="prompt-card hover-card">
         <div class="prompt-top">
-          <div class="prompt-icon" :style="{ '--prompt-c': categoryColor[row.category] || '#64748b' }">
+          <div class="prompt-icon" :style="{ '--prompt-c': categoryColorOf(row.category) }">
             <el-icon :size="18"><Collection /></el-icon>
           </div>
           <div class="prompt-title-row">
@@ -427,7 +429,7 @@ onMounted(load)
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </div>
-          <el-tag size="small" class="category-tag" effect="plain">{{ categoryLabels[row.category] || row.category }}</el-tag>
+          <el-tag size="small" class="category-tag" effect="plain">{{ categoryLabelOf(row.category) }}</el-tag>
         </div>
 
         <p class="prompt-desc">{{ row.description || '暂无描述' }}</p>

@@ -426,7 +426,7 @@ onMounted(load)
   margin-right: 6px;
 }
 .code-inline {
-  font-size: 12.5px;
+  font-size: 12px;
   word-break: break-all;
   background: var(--fill-light);
   padding: 6px 10px;

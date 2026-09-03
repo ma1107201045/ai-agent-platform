@@ -398,7 +398,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { appAgentApi } from '@/api/app-agent'
@@ -419,8 +419,6 @@ const apps = ref<AppAgent[]>([])
 const selectedAppId = ref<number | null>(null)
 const activeTab = ref('items')
 const chatModels = ref<ChatModelInfo[]>([])
-
-const selectedApp = computed(() => apps.value.find((a) => a.id === selectedAppId.value) || null)
 
 const itemCategories = [
   { value: 'preference', label: '用户偏好' },
@@ -689,6 +687,9 @@ const savingStrategy = ref(false)
 async function saveStrategy() {
   const s = strategy.value
   if (!s) return
+  if (s.autoExtract === 1 && !s.extractModelId) {
+    ElMessage.warning('已开启自动抽取但未选择抽取模型，自动抽取将不会执行')
+  }
   savingStrategy.value = true
   try {
     await memoryApi.saveStrategy({

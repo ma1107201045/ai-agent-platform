@@ -40,7 +40,7 @@ async function load() {
   loading.value = true
   try {
     const appId = filterAppId.value || undefined
-    const status = filterStatus.value === '' || filterStatus.value == null ? undefined : filterStatus.value
+    const status = filterStatus.value == null ? undefined : filterStatus.value
     const data = await appApiKeyApi.page({
       page: page.value,
       size: size.value,
@@ -207,11 +207,17 @@ async function toggleStatus(row: AppApiKey, val: boolean) {
   const next = val ? 1 : 0
   try {
     await appApiKeyApi.setStatus(row.id, next)
-    ElMessage.success(next === 1 ? '已启用' : '已禁用')
+    row.status = next
+    ElMessage.success(val ? '已启用' : '已禁用')
     load()
   } catch {
     // 失败时无需回滚（switch 使用单向 model-value，加载后自动还原）
   }
+}
+
+/** el-switch 的 change 值类型为 string | number | boolean，统一收敛为布尔 */
+function onStatusChange(row: AppApiKey, val: string | number | boolean) {
+  void toggleStatus(row, val === true || val === 1)
 }
 
 async function rotate(row: AppApiKey) {
@@ -405,7 +411,7 @@ onMounted(() => {
                 inline-prompt
                 active-text="启用"
                 inactive-text="禁用"
-                @change="(val) => toggleStatus(row, val === true)"
+                @change="onStatusChange(row, $event)"
               />
               <div class="row-links">
                 <el-button link type="primary" size="small" @click="openExample(row)">示例</el-button>

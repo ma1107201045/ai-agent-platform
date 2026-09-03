@@ -111,9 +111,9 @@ export const menuGroups: MenuGroup[] = [
     icon: Files,
     items: [
       { path: '/data/knowledge', title: '知识库', icon: FolderOpened },
-      { path: '/data/memory', title: '记忆管理', icon: Notebook, planned: true },
-      { path: '/data/storage', title: '数据存储', icon: Folder, planned: true },
-      { path: '/data/assets', title: '素材管理', icon: Picture, planned: true }
+      { path: '/data/memory', title: '记忆管理', icon: Notebook },
+      { path: '/data/storage', title: '数据存储', icon: Folder },
+      { path: '/data/assets', title: '素材管理', icon: Picture }
     ]
   },
   {
