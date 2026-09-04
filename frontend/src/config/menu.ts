@@ -179,8 +179,8 @@ export const menuGroups: MenuGroup[] = [
     icon: Setting,
     items: [
       { path: '/system/users', title: '团队与权限', icon: User },
-      { path: '/system/users/audit', title: '操作日志', icon: Document, planned: true },
-      { path: '/system/workspace', title: '工作空间', icon: OfficeBuilding, planned: true },
+      { path: '/system/users/audit', title: '操作日志', icon: Document },
+      { path: '/system/workspace', title: '工作空间', icon: OfficeBuilding },
       { path: '/system/trash', title: '回收站', icon: Delete, planned: true },
       { path: '/system/announcements', title: '公告管理', icon: Notification }
     ]

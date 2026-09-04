@@ -299,26 +299,18 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/users/index.vue'),
                 meta: {title: '团队与权限'}
             },
-            planned('system/users/audit', 'SystemUserAudit', {
-                title: '操作日志',
-                phase: 'P2',
-                desc: '记录关键操作行为，支持审计追溯与安全合规',
-                features: [
-                    {name: '操作审计', detail: '记录登录、应用变更、密钥操作等关键行为'},
-                    {name: '日志检索', detail: '按用户、时间、操作类型检索追溯'}
-                ],
-                dependency: '需后端新增审计日志记录与查询接口'
-            }),
-            planned('system/workspace', 'SystemWorkspace', {
-                title: '工作空间',
-                phase: 'P2',
-                desc: '多工作空间隔离与管理，成员按空间协作',
-                features: [
-                    {name: '空间管理', detail: '创建、切换与归档工作空间'},
-                    {name: '成员协作', detail: '按空间分配成员与角色'}
-                ],
-                dependency: '后端已有 SysTenant 实体，需补充空间级管理接口'
-            }),
+            {
+                path: 'system/users/audit',
+                name: 'SystemUserAudit',
+                component: () => import('@/views/users/audit/index.vue'),
+                meta: {title: '操作日志'}
+            },
+            {
+                path: 'system/workspace',
+                name: 'SystemWorkspace',
+                component: () => import('@/views/system/workspace/index.vue'),
+                meta: {title: '工作空间'}
+            },
             planned('system/trash', 'SystemTrash', {
                 title: '回收站',
                 phase: 'P2',

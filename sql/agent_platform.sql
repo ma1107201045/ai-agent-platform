@@ -1123,4 +1123,39 @@ CREATE TABLE `sys_notification`  (
 INSERT INTO `sys_notification` VALUES (1, 1, 1, 'announcement', 'AgentForge 平台 v1.2 功能升级公告', '平台已完成 v1.2 版本升级，新增费用账单、发布渠道与应用市场等能力，欢迎体验。', 'announcement', 1, 1, '2026-09-02 09:00:00', '2026-09-01 10:00:05', '2026-09-01 10:00:05');
 INSERT INTO `sys_notification` VALUES (2, 1, 1, 'system', '欢迎使用 AgentForge 智能体平台', '你已成功注册平台账号。可前往「智能体」创建你的第一个应用，或到「使用指南」快速上手。', NULL, NULL, 0, NULL, '2026-09-01 00:30:00', '2026-09-01 00:30:00');
 
+-- ----------------------------
+-- Table structure for sys_oper_log 操作日志
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_oper_log`;
+CREATE TABLE `sys_oper_log`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `user_id` bigint NULL DEFAULT NULL COMMENT '操作人ID',
+  `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '操作人登录名',
+  `module` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属模块',
+  `operation` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '操作内容',
+  `method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'HTTP 方法',
+  `uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '请求路径',
+  `ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '来源IP',
+  `success` tinyint NULL DEFAULT 1 COMMENT '是否成功: 0失败 1成功',
+  `error_msg` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '错误信息',
+  `cost_ms` int NULL DEFAULT NULL COMMENT '耗时(毫秒)',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant_time`(`tenant_id` ASC, `create_time` ASC) USING BTREE,
+  INDEX `idx_user`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '操作日志' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_oper_log
+-- ----------------------------
+INSERT INTO `sys_oper_log` VALUES (1, 1, 1, 'admin', '智能体', '发布应用', 'POST', '/api/app/agents/3/publish', '127.0.0.1', 1, NULL, 560, '2026-09-04 10:12:03');
+INSERT INTO `sys_oper_log` VALUES (2, 1, 1, 'admin', '知识库', '上传文档', 'POST', '/api/knowledge/documents/upload', '127.0.0.1', 1, NULL, 1240, '2026-09-04 10:05:41');
+INSERT INTO `sys_oper_log` VALUES (3, 1, 1, 'admin', '系统管理', '新增成员', 'POST', '/api/sys/users', '127.0.0.1', 1, NULL, 45, '2026-09-03 18:42:09');
+INSERT INTO `sys_oper_log` VALUES (4, 1, 1, 'admin', '工具', '配置数据源', 'PUT', '/api/tool/integrations/7', '127.0.0.1', 1, NULL, 88, '2026-09-03 16:20:55');
+INSERT INTO `sys_oper_log` VALUES (5, 1, 1, 'admin', '模型', '更新供应商', 'PUT', '/api/models/1', '127.0.0.1', 1, NULL, 63, '2026-09-03 11:08:30');
+INSERT INTO `sys_oper_log` VALUES (6, 1, 1, 'admin', '系统管理', '删除成员', 'DELETE', '/api/sys/users/9', '127.0.0.1', 0, '用户不存在: 9', 12, '2026-09-02 15:33:47');
+INSERT INTO `sys_oper_log` VALUES (7, 1, 1, 'admin', '提示词库', '新增提示词', 'POST', '/api/app/prompts', '127.0.0.1', 1, NULL, 28, '2026-09-02 09:14:26');
+INSERT INTO `sys_oper_log` VALUES (8, 1, 1, 'admin', '评测', '运行评测任务', 'POST', '/api/eval/tasks/2/run', '127.0.0.1', 1, NULL, 982, '2026-09-01 20:47:12');
+
 SET FOREIGN_KEY_CHECKS = 1;

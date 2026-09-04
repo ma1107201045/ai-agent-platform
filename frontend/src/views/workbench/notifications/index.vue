@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Bell,
@@ -11,6 +11,9 @@ import {
   WarningFilled
 } from '@element-plus/icons-vue'
 import { notificationApi, type SysNotification } from '@/api/sys-notification'
+import { useNotificationStore } from '@/stores/notification'
+
+const notificationStore = useNotificationStore()
 
 const loading = ref(false)
 const list = ref<SysNotification[]>([])
@@ -21,7 +24,8 @@ const size = ref(8)
 /** -1 全部 / 0 未读 / 1 已读 */
 const readFilter = ref<number>(-1)
 const typeFilter = ref('')
-const unread = ref(0)
+/** 未读数与顶栏徽标共用同一个 store */
+const unread = computed(() => notificationStore.unread)
 
 const typeMeta: Record<string, { label: string; color: string; icon: unknown }> = {
   system: { label: '系统', color: 'info', icon: InfoFilled },
@@ -56,7 +60,7 @@ async function load() {
   }
 }
 async function refreshUnread() {
-  unread.value = await notificationApi.unreadCount().catch(() => 0)
+  await notificationStore.refresh()
 }
 async function search() {
   page.value = 1

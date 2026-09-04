@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowDown,
@@ -12,12 +12,17 @@ import {
   SwitchButton
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { useNotificationStore } from '@/stores/notification'
 import { DEFAULT_HOME, menuGroups, menuItems } from '@/config/menu'
 import ThemeSwitch from '@/components/ThemeSwitch.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
+
+/** 未读数轮询定时器（顶栏挂载期间每 60s 刷新一次） */
+let unreadTimer: number | undefined
 
 /** 侧边栏收起：仅保留 64px 图标导航 */
 const collapsed = ref(false)
@@ -61,6 +66,12 @@ onMounted(() => {
   if (userStore.token && !userStore.profile) {
     userStore.fetchMe().catch(() => {})
   }
+  notificationStore.refresh()
+  unreadTimer = window.setInterval(() => notificationStore.refresh(), 60000)
+})
+
+onBeforeUnmount(() => {
+  if (unreadTimer) window.clearInterval(unreadTimer)
 })
 
 /** 开发环境下校验：菜单项必须存在对应路由，且路径前缀与分组 key 一致 */
@@ -143,10 +154,20 @@ if (import.meta.env.DEV) {
             <input class="search-input" placeholder="搜索应用、知识库、模型…" />
             <kbd class="search-kbd">⌘K</kbd>
           </div>
-          <el-tooltip content="通知中心" placement="bottom">
-            <button class="header-icon-btn" @click="router.push('/workbench/notifications')">
-              <el-icon :size="17"><Bell /></el-icon>
-            </button>
+          <el-tooltip
+            :content="notificationStore.unread > 0 ? `通知中心（未读 ${notificationStore.unread} 条）` : '通知中心'"
+            placement="bottom"
+          >
+            <el-badge
+              :value="notificationStore.unread"
+              :max="99"
+              :hidden="notificationStore.unread === 0"
+              class="notif-badge"
+            >
+              <button class="header-icon-btn" @click="router.push('/workbench/notifications')">
+                <el-icon :size="17"><Bell /></el-icon>
+              </button>
+            </el-badge>
           </el-tooltip>
           <ThemeSwitch />
           <el-dropdown class="user-dropdown" @command="onCommand">
@@ -443,6 +464,18 @@ if (import.meta.env.DEV) {
 .header-icon-btn:hover {
   background: var(--hover-bg);
   color: var(--text-primary);
+}
+
+/* 顶栏通知未读徽标 */
+.notif-badge {
+  display: inline-flex;
+  line-height: 1;
+}
+.notif-badge :deep(.el-badge__content) {
+  font-weight: 600;
+}
+.notif-badge:hover :deep(.el-badge__content) {
+  background: var(--el-color-danger);
 }
 
 .user-dropdown {
