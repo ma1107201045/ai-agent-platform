@@ -274,6 +274,8 @@ const debugForm = reactive({
   modelId: 0
 })
 const chatModels = ref<ChatModelInfo[]>([])
+/** 模型下拉加载中（打开调试试跑时异步拉取可用 LLM） */
+const chatModelsLoading = ref(false)
 const rendered = ref('')
 const testing = ref(false)
 const testResult = ref('')
@@ -316,6 +318,7 @@ async function openDebug(row: PromptTemplate) {
 }
 
 async function loadChatModels() {
+  chatModelsLoading.value = true
   try {
     chatModels.value = await modelApi.chatModels()
     if (chatModels.value.length > 0) {
@@ -323,6 +326,8 @@ async function loadChatModels() {
     }
   } catch {
     // 无可用模型时不阻塞调试
+  } finally {
+    chatModelsLoading.value = false
   }
 }
 
@@ -700,7 +705,13 @@ onMounted(load)
           <div class="debug-col">
             <div class="col-title">3. 模型测试</div>
             <div class="model-row">
-              <el-select v-model="debugForm.modelId" placeholder="选择模型" class="model-select">
+              <el-select
+                v-model="debugForm.modelId"
+                :placeholder="chatModelsLoading ? '模型加载中…' : chatModels.length ? '选择模型' : '暂无可用模型，请先配置启用的 LLM 模型'"
+                class="model-select"
+                :loading="chatModelsLoading"
+                :disabled="chatModelsLoading || testing"
+              >
                 <el-option
                   v-for="m in chatModels"
                   :key="m.id"
@@ -1140,5 +1151,21 @@ onMounted(load)
 .result-placeholder {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+</style>
+
+<style>
+/* 调试试跑弹窗经 teleport 挂到 body，scoped 样式不会命中，必须用全局样式。
+   兼容 class 落在 .el-dialog 面板或外层遮罩两种结构。 */
+.debug-dialog.el-dialog,
+.debug-dialog .el-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+}
+.debug-dialog .el-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>

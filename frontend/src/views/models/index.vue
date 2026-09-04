@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { modelApi } from '@/api/model'
 import type { ModelInfo, ModelProvider, ModelType, Usage } from '@/api/types'
@@ -344,6 +344,32 @@ const testStream = ref(true)
 /** 流式输出进行中（用于展示「停止」按钮） */
 const testStreaming = ref(false)
 const testAbort = ref<AbortController | null>(null)
+/** 测试弹窗内滚动容器选择器（弹窗 teleport 到 body，用类名定位） */
+const TEST_SCROLL_BOX = '.test-dialog .el-dialog__body'
+/** 流式输出时是否自动跟随最新文字（用户上翻回看历史时暂停，回到底部后恢复） */
+const testAutoFollow = ref(true)
+function bindTestScrollFollow() {
+  const box = document.querySelector(TEST_SCROLL_BOX) as HTMLElement | null
+  if (!box || (box as { __followBound?: boolean }).__followBound) return
+  ;(box as { __followBound?: boolean }).__followBound = true
+  box.addEventListener(
+    'scroll',
+    () => {
+      testAutoFollow.value = box.scrollHeight - box.scrollTop - box.clientHeight < 48
+    },
+    { passive: true }
+  )
+}
+/** 把滚动容器滚到最底部，让最新输出的文字进入视口 */
+function followTestScroll() {
+  if (!testAutoFollow.value) return
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      const box = document.querySelector(TEST_SCROLL_BOX) as HTMLElement | null
+      if (box) box.scrollTop = box.scrollHeight
+    })
+  })
+}
 
 const testDialogTitle = computed(() => {
   const name = testModel.value ? ` · ${testModel.value.name}` : ''
@@ -369,6 +395,13 @@ function openTest(m: ModelInfo, provider: ModelProvider, mode: 'chat' | 'embed' 
   testEmbedVectors.value = null
   testEmbedText.value = mode === 'embed' ? '智能体（Agent）是什么？\n请对这段话进行向量化' : ''
   testVisible.value = true
+  testAutoFollow.value = true
+  // 等弹窗渲染后：恢复自动跟随、置顶滚动、绑定一次滚动监听
+  setTimeout(() => {
+    bindTestScrollFollow()
+    const box = document.querySelector(TEST_SCROLL_BOX) as HTMLElement | null
+    if (box) box.scrollTop = 0
+  }, 0)
 }
 async function runTest() {
   testError.value = ''
@@ -436,7 +469,10 @@ async function runTest() {
         ]
       },
       (chunk) => {
-        if (chunk.delta) testOutput.value += chunk.delta
+        if (chunk.delta) {
+          testOutput.value += chunk.delta
+          followTestScroll()
+        }
         if (chunk.usage) testUsage.value = chunk.usage
       },
       controller.signal
@@ -458,6 +494,12 @@ async function runTest() {
 function stopTest() {
   testAbort.value?.abort()
 }
+
+// 关闭测试弹窗（关闭按钮 / 点击遮罩 / Esc）时，中断仍在进行的流式请求，
+// 使 fetch 断开连接，通知服务端结束输出
+watch(testVisible, (visible) => {
+  if (!visible) testAbort.value?.abort()
+})
 
 onMounted(load)
 </script>
@@ -509,7 +551,7 @@ onMounted(load)
                   <span>「{{ row.name }}」下的模型</span>
                   <span class="count-badge">{{ (expandedModels[row.id] || []).length }}</span>
                 </div>
-                <el-button size="small" type="primary" plain @click="openModelCreate(row)">
+                <el-button type="primary" plain @click="openModelCreate(row)">
                   <el-icon style="margin-right: 4px"><Plus /></el-icon>添加模型
                 </el-button>
               </div>
@@ -606,9 +648,9 @@ onMounted(load)
           <template #default="{ row }">
             <div class="provider-cell">
               <div class="provider-badge">{{ (row.name || '?').charAt(0).toUpperCase() }}</div>
-              <div>
+              <div class="provider-text">
                 <div class="provider-name-row">
-                  <span class="provider-name">{{ row.name }}</span>
+                  <span class="provider-name" :title="row.name">{{ row.name }}</span>
                   <el-tag size="small" :type="row.type === 'openai-compatible' ? 'success' : 'info'" effect="light">
                     {{ providerTypeLabel(row.type) }}
                   </el-tag>
@@ -622,7 +664,12 @@ onMounted(load)
         <el-table-column label="API 地址" min-width="240">
           <template #default="{ row }">
             <div class="kv-cell">
-              <span class="mono kv-value" :class="{ dim: !row.baseUrl }">{{ row.baseUrl || '未配置' }}</span>
+              <span
+                class="mono kv-value"
+                :class="{ dim: !row.baseUrl }"
+                :title="row.baseUrl || ''"
+                >{{ row.baseUrl || '未配置' }}</span
+              >
               <el-button v-if="row.baseUrl" link type="primary" @click="copyText(row.baseUrl)">复制</el-button>
             </div>
           </template>
@@ -708,7 +755,7 @@ onMounted(load)
     </el-dialog>
 
     <!-- 模型弹窗 -->
-    <el-dialog v-model="modelDialog" :title="modelEditId ? '编辑模型' : '添加模型'" width="640px">
+    <el-dialog v-model="modelDialog" :title="modelEditId ? '编辑模型' : '添加模型'" width="560px">
       <el-form label-width="110px">
         <el-form-item label="所属供应商">
           <el-input :model-value="modelProviderName" disabled />
@@ -749,7 +796,7 @@ onMounted(load)
     </el-dialog>
 
     <!-- 连通性测试 -->
-    <el-dialog v-model="testVisible" :title="testDialogTitle" width="640px">
+    <el-dialog v-model="testVisible" :title="testDialogTitle" width="640px" class="test-dialog" top="5vh">
       <div class="test-meta">
         <el-tag size="small" :type="modelTypeTag(testModel?.modelType)" effect="light">
           {{ modelTypeLabel(testModel?.modelType) }}
@@ -794,6 +841,12 @@ onMounted(load)
         >
           {{ testLoading ? '请求中…' : '运行测试' }}
         </el-button>
+      </div>
+
+      <!-- 请求等待中的加载反馈（流式首 token 前 / 非流式 / 向量化期间展示） -->
+      <div v-if="testLoading && !testOutput" class="test-loading">
+        <el-icon class="test-loading-icon"><Loading /></el-icon>
+        <span>{{ testStreaming ? '正在等待模型响应…' : '正在请求模型…' }}</span>
       </div>
 
       <div v-if="testError" class="test-error">
@@ -869,6 +922,10 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+.provider-cell > .provider-text {
+  min-width: 0;
 }
 .provider-badge {
   flex: none;
@@ -879,6 +936,7 @@ onMounted(load)
   align-items: center;
   justify-content: center;
   background: var(--brand-gradient);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset, 0 2px 6px rgba(31, 35, 45, 0.15);
   color: #fff;
   font-weight: 600;
   font-size: 14px;
@@ -887,21 +945,37 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 .provider-name {
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.provider-name-row .el-tag {
+  flex: none;
 }
 .provider-id {
   margin-top: 2px;
   font-size: 11px;
   color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kv-cell {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+.kv-cell .el-button {
+  flex: none;
 }
 .kv-value {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1044,6 +1118,26 @@ onMounted(load)
   margin: 12px 0;
   min-height: 32px;
 }
+.test-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--fill-lighter);
+  border: 1px solid var(--border-color);
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+.test-loading-icon {
+  animation: test-loading-rotate 1s linear infinite;
+}
+@keyframes test-loading-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .test-result,
 .test-error {
   margin-top: 4px;
@@ -1081,5 +1175,21 @@ onMounted(load)
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--el-color-danger);
+}
+</style>
+
+<style>
+/* 测试弹窗经 teleport 挂到 body，scoped 样式不会命中，必须用全局样式。
+   兼容 class 落在 .el-dialog 面板或外层遮罩两种结构。 */
+.test-dialog.el-dialog,
+.test-dialog .el-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 72vh;
+}
+.test-dialog .el-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>
