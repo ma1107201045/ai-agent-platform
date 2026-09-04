@@ -82,28 +82,18 @@ const routes: RouteRecordRaw[] = [
                 ],
                 dependency: '需后端维护模板市场数据与模板实例化接口'
             }),
-            planned('app/marketplace', 'AppMarketplace', {
-                title: '应用市场',
-                phase: 'P1',
-                desc: '发现、分享并一键安装社区智能体，像应用商店一样获取场景能力',
-                features: [
-                    {name: '应用发现', detail: '按场景/分类浏览与搜索已发布应用'},
-                    {name: '一键安装', detail: '从市场安装应用到当前工作空间'},
-                    {name: '应用上架', detail: '将自有应用发布为市场可安装模板'}
-                ],
-                dependency: '需后端新增应用市场数据与安装接口'
-            }),
-            planned('app/multi-agent', 'MultiAgent', {
-                title: '多智能体编排',
-                phase: 'P1',
-                desc: '编排多个角色智能体协作分工，胜任复杂业务流程',
-                features: [
-                    {name: '智能体团队', detail: '定义多个角色智能体及其协作关系'},
-                    {name: '任务路由', detail: '将任务分配给最合适的智能体执行'},
-                    {name: '协作对话', detail: '可视化查看智能体间传递与决策过程'}
-                ],
-                dependency: '需扩展 WorkflowEngine 支持多智能体协作'
-            }),
+            {
+                path: 'app/marketplace',
+                name: 'AppMarketplace',
+                component: () => import('@/views/app/marketplace/index.vue'),
+                meta: {title: '应用市场'}
+            },
+            {
+                path: 'app/multi-agent',
+                name: 'AppMultiAgent',
+                component: () => import('@/views/app/multi-agent/index.vue'),
+                meta: {title: '多智能体编排'}
+            },
             planned('app/schedules', 'AppSchedules', {
                 title: '定时任务',
                 phase: 'P2',
@@ -115,17 +105,12 @@ const routes: RouteRecordRaw[] = [
                 ],
                 dependency: '需后端新增任务调度与触发服务'
             }),
-            planned('app/guardrails', 'AppGuardrails', {
-                title: '内容安全',
-                phase: 'P1',
-                desc: '输入输出内容校验与敏感词过滤，保障应用合规安全',
-                features: [
-                    {name: '敏感词库', detail: '自定义敏感词与拦截策略'},
-                    {name: '输入校验', detail: 'Prompt 注入与越权输入检测'},
-                    {name: '输出过滤', detail: '生成内容合规过滤与降级回复'}
-                ],
-                dependency: '需在模型调用链路上增加护栏拦截'
-            }),
+            {
+                path: 'app/guardrails',
+                name: 'AppGuardrails',
+                component: () => import('@/views/app/guardrails/index.vue'),
+                meta: {title: '内容安全'}
+            },
             {
                 path: 'app/agents/:id/edit',
                 name: 'AppEdit',
@@ -210,17 +195,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/publish/channels/index.vue'),
                 meta: {title: '渠道管理'}
             },
-            planned('publish/docs', 'PublishDocs', {
-                title: 'API 文档',
-                phase: 'P1',
-                desc: '查看应用调用的接口说明与代码示例，快速完成接入',
-                features: [
-                    {name: '接口文档', detail: '在线查看请求/响应定义与鉴权方式'},
-                    {name: '代码示例', detail: '多语言 SDK 与调用示例'},
-                    {name: '接口调试', detail: '在文档页直接调试调用'}
-                ],
-                dependency: '需基于应用 API 生成在线文档'
-            }),
+            {
+                path: 'publish/docs',
+                name: 'PublishDocs',
+                component: () => import('@/views/publish/docs/index.vue'),
+                meta: {title: 'API 文档'}
+            },
 
             /* ---------------- 观测 /ops ---------------- */
             {
@@ -232,7 +212,7 @@ const routes: RouteRecordRaw[] = [
             {
                 path: 'ops/conversations',
                 name: 'OpsConversations',
-                component: () => import('@/views/conversations/index.vue'),
+                component: () => import('@/views/chat/index.vue'),
                 meta: {title: '对话记录'}
             },
             {
@@ -247,16 +227,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/ops/usage/index.vue'),
                 meta: {title: '用量统计'}
             },
-            planned('ops/conversations/label', 'OpsConversationLabel', {
-                title: '对话标注',
-                phase: 'P1',
-                desc: '对对话质量进行标注与反馈回流，持续提升智能体效果',
-                features: [
-                    {name: '反馈标注', detail: '对消息进行好评/差评、人工标注与补充答案'},
-                    {name: '标注数据集', detail: '按应用汇总标注样本，导出为评测/微调数据集'}
-                ],
-                dependency: '需在 ChatMessage 上补充反馈与标注字段'
-            }),
+            {
+                path: 'ops/conversations/label',
+                name: 'OpsConversationLabel',
+                component: () => import('@/views/conversations/label/index.vue'),
+                meta: {title: '对话标注'}
+            },
             {
                 path: 'ops/billing',
                 name: 'OpsBilling',
