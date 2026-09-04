@@ -201,8 +201,8 @@ if (import.meta.env.DEV) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-card);
-  border-right: 1px solid var(--border-color);
+  background: #000;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
   transition: width 0.25s ease;
 }
@@ -220,7 +220,7 @@ if (import.meta.env.DEV) {
   padding: 0 20px;
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -267,10 +267,10 @@ if (import.meta.env.DEV) {
 }
 .menu-scroll :deep(.sidebar-menu) {
   --el-menu-bg-color: transparent;
-  --el-menu-text-color: var(--text-secondary);
-  --el-menu-hover-text-color: var(--text-primary);
-  --el-menu-hover-bg-color: var(--fill-light);
-  --el-menu-active-color: var(--brand-1);
+  --el-menu-text-color: rgba(255, 255, 255, 0.65);
+  --el-menu-hover-text-color: #fff;
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+  --el-menu-active-color: #fff;
   --el-menu-item-height: 40px;
   --el-menu-sub-item-height: 40px;
   border-right: none;
@@ -281,7 +281,7 @@ if (import.meta.env.DEV) {
   padding: 18px 16px 8px 20px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-tertiary);
+  color: rgba(255, 255, 255, 0.4);
   letter-spacing: 0.2px;
   line-height: 1;
   background: transparent;
@@ -295,15 +295,15 @@ if (import.meta.env.DEV) {
   margin-bottom: 2px;
   border-radius: 10px;
   font-size: 13.5px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.65);
 }
 .menu-scroll :deep(.el-menu-item:hover) {
-  background: var(--fill-light);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 .menu-scroll :deep(.el-menu-item.is-active) {
-  background: var(--el-color-primary-light-9);
-  color: var(--brand-1);
+  background: linear-gradient(135deg, rgba(91, 108, 255, 0.35), rgba(139, 92, 246, 0.35));
+  color: #fff;
   font-weight: 600;
 }
 .menu-scroll :deep(.el-menu-item .el-icon) {
@@ -324,7 +324,7 @@ if (import.meta.env.DEV) {
 .sidebar-footer {
   flex-shrink: 0;
   padding: 10px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .sidebar.collapsed .sidebar-footer {
   padding: 10px 0;
@@ -339,7 +339,7 @@ if (import.meta.env.DEV) {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -350,8 +350,8 @@ if (import.meta.env.DEV) {
   padding: 0;
 }
 .fold-btn:hover {
-  background: var(--fill-light);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 .fold-text {
   white-space: nowrap;
@@ -362,7 +362,7 @@ if (import.meta.env.DEV) {
    ============================================================ */
 .header {
   height: 64px;
-  background: var(--bg-card);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -371,10 +371,13 @@ if (import.meta.env.DEV) {
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .page-title {
   font-size: 18px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 .header-right {
   display: flex;
@@ -382,13 +385,14 @@ if (import.meta.env.DEV) {
   gap: 14px;
 }
 
+/* 顶栏随主题切换，头部按钮颜色直接继承全局主题变量 */
 .search-box {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 36px;
   padding: 0 12px;
-  background: var(--bg-page);
+  background: var(--fill-light);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   width: 260px;
@@ -455,7 +459,7 @@ if (import.meta.env.DEV) {
   transition: background-color 0.2s ease;
 }
 .user-trigger:hover {
-  background: var(--bg-page);
+  background: var(--hover-bg);
 }
 .avatar-ring {
   padding: 2px;
@@ -471,6 +475,7 @@ if (import.meta.env.DEV) {
 .user-name {
   font-size: 14px;
   font-weight: 500;
+  color: var(--text-primary);
 }
 .user-arrow {
   color: var(--text-tertiary);
@@ -531,18 +536,18 @@ if (import.meta.env.DEV) {
   font-size: 10px;
   line-height: 1.5;
   letter-spacing: 0.5px;
-  color: var(--text-tertiary);
-  background: var(--fill-light);
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ---------- 折叠状态 hover 弹出的子菜单浮层 ---------- */
 .el-menu--popup {
-  --el-menu-bg-color: var(--bg-elevated);
-  --el-menu-hover-bg-color: var(--fill-light);
-  --el-menu-active-color: var(--brand-1);
-  --el-menu-text-color: var(--text-secondary);
+  --el-menu-bg-color: #17181f;
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+  --el-menu-active-color: #fff;
+  --el-menu-text-color: rgba(255, 255, 255, 0.65);
   padding: 4px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   box-shadow: var(--shadow-pop);
 }
@@ -553,11 +558,11 @@ if (import.meta.env.DEV) {
   font-size: 13px;
 }
 .el-menu--popup .el-menu-item.is-active {
-  background: var(--brand-gradient-soft);
-  color: var(--brand-1);
+  background: linear-gradient(135deg, rgba(91, 108, 255, 0.35), rgba(139, 92, 246, 0.35));
+  color: #fff;
   font-weight: 600;
 }
 .el-menu--popup .el-menu-item.is-active .planned-badge {
-  color: var(--brand-1);
+  color: #fff;
 }
 </style>

@@ -47,17 +47,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/dashboard/index.vue'),
                 meta: {title: '工作台概览'}
             },
-            planned('workbench/notifications', 'WorkbenchNotifications', {
-                title: '通知中心',
-                phase: 'P2',
-                desc: '汇聚系统消息、任务结果与告警通知，一处查看',
-                features: [
-                    {name: '消息列表', detail: '系统、任务、告警消息统一聚合'},
-                    {name: '偏好设置', detail: '通知类型与渠道偏好配置'},
-                    {name: '已读管理', detail: '消息已读与批量操作'}
-                ],
-                dependency: '需后端新增消息中心服务'
-            }),
+            {
+                path: 'workbench/notifications',
+                name: 'WorkbenchNotifications',
+                component: () => import('@/views/workbench/notifications/index.vue'),
+                meta: {title: '通知中心'}
+            },
 
             /* ---------------- 应用 /app-agents ---------------- */
             {
@@ -72,16 +67,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/app/prompts/index.vue'),
                 meta: {title: '提示词库'}
             },
-            planned('app/templates', 'AppTemplates', {
-                title: '应用模板',
-                phase: 'P2',
-                desc: '从模板一键创建应用，覆盖常见业务场景，降低上手成本',
-                features: [
-                    {name: '场景模板库', detail: '内置对话助手、翻译、客服等常用场景模板'},
-                    {name: '一键创建', detail: '选择模板生成可编排应用，快速起步'}
-                ],
-                dependency: '需后端维护模板市场数据与模板实例化接口'
-            }),
+            {
+                path: 'app/templates',
+                name: 'AppTemplates',
+                component: () => import('@/views/app/templates/index.vue'),
+                meta: {title: '应用模板'}
+            },
             {
                 path: 'app/marketplace',
                 name: 'AppMarketplace',
@@ -94,17 +85,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/app/multi-agent/index.vue'),
                 meta: {title: '多智能体编排'}
             },
-            planned('app/schedules', 'AppSchedules', {
-                title: '定时任务',
-                phase: 'P2',
-                desc: '按时间或事件触发智能体/工作流自动执行',
-                features: [
-                    {name: '定时触发', detail: 'Cron 表达式配置周期执行'},
-                    {name: '事件触发', detail: 'Webhook 或业务事件触发运行'},
-                    {name: '执行记录', detail: '查看每次触发的运行结果'}
-                ],
-                dependency: '需后端新增任务调度与触发服务'
-            }),
+            {
+                path: 'app/schedules',
+                name: 'AppSchedules',
+                component: () => import('@/views/app/schedules/index.vue'),
+                meta: {title: '定时任务'}
+            },
             {
                 path: 'app/guardrails',
                 name: 'AppGuardrails',
@@ -344,17 +330,12 @@ const routes: RouteRecordRaw[] = [
                 ],
                 dependency: '需后端为删除操作增加软删除与回收站表'
             }),
-            planned('system/announcements', 'SystemAnnouncements', {
-                title: '公告管理',
-                phase: 'P2',
-                desc: '向平台用户发布系统公告与运营通知',
-                features: [
-                    {name: '公告发布', detail: '创建面向全部或指定用户群的公告'},
-                    {name: '有效期管理', detail: '公告上线/下线时间控制'},
-                    {name: '送达统计', detail: '查看公告阅读与送达情况'}
-                ],
-                dependency: '需后端新增公告实体与发布接口'
-            }),
+            {
+                path: 'system/announcements',
+                name: 'SystemAnnouncements',
+                component: () => import('@/views/system/announcements/index.vue'),
+                meta: {title: '公告管理'}
+            },
             {
                 path: 'system/security',
                 name: 'SystemSecurity',

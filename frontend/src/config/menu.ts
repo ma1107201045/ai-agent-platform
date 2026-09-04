@@ -88,7 +88,7 @@ export const menuGroups: MenuGroup[] = [
     icon: Odometer,
     items: [
       { path: '/workbench/dashboard', title: '工作台概览', icon: Odometer },
-      { path: '/workbench/notifications', title: '通知中心', icon: Bell, planned: true }
+      { path: '/workbench/notifications', title: '通知中心', icon: Bell }
     ]
   },
   {
@@ -98,10 +98,10 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { path: '/app/agents', title: '智能体', icon: Grid },
       { path: '/app/prompts', title: '提示词库', icon: Collection },
-      { path: '/app/templates', title: '应用模板', icon: CopyDocument, planned: true },
+      { path: '/app/templates', title: '应用模板', icon: CopyDocument },
       { path: '/app/marketplace', title: '应用市场', icon: Shop },
       { path: '/app/multi-agent', title: '多智能体编排', icon: Avatar },
-      { path: '/app/schedules', title: '定时任务', icon: Timer, planned: true },
+      { path: '/app/schedules', title: '定时任务', icon: Timer },
       { path: '/app/guardrails', title: '内容安全', icon: Umbrella }
     ]
   },
@@ -182,7 +182,7 @@ export const menuGroups: MenuGroup[] = [
       { path: '/system/users/audit', title: '操作日志', icon: Document, planned: true },
       { path: '/system/workspace', title: '工作空间', icon: OfficeBuilding, planned: true },
       { path: '/system/trash', title: '回收站', icon: Delete, planned: true },
-      { path: '/system/announcements', title: '公告管理', icon: Notification, planned: true }
+      { path: '/system/announcements', title: '公告管理', icon: Notification }
     ]
   },
   {

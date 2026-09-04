@@ -2,11 +2,13 @@ package com.agent.platform;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 智能体平台启动类
  */
 @SpringBootApplication
+@EnableScheduling
 public class AgentPlatformApplication {
 
     public static void main(String[] args) {

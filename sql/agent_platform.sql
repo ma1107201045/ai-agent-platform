@@ -987,4 +987,140 @@ CREATE TABLE `eval_run_case`  (
   INDEX `idx_run`(`run_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '评测用例明细' ROW_FORMAT = DYNAMIC;
 
+-- ----------------------------
+-- Table structure for sys_announcement 公告
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_announcement`;
+CREATE TABLE `sys_announcement`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `title` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '公告标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '公告内容(支持换行的纯文本)',
+  `scope` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'all' COMMENT '受众范围: all 全部用户',
+  `status` tinyint NULL DEFAULT 0 COMMENT '状态: 0草稿 1发布中 2已下线',
+  `pinned` tinyint NULL DEFAULT 0 COMMENT '是否置顶: 0否 1是',
+  `publish_time` datetime NULL DEFAULT NULL COMMENT '发布时间',
+  `offline_time` datetime NULL DEFAULT NULL COMMENT '下线时间',
+  `publisher` bigint NULL DEFAULT NULL COMMENT '发布人用户ID',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant_status`(`tenant_id` ASC, `status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '平台公告' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_announcement
+-- ----------------------------
+INSERT INTO `sys_announcement` VALUES (1, 1, 'AgentForge 平台 v1.2 功能升级公告', '各位用户：\n\n平台已于近期完成 v1.2 版本升级，本次升级新增以下能力：\n1. 新增费用账单与月度预算提醒；\n2. 新增发布渠道与应用市场模块；\n3. 优化多智能体编排与运行观测体验。\n\n如遇使用问题，可前往「帮助与文档」查看使用指南。', 'all', 1, 1, '2026-09-01 10:00:00', NULL, 1, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `sys_announcement` VALUES (2, 1, '关于数据安全使用的提醒（草稿）', '请勿在知识库与提示词中上传含敏感信息的资料，注意遵守数据安全规范。', 'all', 0, 0, NULL, NULL, 1, '2026-09-02 14:20:00', '2026-09-02 14:20:00');
+
+-- ----------------------------
+-- Table structure for app_template 应用模板
+-- ----------------------------
+DROP TABLE IF EXISTS `app_template`;
+CREATE TABLE `app_template`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID（0=平台内置）',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '模板名称',
+  `category` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '分类: customer-service/translate/content/data-analysis/marketing/coding/custom',
+  `app_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'chatflow' COMMENT '应用类型: chatflow/workflow/agent',
+  `icon` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '图标(emoji)',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '模板简介',
+  `use_case` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '适用场景',
+  `welcome_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '创建应用后的默认开场白',
+  `builtin` tinyint NULL DEFAULT 0 COMMENT '是否平台内置: 0否 1是',
+  `usage_count` int NULL DEFAULT 0 COMMENT '被使用次数',
+  `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0停用 1启用',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '应用模板' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of app_template（平台内置）
+-- ----------------------------
+INSERT INTO `app_template` VALUES (1, 0, '智能客服助手', 'customer-service', 'chatflow', '💬', '基于知识库回答客户问题，支持多轮追问与转人工', '电商 / 企业服务', '你好，我是智能客服助手，请问有什么可以帮您？', 1, 3, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `app_template` VALUES (2, 0, '多语言翻译助手', 'translate', 'chatflow', '🌐', '中英互译与术语润色，支持行业术语定制', '出海业务', '你好，我可以帮你完成多语言翻译与润色。', 1, 1, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `app_template` VALUES (3, 0, '内容创作助手', 'content', 'agent', '✍️', '撰写文章 / 文案 / 脚本，自动调用写作工具', '新媒体运营', '我来帮你创作内容，告诉我主题与风格即可。', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `app_template` VALUES (4, 0, '数据分析工作流', 'data-analysis', 'workflow', '📊', '数据接入-清洗-分析-报告一键生成', '经营分析', '', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `app_template` VALUES (5, 0, '营销文案助手', 'marketing', 'chatflow', '📣', '生成营销文案与活动创意，可切换文案风格', '市场运营', '我可以帮你生成各平台营销文案。', 1, 2, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `app_template` VALUES (6, 0, '编程助手', 'coding', 'agent', '👨‍💻', '代码生成 / 解释 / 重构，调用代码工具链', '研发提效', '我是编程助手，可以帮你编写与解释代码。', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+
+-- ----------------------------
+-- Table structure for app_schedule 应用定时任务
+-- ----------------------------
+DROP TABLE IF EXISTS `app_schedule`;
+CREATE TABLE `app_schedule`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '任务名称',
+  `app_id` bigint NOT NULL COMMENT '关联应用ID',
+  `app_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '应用名称快照',
+  `trigger_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'interval' COMMENT '触发类型: interval间隔/daily每天/weekly每周',
+  `interval_minutes` int NULL DEFAULT NULL COMMENT '触发间隔(分钟)，interval 生效',
+  `run_time` varchar(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '触发时刻 HH:mm，daily/weekly 生效',
+  `run_weekday` int NULL DEFAULT NULL COMMENT '周几 1-7(周一到周日)，weekly 生效',
+  `input_message` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '触发时发送给应用的输入',
+  `enabled` tinyint NULL DEFAULT 1 COMMENT '是否启用: 0停用 1启用',
+  `last_run_time` datetime NULL DEFAULT NULL COMMENT '最近执行时间',
+  `next_run_time` datetime NULL DEFAULT NULL COMMENT '下次执行时间',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_by` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  INDEX `idx_next`(`enabled` ASC, `next_run_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '应用定时任务' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for app_schedule_log 定时任务执行记录
+-- ----------------------------
+DROP TABLE IF EXISTS `app_schedule_log`;
+CREATE TABLE `app_schedule_log`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `schedule_id` bigint NOT NULL COMMENT '任务ID',
+  `schedule_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '任务名称快照',
+  `app_id` bigint NULL DEFAULT NULL COMMENT '应用ID',
+  `app_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '应用名称快照',
+  `trigger_by` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'scheduled' COMMENT '触发方式: scheduled自动/manual手动',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'success' COMMENT '执行结果: success成功/failed失败',
+  `message` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '结果摘要/错误信息',
+  `cost_ms` int NULL DEFAULT NULL COMMENT '耗时(毫秒)',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_schedule`(`schedule_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '定时任务执行记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for sys_notification 站内通知
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_notification`;
+CREATE TABLE `sys_notification`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `user_id` bigint NOT NULL COMMENT '接收用户ID',
+  `type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'system' COMMENT '类型: system系统/announcement公告/run任务/alert告警',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '内容',
+  `biz_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '业务类型(如 announcement)',
+  `biz_id` bigint NULL DEFAULT NULL COMMENT '业务ID',
+  `read` tinyint NULL DEFAULT 0 COMMENT '是否已读: 0未读 1已读',
+  `read_time` datetime NULL DEFAULT NULL COMMENT '阅读时间',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_user_read`(`tenant_id` ASC, `user_id` ASC, `read` ASC) USING BTREE,
+  INDEX `idx_biz`(`biz_type` ASC, `biz_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '站内通知' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_notification
+-- ----------------------------
+INSERT INTO `sys_notification` VALUES (1, 1, 1, 'announcement', 'AgentForge 平台 v1.2 功能升级公告', '平台已完成 v1.2 版本升级，新增费用账单、发布渠道与应用市场等能力，欢迎体验。', 'announcement', 1, 1, '2026-09-02 09:00:00', '2026-09-01 10:00:05', '2026-09-01 10:00:05');
+INSERT INTO `sys_notification` VALUES (2, 1, 1, 'system', '欢迎使用 AgentForge 智能体平台', '你已成功注册平台账号。可前往「智能体」创建你的第一个应用，或到「使用指南」快速上手。', NULL, NULL, 0, NULL, '2026-09-01 00:30:00', '2026-09-01 00:30:00');
+
 SET FOREIGN_KEY_CHECKS = 1;
