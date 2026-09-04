@@ -135,29 +135,13 @@ public class AppAgentService {
     }
 
     /**
-     * 删除应用：级联清理发布版本、会话与消息，避免脏数据残留
+     * 删除应用：软删除移入回收站，保留版本、会话与消息等子数据，
+     * 恢复后可完整还原；彻底删除由回收站级联清理
      */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         getById(id);
-        List<Long> convIds = chatConversationMapper.selectList(
-                        new LambdaQueryWrapper<ChatConversation>()
-                                .select(ChatConversation::getId)
-                                .eq(ChatConversation::getAppId, id))
-                .stream()
-                .map(ChatConversation::getId)
-                .toList();
-        if (!convIds.isEmpty()) {
-            chatMessageMapper.delete(
-                    new LambdaQueryWrapper<com.agent.platform.dao.entity.chat.ChatMessage>()
-                            .in(com.agent.platform.dao.entity.chat.ChatMessage::getConversationId, convIds));
-        }
-        chatConversationMapper.delete(
-                new LambdaQueryWrapper<ChatConversation>().eq(ChatConversation::getAppId, id));
-        chatUsageMapper.delete(new LambdaQueryWrapper<ChatUsage>().eq(ChatUsage::getAppId, id));
-        appAgentMapper.deleteById(id);
-        appAgentVersionMapper.delete(
-                new LambdaQueryWrapper<AppAgentVersion>().eq(AppAgentVersion::getAppId, id));
+        appAgentMapper.markDeleted(id);
     }
 
     // ==================== 版本与发布 ====================

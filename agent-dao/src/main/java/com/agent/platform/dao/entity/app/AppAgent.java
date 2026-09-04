@@ -2,6 +2,7 @@ package com.agent.platform.dao.entity.app;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -52,4 +53,11 @@ public class AppAgent {
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
+
+    /** 逻辑删除：0正常 1回收站 */
+    @TableLogic
+    private Integer deleted;
+
+    /** 删除时间 */
+    private LocalDateTime deletedTime;
 }

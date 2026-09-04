@@ -129,7 +129,7 @@ public class SysAnnouncementService {
 
     public void delete(Long id) {
         getById(id);
-        announcementMapper.deleteById(id);
+        announcementMapper.markDeleted(id);
     }
 
     private void validate(SysAnnouncement announcement) {

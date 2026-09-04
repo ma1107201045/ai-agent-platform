@@ -102,9 +102,8 @@ public class KnowledgeService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteDataset(Long id) {
         getDataset(id);
-        chunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDatasetId, id));
-        documentMapper.delete(new LambdaQueryWrapper<KnowledgeDocument>().eq(KnowledgeDocument::getDatasetId, id));
-        datasetMapper.deleteById(id);
+        // 回收站软删：保留文档与分段以便完整恢复，彻底删除在回收站执行
+        datasetMapper.markDeleted(id);
     }
 
     // ---------- 文档 ----------

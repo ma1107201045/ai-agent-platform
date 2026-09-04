@@ -107,13 +107,13 @@ public class AppTemplateService {
         templateMapper.updateById(template);
     }
 
-    /** 删除自定义模板 */
+    /** 删除自定义模板（移入回收站，可恢复） */
     public void delete(Long id) {
         AppTemplate exist = getById(id);
         if (exist.getBuiltin() != null && exist.getBuiltin() == 1) {
             throw new BizException("平台内置模板不可删除");
         }
-        templateMapper.deleteById(id);
+        templateMapper.markDeleted(id);
     }
 
     /**

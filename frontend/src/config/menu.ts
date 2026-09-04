@@ -149,7 +149,7 @@ export const menuGroups: MenuGroup[] = [
       { path: '/ops/usage', title: '用量统计', icon: Histogram },
       { path: '/ops/conversations/label', title: '对话标注', icon: CollectionTag },
       { path: '/ops/billing', title: '费用账单', icon: CreditCard },
-      { path: '/ops/alerts', title: '告警管理', icon: WarningFilled, planned: true }
+      { path: '/ops/alerts', title: '告警管理', icon: WarningFilled },
     ]
   },
   {
@@ -190,8 +190,8 @@ export const menuGroups: MenuGroup[] = [
     title: '帮助与文档',
     icon: QuestionFilled,
     items: [
-      { path: '/support/help', title: '使用指南', icon: QuestionFilled, planned: true },
-      { path: '/support/changelog', title: '更新日志', icon: List, planned: true }
+      { path: '/support/help', title: '使用指南', icon: QuestionFilled },
+      { path: '/support/changelog', title: '更新日志', icon: List }
     ]
   }
 ]

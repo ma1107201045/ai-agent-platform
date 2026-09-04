@@ -225,16 +225,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/ops/billing/index.vue'),
                 meta: {title: '费用账单'}
             },
-            planned('ops/alerts', 'OpsAlerts', {
-                title: '告警管理',
-                phase: 'P2',
-                desc: '监控错误率与用量指标，超过阈值自动通知',
-                features: [
-                    {name: '告警规则', detail: '配置错误率、用量、延迟等阈值规则'},
-                    {name: '通知渠道', detail: '通过邮件、Webhook 推送告警消息'}
-                ],
-                dependency: '需后端新增指标监控与通知投递能力'
-            }),
+            {
+                path: 'ops/alerts',
+                name: 'OpsAlerts',
+                component: () => import('@/views/ops/alerts/index.vue'),
+                meta: {title: '告警管理'}
+            },
 
             /* ---------------- 评测 /eval ---------------- */
             {
@@ -336,26 +332,18 @@ const routes: RouteRecordRaw[] = [
             },
 
             /* ---------------- 帮助与文档 /support ---------------- */
-            planned('support/help', 'SupportHelp', {
-                title: '使用指南',
-                phase: 'P2',
-                desc: '内置使用文档与常见问题，帮助快速上手',
-                features: [
-                    {name: '使用文档', detail: '分模块的操作指南与最佳实践'},
-                    {name: '常见问题', detail: 'FAQ 与常见排障指引'}
-                ],
-                dependency: '纯前端内容页，无需后端改动'
-            }),
-            planned('support/changelog', 'SupportChangelog', {
-                title: '更新日志',
-                phase: 'P2',
-                desc: '跟踪平台版本更新与功能演进，及时了解新能力',
-                features: [
-                    {name: '版本动态', detail: '按版本发布记录功能变更'},
-                    {name: '订阅关注', detail: '关注重点功能上线通知'}
-                ],
-                dependency: '纯前端内容页，无需后端改动'
-            })
+            {
+                path: 'support/help',
+                name: 'SupportHelp',
+                component: () => import('@/views/support/help/index.vue'),
+                meta: {title: '使用指南'}
+            },
+            {
+                path: 'support/changelog',
+                name: 'SupportChangelog',
+                component: () => import('@/views/support/changelog/index.vue'),
+                meta: {title: '更新日志'}
+            }
         ]
     }
 ]

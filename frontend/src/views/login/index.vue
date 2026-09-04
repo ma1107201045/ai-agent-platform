@@ -48,7 +48,7 @@ async function handleLogin() {
       <ThemeSwitch />
     </div>
 
-    <!-- 左侧品牌区 -->
+    <!-- 品牌区（order:2，视觉上显示在右侧） -->
     <div class="brand-panel">
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
@@ -80,7 +80,7 @@ async function handleLogin() {
       </div>
     </div>
 
-    <!-- 右侧登录区 -->
+    <!-- 登录区（order:1，视觉上显示在左侧） -->
     <div class="form-panel">
       <div class="login-card">
         <div class="card-head">
@@ -141,12 +141,25 @@ async function handleLogin() {
   right: 20px;
   z-index: 10;
 }
+/* 品牌区为深色，右上角主题切换按钮改为白玻璃样式以保持可读 */
+.theme-corner :deep(.theme-btn) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.theme-corner :deep(.theme-btn:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
 
-/* ---------- 左侧品牌区 ---------- */
+/* ---------- 品牌区（右侧 · 深色高端渐变） ---------- */
 .brand-panel {
   position: relative;
   flex: 1.15;
-  background: linear-gradient(135deg, #4b5ae8 0%, #7c4dff 55%, #9b5cff 100%);
+  order: 2;
+  background: linear-gradient(160deg, #1b2752 0%, #0e1734 48%, #171036 100%);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -174,24 +187,27 @@ async function handleLogin() {
 .orb-1 {
   width: 340px;
   height: 340px;
-  background: #ff8f6b;
+  background: #5f7dff;
   top: -90px;
   right: -60px;
+  opacity: 0.5;
 }
 .orb-2 {
   width: 280px;
   height: 280px;
-  background: #5be3ff;
+  background: #8a63ff;
   bottom: -70px;
   left: -50px;
+  opacity: 0.42;
   animation-delay: 2s;
 }
 .orb-3 {
   width: 180px;
   height: 180px;
-  background: #ffd75b;
+  background: #2fd3ff;
   bottom: 26%;
   right: 18%;
+  opacity: 0.4;
   animation-delay: 4s;
 }
 
@@ -267,8 +283,8 @@ async function handleLogin() {
   height: 8px;
   margin-top: 6px;
   border-radius: 50%;
-  background: #ffd75b;
-  box-shadow: 0 0 10px rgba(255, 215, 91, 0.9);
+  background: #9fb0ff;
+  box-shadow: 0 0 10px rgba(159, 176, 255, 0.85);
   flex-shrink: 0;
 }
 .feature-title {
@@ -292,13 +308,14 @@ async function handleLogin() {
   }
 }
 
-/* ---------- 右侧登录区 ---------- */
+/* ---------- 登录区（左侧 · 黑色背景） ---------- */
 .form-panel {
   flex: 1;
+  order: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-page);
+  background: #000000;
   padding: 32px;
 }
 
@@ -306,8 +323,9 @@ async function handleLogin() {
   width: 400px;
   padding: 44px 40px 32px;
   background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-pop);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
   animation: rise 0.7s ease 0.15s both;
 }
 .card-head {
@@ -341,6 +359,16 @@ async function handleLogin() {
 @media (max-width: 900px) {
   .brand-panel {
     display: none;
+  }
+  /* 品牌区隐藏后整屏为黑色登录区，主题按钮保持浅色可读 */
+  .theme-corner :deep(.theme-btn) {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .theme-corner :deep(.theme-btn:hover) {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
   }
 }
 </style>
