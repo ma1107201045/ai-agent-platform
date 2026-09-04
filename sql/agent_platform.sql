@@ -628,4 +628,363 @@ CREATE TABLE `tool_info`  (
 INSERT INTO `tool_info` VALUES (1, 1, 'get_current_time', '获取当前日期时间字符串', 'code', NULL, 'GET', NULL, 'none', NULL, '{\"type\":\"object\",\"properties\":{}}', 'return new java.text.SimpleDateFormat(\"yyyy-MM-dd HH:mm:ss\").format(new java.util.Date())', 1, '2026-08-28 00:22:58', '2026-08-28 00:22:58');
 INSERT INTO `tool_info` VALUES (2, 1, 'text_stats', '统计文本的长度、单词数和行数', 'code', NULL, 'GET', NULL, 'none', NULL, '{\"type\":\"object\",\"properties\":{}}', 'var t = input != null ? String.valueOf(input) : \"\"; return \"字符数=\" + t.length() + \", 单词数=\" + (t.trim().isEmpty() ? 0 : t.trim().split(\"\\\\s+\").length) + \", 行数=\" + t.split(\"\\n\").length', 1, '2026-08-28 00:22:58', '2026-08-28 00:22:58');
 
+-- ============================================================
+-- P0/P1 新增模块表（发布渠道 / 应用市场 / 多智能体 / 内容安全 /
+-- 模型网关 / 账号安全 / 对话标注 / 评测 / 费用账单）
+-- ============================================================
+
+-- ----------------------------
+-- Table structure for publish_channel 发布渠道管理
+-- ----------------------------
+DROP TABLE IF EXISTS `publish_channel`;
+CREATE TABLE `publish_channel`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `app_id` bigint NOT NULL COMMENT '绑定应用ID(app_agent.id)',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '渠道名称',
+  `channel_type` varchar(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '类型: wechat_mp公众号/feishu飞书/dingtalk钉钉/web网页/webhook',
+  `config_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '渠道配置(JSON，含凭证/校验token等)',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '启用: 0停用 1启用',
+  `msg_count` bigint NOT NULL DEFAULT 0 COMMENT '累计消息数',
+  `last_msg_at` datetime NULL DEFAULT NULL COMMENT '最近消息时间',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_app`(`app_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '发布-渠道管理' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for publish_channel_msg 渠道消息
+-- ----------------------------
+DROP TABLE IF EXISTS `publish_channel_msg`;
+CREATE TABLE `publish_channel_msg`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `channel_id` bigint NOT NULL COMMENT '渠道ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID',
+  `direction` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'inbound' COMMENT '方向: inbound入站/outbound出站',
+  `event_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '事件类型(如 message/event)',
+  `from_user` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '来源用户标识(openid等)',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '消息内容',
+  `reply` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '回复内容',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'success' COMMENT '处理状态: success/failed/skipped',
+  `error_msg` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '失败原因',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_channel`(`channel_id` ASC) USING BTREE,
+  INDEX `idx_app_time`(`app_id` ASC, `create_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '发布-渠道消息记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for app_market_item 应用市场(官方内置或用户上架)
+-- ----------------------------
+DROP TABLE IF EXISTS `app_market_item`;
+CREATE TABLE `app_market_item`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NULL DEFAULT NULL COMMENT '上架租户(空/0=平台官方)',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '应用名称',
+  `description` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `category` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'general' COMMENT '分类: general通用/customer_service客服/translate翻译/writing写作/office办公/analysis分析/other其他',
+  `icon` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '图标',
+  `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'chatflow' COMMENT '应用类型: chatflow/workflow/agent',
+  `workflow_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '应用DSL快照(安装时拷贝)',
+  `config_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '基础配置(JSON: welcome_message等)',
+  `source_app_id` bigint NULL DEFAULT NULL COMMENT '来源应用ID(用户上架时)',
+  `author` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '平台官方' COMMENT '作者',
+  `install_count` int NOT NULL DEFAULT 0 COMMENT '安装次数',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0下架 1上架',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_category`(`category` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '应用市场条目' ROW_FORMAT = DYNAMIC;
+
+INSERT INTO `app_market_item` (`id`, `tenant_id`, `name`, `description`, `category`, `icon`, `type`, `workflow_json`, `config_json`, `source_app_id`, `author`, `install_count`, `status`) VALUES
+(1, NULL, '智能客服助手', '基于知识库自动应答客户咨询，支持多轮追问与转人工引导，适合官网/电商客服场景。', 'customer_service', NULL, 'chatflow', '{\"nodes\":[],\"edges\":[]}', '{\"welcome_message\":\"您好，我是智能客服助手，请问有什么可以帮您？\",\"opening_questions\":[\"退货政策是什么？\",\"如何联系人工客服？\"]}', NULL, '平台官方', 0, 1),
+(2, NULL, '中英互译助手', '高质量中英互译与术语润色，支持行业术语定制，适合翻译与国际化业务。', 'translate', NULL, 'workflow', '{\"nodes\":[],\"edges\":[]}', '{\"welcome_message\":\"我可以帮您完成中英文互译与润色，请输入需要翻译的内容。\",\"opening_questions\":[\"帮我翻译这段话\",\"润色这段英文\"]}', NULL, '平台官方', 0, 1),
+(3, NULL, '日报周报助手', '根据工作事项自动生成结构化日报/周报，支持按模板定制，提升汇报效率。', 'office', NULL, 'chatflow', '{\"nodes\":[],\"edges\":[]}', '{\"welcome_message\":\"请描述今天完成的工作事项，我为您生成结构化日报。\",\"opening_questions\":[\"生成今日日报\",\"生成本周周报\"]}', NULL, '平台官方', 0, 1);
+
+-- ----------------------------
+-- Table structure for agent_team 多智能体团队
+-- ----------------------------
+DROP TABLE IF EXISTS `agent_team`;
+CREATE TABLE `agent_team`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '团队名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `routing` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'first_match' COMMENT '路由策略: first_match意图匹配/round_robin轮询/all并行汇合',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0停用 1启用',
+  `run_count` int NOT NULL DEFAULT 0 COMMENT '累计运行次数',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '多智能体编排-团队' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for agent_team_member 团队成员(角色)
+-- ----------------------------
+DROP TABLE IF EXISTS `agent_team_member`;
+CREATE TABLE `agent_team_member`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `team_id` bigint NOT NULL COMMENT '团队ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '成员/角色名',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '职责描述',
+  `app_id` bigint NOT NULL COMMENT '绑定应用ID(app_agent.id)',
+  `keywords` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '意图关键词(逗号分隔，first_match路由用)',
+  `priority` int NOT NULL DEFAULT 1 COMMENT '路由优先级(数字小优先)',
+  `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '是否启用: 0否 1是',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_team`(`team_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '多智能体编排-团队成员' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for agent_team_run 团队运行记录
+-- ----------------------------
+DROP TABLE IF EXISTS `agent_team_run`;
+CREATE TABLE `agent_team_run`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `team_id` bigint NOT NULL COMMENT '团队ID',
+  `input` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '用户输入',
+  `answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '最终回答',
+  `routed_member` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '命中的成员(名称)',
+  `trace_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '执行轨迹(JSON数组)',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'running' COMMENT '状态: running/success/failed',
+  `error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '错误信息',
+  `cost_ms` bigint NULL DEFAULT 0 COMMENT '耗时(毫秒)',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `finish_time` datetime NULL DEFAULT NULL COMMENT '结束时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_team_time`(`team_id` ASC, `create_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '多智能体编排-团队运行记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for guard_rule 内容安全规则
+-- ----------------------------
+DROP TABLE IF EXISTS `guard_rule`;
+CREATE TABLE `guard_rule`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '规则名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '规则说明',
+  `direction` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'input' COMMENT '作用方向: input输入/output输出',
+  `match_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'keyword' COMMENT '匹配方式: keyword关键词/regex正则/prompt_injection注入检测',
+  `rule_content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '匹配内容(关键词逗号分隔 或 正则表达式)',
+  `action` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'mask' COMMENT '处置动作: block拦截/mask打码/replace替换',
+  `replace_text` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '****' COMMENT '替换/打码文本',
+  `risk_level` tinyint NOT NULL DEFAULT 3 COMMENT '风险等级 1-5',
+  `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '启用: 0否 1是',
+  `priority` int NOT NULL DEFAULT 1 COMMENT '执行优先级(数字小优先)',
+  `hit_count` bigint NOT NULL DEFAULT 0 COMMENT '累计命中次数',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant_dir`(`tenant_id` ASC, `direction` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '内容安全-规则库' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for guard_app_bind 应用内容安全绑定
+-- ----------------------------
+DROP TABLE IF EXISTS `guard_app_bind`;
+CREATE TABLE `guard_app_bind`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID',
+  `rule_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '绑定规则ID列表(JSON数组)',
+  `mode` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'enforce' COMMENT '模式: enforce强制/log仅记录',
+  `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '启用: 0否 1是',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_app`(`app_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '内容安全-应用绑定' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for model_gateway_route 模型网关路由
+-- ----------------------------
+DROP TABLE IF EXISTS `model_gateway_route`;
+CREATE TABLE `model_gateway_route`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '路由名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `route_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'priority' COMMENT '路由类型: priority优先级/failover故障回退/round_robin轮询',
+  `targets_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '目标列表(JSON数组: [{modelId,weight,priority}])',
+  `is_default` tinyint NOT NULL DEFAULT 0 COMMENT '是否默认路由: 0否 1是',
+  `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '启用: 0否 1是',
+  `call_count` bigint NOT NULL DEFAULT 0 COMMENT '累计调用次数',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型网关路由' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for sys_user_security 账号安全扩展
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_user_security`;
+CREATE TABLE `sys_user_security`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '手机号',
+  `mfa_enabled` tinyint NOT NULL DEFAULT 0 COMMENT 'MFA二次验证: 0关闭 1开启',
+  `mfa_secret` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'MFA密钥(Base32)',
+  `mfa_bound_at` datetime NULL DEFAULT NULL COMMENT 'MFA绑定时间',
+  `last_login_at` datetime NULL DEFAULT NULL COMMENT '最近登录时间',
+  `last_login_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '最近登录IP',
+  `login_count` int NOT NULL DEFAULT 0 COMMENT '累计登录次数',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_user`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '账号安全扩展' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for bill_budget 预算提醒设置
+-- ----------------------------
+DROP TABLE IF EXISTS `bill_budget`;
+CREATE TABLE `bill_budget`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `month` varchar(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '月份(yyyy-MM)',
+  `budget` decimal(14, 2) NOT NULL DEFAULT 0.00 COMMENT '月度预算(元)',
+  `notify_enabled` tinyint NOT NULL DEFAULT 0 COMMENT '超预算提醒: 0否 1是',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_tenant_month`(`tenant_id` ASC, `month` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '费用账单-预算设置' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for chat_message_feedback 对话标注(反馈)
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_message_feedback`;
+CREATE TABLE `chat_message_feedback`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `message_id` bigint NOT NULL COMMENT '被标注消息ID(chat_message.id)',
+  `conversation_id` bigint NOT NULL COMMENT '会话ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID',
+  `user_id` bigint NULL DEFAULT NULL COMMENT '会话所属用户ID',
+  `rating` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'good' COMMENT '评分: good好/bad差',
+  `label_type` varchar(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '标签: correct准确/incorrect错误/hallucination幻觉/off_topic跑题/vague含糊',
+  `corrected_answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '补充参考答案',
+  `note` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '标注说明',
+  `created_by` bigint NULL DEFAULT NULL COMMENT '标注人ID',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_message`(`message_id` ASC) USING BTREE,
+  INDEX `idx_conversation`(`conversation_id` ASC) USING BTREE,
+  INDEX `idx_app`(`app_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '对话标注-消息反馈' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for eval_dataset 评测数据集
+-- ----------------------------
+DROP TABLE IF EXISTS `eval_dataset`;
+CREATE TABLE `eval_dataset`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '数据集名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `source` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'manual' COMMENT '来源: manual手动/import导入/feedback对话标注回流',
+  `sample_count` int NOT NULL DEFAULT 0 COMMENT '样本数量',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '评测数据集' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for eval_sample 评测样本
+-- ----------------------------
+DROP TABLE IF EXISTS `eval_sample`;
+CREATE TABLE `eval_sample`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `dataset_id` bigint NOT NULL COMMENT '数据集ID',
+  `question` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '提问',
+  `reference` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参考答案',
+  `category` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '样本分类/标签',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0停用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_dataset`(`dataset_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '评测样本' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for eval_experiment 对比实验
+-- ----------------------------
+DROP TABLE IF EXISTS `eval_experiment`;
+CREATE TABLE `eval_experiment`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '实验名称',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `dataset_id` bigint NOT NULL COMMENT '共用评测数据集ID',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0停用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_dataset`(`dataset_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '评测对比实验' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for eval_run 评测任务
+-- ----------------------------
+DROP TABLE IF EXISTS `eval_run`;
+CREATE TABLE `eval_run`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `experiment_id` bigint NULL DEFAULT NULL COMMENT '所属对比实验ID(可为空)',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '任务名称',
+  `dataset_id` bigint NOT NULL COMMENT '数据集ID',
+  `app_id` bigint NULL DEFAULT NULL COMMENT '被测应用ID(与应用/模型二选一)',
+  `app_version_id` bigint NULL DEFAULT NULL COMMENT '被测应用版本ID',
+  `model_id` bigint NULL DEFAULT NULL COMMENT '被测模型ID(直连模型时)',
+  `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending' COMMENT '状态: pending/running/success/failed/stopped',
+  `total_count` int NOT NULL DEFAULT 0 COMMENT '样本总数',
+  `success_count` int NOT NULL DEFAULT 0 COMMENT '通过数',
+  `failed_count` int NOT NULL DEFAULT 0 COMMENT '未通过数',
+  `pass_rate` decimal(6, 4) NULL DEFAULT NULL COMMENT '通过率(0-1)',
+  `avg_score` decimal(6, 4) NULL DEFAULT NULL COMMENT '平均得分(0-1)',
+  `report_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '报告(JSON: 分类得分/耗时统计等)',
+  `started_at` datetime NULL DEFAULT NULL COMMENT '开始时间',
+  `finished_at` datetime NULL DEFAULT NULL COMMENT '结束时间',
+  `error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '运行错误',
+  `created_by` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_dataset`(`dataset_id` ASC) USING BTREE,
+  INDEX `idx_experiment`(`experiment_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '评测任务' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for eval_run_case 评测任务用例明细
+-- ----------------------------
+DROP TABLE IF EXISTS `eval_run_case`;
+CREATE TABLE `eval_run_case`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `run_id` bigint NOT NULL COMMENT '评测任务ID',
+  `sample_id` bigint NULL DEFAULT NULL COMMENT '样本ID',
+  `question` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '提问',
+  `reference` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参考答案',
+  `answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '模型/应用回答',
+  `passed` tinyint NOT NULL DEFAULT 0 COMMENT '是否通过: 0否 1是',
+  `score` decimal(6, 4) NULL DEFAULT NULL COMMENT '相似度得分(0-1)',
+  `latency_ms` int NULL DEFAULT 0 COMMENT '耗时(毫秒)',
+  `error` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '错误信息',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_run`(`run_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '评测用例明细' ROW_FORMAT = DYNAMIC;
+
 SET FOREIGN_KEY_CHECKS = 1;

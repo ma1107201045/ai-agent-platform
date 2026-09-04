@@ -23,6 +23,7 @@
   --bg-aside: rgba(255, 255, 255, 0.9);
   --fill-light: #f5f7fa; /* 次级填充 */
   --fill-lighter: #fafbfe; /* 更浅的填充 */
+  --bg-fill: #f5f7fa; /* 次级填充别名（组件内 var(--bg-fill, #f5f7fa) 使用，需随主题切换） */
   --border-color: #e8ecf4;
   --hover-bg: rgba(31, 36, 55, 0.06);
 
@@ -78,6 +79,7 @@ html.dark {
   --bg-aside: rgba(21, 24, 40, 0.88);
   --fill-light: #1e2233;
   --fill-lighter: #1a1d2c;
+  --bg-fill: #1e2233; /* 与 --fill-light 同步，保证暗色下次级填充块正确换肤 */
   --border-color: #2a2f47;
   --hover-bg: rgba(255, 255, 255, 0.08);
 

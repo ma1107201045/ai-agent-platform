@@ -5,7 +5,9 @@ import com.agent.platform.common.result.ResultCode;
 import com.agent.platform.common.security.JwtUtil;
 import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.entity.sys.SysUser;
+import com.agent.platform.dao.entity.sys.SysUserSecurity;
 import com.agent.platform.dao.mapper.sys.SysUserMapper;
+import com.agent.platform.dao.mapper.sys.SysUserSecurityMapper;
 import com.agent.platform.dao.vo.sys.SysAuthLoginVO;
 import com.agent.platform.dao.vo.sys.UserProfileVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,6 +25,7 @@ import java.time.LocalDateTime;
 public class SysAuthService {
 
     private final SysUserMapper userMapper;
+    private final SysUserSecurityMapper securityMapper;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -37,8 +40,32 @@ public class SysAuthService {
             throw new BizException("账号已被禁用");
         }
         upgradeLegacyPassword(user, password);
+        recordLoginTrace(user);
         String token = jwtUtil.createToken(user.getId(), user.getTenantId(), user.getUsername());
         return new SysAuthLoginVO(token, toProfile(user));
+    }
+
+    /** 登录成功记录安全扩展表中的登录次数与时间 */
+    private void recordLoginTrace(SysUser user) {
+        SysUserSecurity sec = securityMapper.selectOne(
+                new LambdaQueryWrapper<SysUserSecurity>().eq(SysUserSecurity::getUserId, user.getId()));
+        LocalDateTime now = LocalDateTime.now();
+        if (sec == null) {
+            sec = new SysUserSecurity();
+            sec.setTenantId(user.getTenantId());
+            sec.setUserId(user.getId());
+            sec.setMfaEnabled(0);
+            sec.setLoginCount(1);
+            sec.setLastLoginAt(now);
+            sec.setCreateTime(now);
+            sec.setUpdateTime(now);
+            securityMapper.insert(sec);
+            return;
+        }
+        sec.setLoginCount((sec.getLoginCount() == null ? 0 : sec.getLoginCount()) + 1);
+        sec.setLastLoginAt(now);
+        sec.setUpdateTime(now);
+        securityMapper.updateById(sec);
     }
 
     /** 当前登录用户信息 */

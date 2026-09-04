@@ -204,17 +204,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/publish/versions/index.vue'),
                 meta: {title: '版本历史'}
             },
-            planned('publish/channels', 'PublishChannels', {
-                title: '渠道管理',
-                phase: 'P0',
-                desc: '将智能体一键接入微信、飞书、钉钉、Web 等终端渠道',
-                features: [
-                    {name: '渠道接入', detail: '公众号、飞书、钉钉、网页插件等'},
-                    {name: '渠道配置', detail: '各渠道的凭证与回复模式配置'},
-                    {name: '渠道监控', detail: '渠道级调用量与错误统计'}
-                ],
-                dependency: '需后端新增渠道实体与消息协议适配'
-            }),
+            {
+                path: 'publish/channels',
+                name: 'PublishChannels',
+                component: () => import('@/views/publish/channels/index.vue'),
+                meta: {title: '渠道管理'}
+            },
             planned('publish/docs', 'PublishDocs', {
                 title: 'API 文档',
                 phase: 'P1',
@@ -408,18 +403,12 @@ const routes: RouteRecordRaw[] = [
                 ],
                 dependency: '需后端新增公告实体与发布接口'
             }),
-            planned('system/security', 'SystemSecurity', {
-                title: '账号与安全',
-                phase: 'P0',
-                desc: '管理个人资料、登录密码与安全验证，守护账号安全',
-                features: [
-                    {name: '个人资料', detail: '昵称、头像、邮箱等资料维护'},
-                    {name: '密码管理', detail: '修改密码与找回设置'},
-                    {name: '安全验证', detail: 'MFA 二次验证与登录设备管理'}
-                ],
-                dependency: '需后端新增账号安全相关接口',
-                hidden: true
-            }),
+            {
+                path: 'system/security',
+                name: 'SystemSecurity',
+                component: () => import('@/views/system/security/index.vue'),
+                meta: {title: '账号与安全', hidden: true}
+            },
 
             /* ---------------- 帮助与文档 /support ---------------- */
             planned('support/help', 'SupportHelp', {

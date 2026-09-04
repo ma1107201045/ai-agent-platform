@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Clock,
@@ -12,6 +12,7 @@ import {
   Promotion,
   RefreshLeft,
   Search,
+  VideoPause,
   VideoPlay
 } from '@element-plus/icons-vue'
 import { appPromptApi } from '@/api/app-prompt'
@@ -43,13 +44,17 @@ const categoryOptions = [
 const categoryLabels: Record<string, string> = Object.fromEntries(
   categoryOptions.map((c) => [c.value, c.label])
 )
-const categoryColor: Record<string, string> = {
-  general: '#64748b',
-  system: '#f59e0b',
-  business: '#10b981',
-  custom: '#5b6cff'
+/** 分类封面渐变色（与智能体应用卡片同套封面表达） */
+const coverGradients: Record<string, [string, string]> = {
+  general: ['#64748b', '#94a3b8'],
+  system: ['#d97706', '#f59e0b'],
+  business: ['#059669', '#34d399'],
+  custom: ['#4f46e5', '#8b5cf6']
 }
-const categoryColorOf = (c?: string) => (c ? categoryColor[c] ?? '#64748b' : '#64748b')
+const coverGradientOf = (c?: string) => {
+  const g = (c && coverGradients[c]) || coverGradients.general
+  return `linear-gradient(135deg, ${g[0]} 0%, ${g[1]} 100%)`
+}
 const categoryLabelOf = (c?: string) => (c ? categoryLabels[c] || c : '')
 
 async function load() {
@@ -279,6 +284,12 @@ const chatModelsLoading = ref(false)
 const rendered = ref('')
 const testing = ref(false)
 const testResult = ref('')
+/** 进行中的流式请求（停止按钮 / 关闭弹窗时中断） */
+const debugAbort = ref<AbortController | null>(null)
+/** 模型回复区滚动容器 */
+const resultBoxRef = ref<HTMLElement | null>(null)
+/** 是否自动跟随最新回复（用户上翻查看历史时暂停，回到底部后恢复） */
+const resultFollow = ref(true)
 /** 变量名 → 说明（来自模板 variables 定义，作为试跑输入框提示） */
 const debugVarDesc = ref<Record<string, string>>({})
 
@@ -375,19 +386,67 @@ async function runTest() {
     ElMessage.warning('请选择测试模型')
     return
   }
-  testing.value = true
+  // SSE 流式输出：增量展示模型回复（与模型管理「对话测试」一致，可随时停止）
   testResult.value = ''
+  testing.value = true
+  resultFollow.value = true
+  const controller = new AbortController()
+  debugAbort.value = controller
   try {
-    const resp = await modelApi.chat({
-      modelId: debugForm.modelId,
-      systemPrompt: rendered.value,
-      prompt: debugForm.question || undefined
-    })
-    testResult.value = resp.content || '(模型未返回内容)'
+    await modelApi.chatStream(
+      {
+        modelId: debugForm.modelId,
+        messages: [
+          { role: 'system', content: rendered.value },
+          { role: 'user', content: debugForm.question || '' }
+        ]
+      },
+      (chunk) => {
+        if (chunk.delta) {
+          testResult.value += chunk.delta
+          followResultScroll()
+        }
+      },
+      controller.signal
+    )
+    if (!testResult.value.trim()) testResult.value = '(模型未返回内容)'
+  } catch (e) {
+    // 用户主动停止：保留已输出内容，不视为错误
+    if (!(e instanceof DOMException && e.name === 'AbortError')) {
+      testResult.value = e instanceof Error ? e.message : String(e)
+    }
   } finally {
     testing.value = false
+    debugAbort.value = null
+    followResultScroll()
   }
 }
+
+/** 停止流式输出（保留已生成内容） */
+function stopDebugStream() {
+  debugAbort.value?.abort()
+}
+
+/** 回复区用户手动滚动：贴近底部才继续自动跟随最新内容 */
+function onResultScroll() {
+  const el = resultBoxRef.value
+  if (!el) return
+  resultFollow.value = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+}
+
+/** 把回复区滚到底部，让最新输出的内容进入视口 */
+function followResultScroll() {
+  if (!resultFollow.value) return
+  nextTick(() => {
+    const el = resultBoxRef.value
+    if (el) el.scrollTop = el.scrollHeight
+  })
+}
+
+// 弹窗关闭（关闭按钮 / 点击遮罩 / Esc）时中断仍在进行的流式请求
+watch(debugVisible, (visible) => {
+  if (!visible) debugAbort.value?.abort()
+})
 
 onMounted(load)
 </script>
@@ -424,52 +483,55 @@ onMounted(load)
     <!-- 模板卡片 -->
     <div v-loading="loading" class="prompt-grid">
       <div v-for="row in list" :key="row.id" class="prompt-card hover-card">
-        <div class="prompt-top">
-          <div class="prompt-icon" :style="{ '--prompt-c': categoryColorOf(row.category) }">
-            <el-icon :size="18"><Collection /></el-icon>
-          </div>
+        <!-- 渐变封面 -->
+        <div class="prompt-cover" :style="{ background: coverGradientOf(row.category) }">
+          <div class="cover-deco"></div>
+          <el-icon :size="32" class="cover-icon"><Collection /></el-icon>
+          <span v-if="row.category" class="cover-category">{{ categoryLabelOf(row.category) }}</span>
+        </div>
+
+        <!-- 信息区 -->
+        <div class="prompt-body">
           <div class="prompt-title-row">
-            <span class="prompt-name">{{ row.name }}</span>
+            <span class="prompt-name" :title="row.name">{{ row.name }}</span>
             <el-tag size="small" :type="row.status === 1 ? 'success' : 'info'" effect="light">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </div>
-          <el-tag size="small" class="category-tag" effect="plain">{{ categoryLabelOf(row.category) }}</el-tag>
+          <p class="prompt-desc">{{ row.description || '暂无描述' }}</p>
+          <div class="prompt-foot">
+            <span class="prompt-version" title="当前版本">
+              <el-icon :size="12"><RefreshLeft /></el-icon>&nbsp;v{{ row.version }}
+            </span>
+            <span class="prompt-time">{{ formatTime(row.updateTime) }}</span>
+          </div>
         </div>
 
-        <p class="prompt-desc">{{ row.description || '暂无描述' }}</p>
-
-        <div class="prompt-meta">
-          <span class="prompt-version" title="当前版本">
-            <el-icon :size="12"><RefreshLeft /></el-icon>&nbsp;v{{ row.version }}
-          </span>
-          <span class="prompt-time">{{ formatTime(row.updateTime) }}</span>
-        </div>
-
+        <!-- hover 浮现操作 -->
         <div class="prompt-actions">
           <el-tooltip content="编辑模板" placement="top">
             <div class="action-btn" @click="openEdit(row)">
-              <el-icon :size="15"><Edit /></el-icon>
+              <el-icon :size="16"><Edit /></el-icon>
             </div>
           </el-tooltip>
           <el-tooltip content="版本历史" placement="top">
             <div class="action-btn" @click="openVersions(row)">
-              <el-icon :size="15"><Clock /></el-icon>
+              <el-icon :size="16"><Clock /></el-icon>
             </div>
           </el-tooltip>
           <el-tooltip content="调试试跑" placement="top">
             <div class="action-btn" @click="openDebug(row)">
-              <el-icon :size="15"><VideoPlay /></el-icon>
+              <el-icon :size="16"><VideoPlay /></el-icon>
             </div>
           </el-tooltip>
           <el-tooltip :content="row.status === 1 ? '禁用' : '启用'" placement="top">
             <div class="action-btn" @click="toggleStatus(row)">
-              <el-icon :size="15"><Promotion /></el-icon>
+              <el-icon :size="16"><Promotion /></el-icon>
             </div>
           </el-tooltip>
           <el-tooltip content="删除" placement="top">
             <div class="action-btn danger" @click="remove(row)">
-              <el-icon :size="15"><Delete /></el-icon>
+              <el-icon :size="16"><Delete /></el-icon>
             </div>
           </el-tooltip>
         </div>
@@ -657,7 +719,7 @@ onMounted(load)
 
         <div class="debug-grid">
           <!-- 左：编辑正文 -->
-          <div class="debug-col">
+          <div class="debug-col debug-col--left">
             <div class="col-title">1. 提示词正文（可临时修改）</div>
             <el-input
               v-model="debugForm.content"
@@ -702,7 +764,7 @@ onMounted(load)
           </div>
 
           <!-- 右：模型测试 -->
-          <div class="debug-col">
+          <div class="debug-col debug-col--right">
             <div class="col-title">3. 模型测试</div>
             <div class="model-row">
               <el-select
@@ -719,7 +781,15 @@ onMounted(load)
                   :value="m.id"
                 />
               </el-select>
-              <el-button type="primary" class="btn-gradient" :loading="testing" @click="runTest">运行</el-button>
+              <el-button
+                v-if="testing"
+                type="danger"
+                plain
+                @click="stopDebugStream"
+              >
+                <el-icon style="margin-right: 4px"><VideoPause /></el-icon>停止
+              </el-button>
+              <el-button v-else type="primary" class="btn-gradient" @click="runTest">运行</el-button>
             </div>
             <div class="col-title">测试问题</div>
             <el-input
@@ -728,10 +798,19 @@ onMounted(load)
               :rows="3"
               placeholder="输入要发送给模型的问题"
             />
-            <div class="col-title">模型回复</div>
-            <div v-loading="testing" class="result-box">
+            <div class="col-title">
+              模型回复
+              <span v-if="testing" class="stream-dot" />
+              <span v-if="testing" class="stream-text">生成中…</span>
+            </div>
+            <div
+              ref="resultBoxRef"
+              v-loading="testing"
+              class="result-box"
+              @scroll="onResultScroll"
+            >
               <pre v-if="testResult">{{ testResult }}</pre>
-              <span v-else class="result-placeholder">运行后在此查看模型回复，可反复修改正文/变量对比不同写法效果</span>
+              <span v-else class="result-placeholder">运行后在此流式查看模型回复，可反复修改正文/变量对比不同写法效果</span>
             </div>
           </div>
         </div>
@@ -780,50 +859,92 @@ onMounted(load)
 /* ---------- 卡片 ---------- */
 .prompt-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
   gap: 16px;
   min-height: 200px;
 }
 .prompt-card {
   position: relative;
-  padding: 16px;
+  overflow: hidden;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
-.prompt-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.prompt-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--brand-gradient-soft);
-  color: var(--prompt-c, var(--brand-1));
+
+/* 渐变封面（对齐智能体应用卡片） */
+.prompt-cover {
+  position: relative;
+  height: 92px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   flex-shrink: 0;
+}
+.cover-deco {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  top: -80px;
+  right: -50px;
+}
+.cover-deco::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  bottom: -60px;
+  left: -30px;
+}
+.cover-icon {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
+  transition: transform 0.25s ease;
+}
+.prompt-card:hover .cover-icon {
+  transform: scale(1.18) rotate(-6deg);
+}
+.cover-category {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 9px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+
+/* 信息区 */
+.prompt-body {
+  padding: 13px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 .prompt-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: 1;
 }
 .prompt-name {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.category-tag {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 .prompt-desc {
   font-size: 12.5px;
@@ -835,7 +956,7 @@ onMounted(load)
   overflow: hidden;
   line-height: 1.6;
 }
-.prompt-meta {
+.prompt-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -855,28 +976,29 @@ onMounted(load)
   color: var(--text-tertiary);
 }
 
-/* hover 浮现操作 */
+/* hover 从底部浮现操作（对齐智能体应用卡片） */
 .prompt-actions {
   position: absolute;
-  right: 12px;
-  top: 12px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 16px;
   display: flex;
-  gap: 6px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
-  padding: 6px;
-  border-radius: 10px;
+  justify-content: flex-end;
+  gap: 8px;
+  background: linear-gradient(180deg, transparent, var(--bg-card) 34%);
   opacity: 0;
-  transform: translateY(-4px);
-  transition: all 0.22s ease;
+  transform: translateY(8px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 .prompt-card:hover .prompt-actions {
   opacity: 1;
   transform: translateY(0);
 }
 .action-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1081,11 +1203,29 @@ onMounted(load)
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .debug-col {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+}
+/* 左列：内容超高时在列内滚动，避免弹窗整体出现滚动条 */
+.debug-col--left {
+  overflow-y: auto;
+  padding-right: 2px;
+}
+/* 右列：只让「模型回复」卡片内部滚动，其余保持固定 */
+.debug-col--right {
+  overflow: hidden;
+}
+.debug-col--right > * {
+  flex-shrink: 0;
+}
+.debug-col--right .result-box {
+  flex-shrink: 1;
 }
 .col-title {
   font-size: 13px;
@@ -1136,7 +1276,11 @@ onMounted(load)
   flex: 1;
 }
 .result-box {
-  min-height: 180px;
+  /* 占满右列剩余空间；内容多时内部滚动（fits 窗口，不把弹窗撑出视口） */
+  flex: 0 1 auto;
+  min-height: 100px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--bg-fill, #f5f7fa);
   border-radius: 10px;
   padding: 12px;
@@ -1152,6 +1296,33 @@ onMounted(load)
   font-size: 12px;
   color: var(--text-tertiary);
 }
+/* 流式输出进行中的指示：脉冲圆点 + 文案 */
+.stream-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--brand-1, #5b6cff);
+  vertical-align: middle;
+  animation: stream-pulse 1s ease-in-out infinite;
+}
+.stream-text {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  vertical-align: middle;
+}
+@keyframes stream-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 </style>
 
 <style>
@@ -1163,9 +1334,15 @@ onMounted(load)
   flex-direction: column;
   max-height: 92vh;
 }
+/* body 整体不再滚动（滚动收进左右两列），高度撑满弹窗剩余空间 */
 .debug-dialog .el-dialog__body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.debug-dialog .debug-head {
+  flex-shrink: 0;
 }
 </style>
