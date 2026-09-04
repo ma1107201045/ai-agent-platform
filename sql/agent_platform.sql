@@ -1,17 +1,17 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : mysql
+ Source Server         : localhost
  Source Server Type    : MySQL
- Source Server Version : 80030 (8.0.30)
+ Source Server Version : 80046 (8.0.46)
  Source Host           : localhost:3306
  Source Schema         : agent_platform
 
  Target Server Type    : MySQL
- Target Server Version : 80030 (8.0.30)
+ Target Server Version : 80046 (8.0.46)
  File Encoding         : 65001
 
- Date: 03/09/2026 23:06:46
+ Date: 04/09/2026 17:35:45
 */
 
 SET NAMES utf8mb4;
@@ -47,7 +47,6 @@ CREATE TABLE `app_agent`  (
 INSERT INTO `app_agent` VALUES (6, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:34:35', '2026-08-28 01:34:35');
 INSERT INTO `app_agent` VALUES (8, 1, '多语言翻译助手', '中英互译与术语润色，支持行业术语定制', 'workflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:41:06', '2026-08-28 01:41:06');
 INSERT INTO `app_agent` VALUES (9, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, '{\"nodes\":[],\"edges\":[]}', NULL, NULL, NULL, '2026-08-28 01:42:44', '2026-08-28 03:25:50');
-
 
 -- ----------------------------
 -- Table structure for app_agent_version
@@ -154,6 +153,33 @@ INSERT INTO `app_prompt_version` VALUES (3, 3, 1, '你是{{brand}}的在线客�
 INSERT INTO `app_prompt_version` VALUES (4, 4, 1, '你是资深翻译与润色专家。请将下方内容从{{srcLang}}翻译为{{tgtLang}}：{{input}}。要求：1. 准确传达原意与语气；2. 译文自然流畅，符合目标语言习惯；3. 保留专有名词、数字与格式；4. 如存在多义，选择最佳译法并附一句简短说明。', '[{\"name\":\"srcLang\",\"desc\":\"源语言\"},{\"name\":\"tgtLang\",\"desc\":\"目标语言\"},{\"name\":\"input\",\"desc\":\"待翻译内容\"}]', '初始版本', 1, '2026-09-01 12:00:00');
 
 -- ----------------------------
+-- Table structure for asset_file
+-- ----------------------------
+DROP TABLE IF EXISTS `asset_file`;
+CREATE TABLE `asset_file`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '素材名称(展示用)',
+  `original_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '原始文件名',
+  `ext` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '扩展名(小写不带点)',
+  `content_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'MIME类型',
+  `size` bigint NOT NULL DEFAULT 0 COMMENT '文件大小(字节)',
+  `category` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'other' COMMENT '分类: image/document/audio/video/other',
+  `storage_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '存储相对路径(实际文件位于 upload-dir 下)',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0删除 1正常',
+  `created_by` bigint NULL DEFAULT NULL COMMENT '上传用户ID',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_category`(`category` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '素材管理-素材文件' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of asset_file
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for chat_agent_run
 -- ----------------------------
 DROP TABLE IF EXISTS `chat_agent_run`;
@@ -257,6 +283,48 @@ CREATE TABLE `chat_usage`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for data_record
+-- ----------------------------
+DROP TABLE IF EXISTS `data_record`;
+CREATE TABLE `data_record`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `table_id` bigint NOT NULL COMMENT '数据表ID(data_table.id)',
+  `data_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '行数据(JSON对象: {列key:值})',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_table`(`table_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '数据存储-数据记录' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of data_record
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for data_table
+-- ----------------------------
+DROP TABLE IF EXISTS `data_table`;
+CREATE TABLE `data_table`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '数据表名(展示用，应用内唯一)',
+  `label` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '显示名称/别名',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述',
+  `columns_json` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '列定义(JSON数组: [{key,label,type,options?}])',
+  `row_count` int NOT NULL DEFAULT 0 COMMENT '行记录数',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_tenant_name`(`tenant_id` ASC, `name` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '数据存储-自定义数据表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of data_table
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for knowledge_chunk
 -- ----------------------------
 DROP TABLE IF EXISTS `knowledge_chunk`;
@@ -325,6 +393,88 @@ CREATE TABLE `knowledge_document`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for mem_item
+-- ----------------------------
+DROP TABLE IF EXISTS `mem_item`;
+CREATE TABLE `mem_item`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID(app_agent.id)',
+  `scope` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'global' COMMENT '作用域: global全局/user用户',
+  `source` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'manual' COMMENT '来源: manual手动/auto自动抽取',
+  `category` varchar(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'preference' COMMENT '类别: preference偏好/fact事实/event事件/summary摘要/custom自定义',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '记忆内容',
+  `importance` tinyint NOT NULL DEFAULT 3 COMMENT '重要度 1-5(数字越大越重要)',
+  `hit_count` int NOT NULL DEFAULT 0 COMMENT '命中次数(作为上下文注入时累计)',
+  `last_hit_at` datetime NULL DEFAULT NULL COMMENT '最近命中时间',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_app_cat`(`app_id` ASC, `category` ASC) USING BTREE,
+  INDEX `idx_app_importance`(`app_id` ASC, `importance` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '记忆管理-长期记忆条目' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of mem_item
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for mem_strategy
+-- ----------------------------
+DROP TABLE IF EXISTS `mem_strategy`;
+CREATE TABLE `mem_strategy`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID(app_agent.id)',
+  `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '是否启用长期记忆: 0否 1是',
+  `auto_extract` tinyint NOT NULL DEFAULT 0 COMMENT '对话后自动抽取记忆: 0否 1是',
+  `extract_model_id` bigint NULL DEFAULT NULL COMMENT '自动抽取使用的对话模型ID(model_info.id)',
+  `top_n` int NOT NULL DEFAULT 3 COMMENT '每次对话注入的记忆条目数',
+  `keep_days` int NULL DEFAULT NULL COMMENT '记忆保留天数(空=永久保留)',
+  `max_items` int NOT NULL DEFAULT 500 COMMENT '单应用记忆条目上限',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_app`(`app_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '记忆管理-应用记忆策略' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of mem_strategy
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for mem_variable
+-- ----------------------------
+DROP TABLE IF EXISTS `mem_variable`;
+CREATE TABLE `mem_variable`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `app_id` bigint NOT NULL COMMENT '应用ID(app_agent.id)',
+  `scope` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'global' COMMENT '作用域: global全局(跨会话)/session指定会话',
+  `conversation_id` bigint NULL DEFAULT NULL COMMENT '所属会话ID(scope=session时使用，空=该应用全部会话)',
+  `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '变量名(英文下划线)',
+  `value` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '变量值',
+  `value_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'string' COMMENT '类型: string/number/boolean/json',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '说明',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_app_scope`(`app_id` ASC, `scope` ASC) USING BTREE,
+  INDEX `idx_app_name`(`app_id` ASC, `name` ASC) USING BTREE,
+  INDEX `idx_conv`(`conversation_id` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '记忆管理-会话变量' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of mem_variable
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for model_info
 -- ----------------------------
 DROP TABLE IF EXISTS `model_info`;
@@ -341,13 +491,14 @@ CREATE TABLE `model_info`  (
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_provider`(`provider_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型信息' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型信息' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of model_info
 -- ----------------------------
 INSERT INTO `model_info` VALUES (5, 2, 'qwen3.8-27b', 'llm', NULL, NULL, '[\"stream\"]', 1, '2026-09-03 17:34:31', '2026-09-03 17:34:31');
 INSERT INTO `model_info` VALUES (6, 2, 'qwen3.7-text-embedding-flash', 'embedding', NULL, NULL, '[\"stream\",\"json_mode\",\"reasoning\"]', 1, '2026-09-03 17:37:18', '2026-09-03 22:51:52');
+INSERT INTO `model_info` VALUES (8, 3, 'doubao-seed-2-1-pro-260628', 'llm', NULL, NULL, '[\"vision\",\"stream\"]', 1, '2026-09-04 17:16:31', '2026-09-04 17:32:11');
 
 -- ----------------------------
 -- Table structure for model_provider
@@ -364,12 +515,13 @@ CREATE TABLE `model_provider`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型供应商' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '模型供应商' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of model_provider
 -- ----------------------------
 INSERT INTO `model_provider` VALUES (2, 1, 'DashScope', 'openai-compatible', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'sk-34cd7fe56f554bd7a79b509b6310434b', 1, '2026-09-03 17:33:45', '2026-09-03 17:47:03');
+INSERT INTO `model_provider` VALUES (3, 1, '火山方舟', 'openai-compatible', 'https://ark.cn-beijing.volces.com/api/v3', 'ark-0ff6dcc7-a492-4c59-9f2a-b75795e788c0-25e3e', 1, '2026-09-04 17:16:16', '2026-09-04 17:26:56');
 
 -- ----------------------------
 -- Table structure for sys_tenant
@@ -416,5 +568,64 @@ CREATE TABLE `sys_user`  (
 -- Records of sys_user
 -- ----------------------------
 INSERT INTO `sys_user` VALUES (1, 1, 'admin', '$2a$10$9q7nqAmKWk7KcW/peXz.Ru4OVkaJUjrrI4UElU1RRk.Z.V6rSrDgq', '管理员', NULL, NULL, 1, '2026-08-28 00:22:58', '2026-08-28 01:23:10');
+
+-- ----------------------------
+-- Table structure for tool_connector
+-- ----------------------------
+DROP TABLE IF EXISTS `tool_connector`;
+CREATE TABLE `tool_connector`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '连接器名称(英文标识符)',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '描述(用途说明)',
+  `type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'http' COMMENT '类型: http/mysql',
+  `url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'http: API地址; mysql: JDBC URL',
+  `method` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'GET' COMMENT 'http: 请求方式',
+  `headers` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT 'http: 额外请求头(JSON)',
+  `auth_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'none' COMMENT '鉴权: none/bearer/basic',
+  `auth_token` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'Bearer Token',
+  `auth_username` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '用户名(basic/mysql)',
+  `auth_password` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '密码(basic/mysql)',
+  `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '外部连接器(数据集成)' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of tool_connector
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for tool_info
+-- ----------------------------
+DROP TABLE IF EXISTS `tool_info`;
+CREATE TABLE `tool_info`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '工具名称(模型调用时使用)',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '工具描述(给模型理解用途)',
+  `type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'http' COMMENT '类型: http/code',
+  `url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'HTTP工具: 请求地址',
+  `method` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'GET' COMMENT 'HTTP工具: 请求方式',
+  `headers` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT 'HTTP工具: 请求头(JSON)',
+  `auth_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'none' COMMENT '鉴权: none/bearer/basic',
+  `auth_token` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'Bearer Token',
+  `parameters` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '参数JSON Schema(JSON)',
+  `code` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '代码工具: MVEL脚本',
+  `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'Agent工具注册表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of tool_info
+-- ----------------------------
+INSERT INTO `tool_info` VALUES (1, 1, 'get_current_time', '获取当前日期时间字符串', 'code', NULL, 'GET', NULL, 'none', NULL, '{\"type\":\"object\",\"properties\":{}}', 'return new java.text.SimpleDateFormat(\"yyyy-MM-dd HH:mm:ss\").format(new java.util.Date())', 1, '2026-08-28 00:22:58', '2026-08-28 00:22:58');
+INSERT INTO `tool_info` VALUES (2, 1, 'text_stats', '统计文本的长度、单词数和行数', 'code', NULL, 'GET', NULL, 'none', NULL, '{\"type\":\"object\",\"properties\":{}}', 'var t = input != null ? String.valueOf(input) : \"\"; return \"字符数=\" + t.length() + \", 单词数=\" + (t.trim().isEmpty() ? 0 : t.trim().split(\"\\\\s+\").length) + \", 行数=\" + t.split(\"\\n\").length', 1, '2026-08-28 00:22:58', '2026-08-28 00:22:58');
 
 SET FOREIGN_KEY_CHECKS = 1;
