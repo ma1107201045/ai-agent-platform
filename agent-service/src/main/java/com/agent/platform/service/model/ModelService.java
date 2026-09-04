@@ -6,14 +6,18 @@ import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.mapper.model.ModelInfoMapper;
 import com.agent.platform.dao.mapper.model.ModelProviderMapper;
 import com.agent.platform.dao.vo.model.ModelInfoVO;
+import com.agent.platform.dao.vo.model.ModelPlaygroundVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -187,5 +191,52 @@ public class ModelService {
             result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
+    }
+
+    // ---------- 模型广场 ----------
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /**
+     * 模型广场目录：列出全部供应商与其下模型（含已禁用，由前端标注状态），供广场浏览与试玩。
+     * 注意：不返回供应商 apiKey 等敏感字段。
+     */
+    public List<ModelPlaygroundVO> playgroundModels() {
+        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
+                .orderByAsc(ModelInfo::getProviderId)
+                .orderByAsc(ModelInfo::getId));
+        List<ModelPlaygroundVO> result = new ArrayList<>();
+        for (ModelInfo info : infos) {
+            ModelProvider provider = providerMapper.selectById(info.getProviderId());
+            if (provider == null) {
+                continue;
+            }
+            result.add(ModelPlaygroundVO.builder()
+                    .modelId(info.getId())
+                    .modelName(info.getName())
+                    .modelType(info.getModelType())
+                    .contextWindow(info.getContextWindow())
+                    .maxTokens(info.getMaxTokens())
+                    .capabilities(parseCapabilities(info.getCapabilities()))
+                    .modelStatus(info.getStatus())
+                    .providerId(provider.getId())
+                    .providerName(provider.getName())
+                    .providerType(provider.getType())
+                    .providerStatus(provider.getStatus())
+                    .build());
+        }
+        return result;
+    }
+
+    private List<String> parseCapabilities(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return Collections.emptyList();
+        }
+        try {
+            return OBJECT_MAPPER.readValue(raw, new TypeReference<List<String>>() {
+            });
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 }

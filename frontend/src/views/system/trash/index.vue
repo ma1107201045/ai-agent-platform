@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Refresh, RefreshLeft, Thunderbolt, Warning } from '@element-plus/icons-vue'
-import { trashApi, type TrashItem, type TrashType } from '@/api/system-trash'
+import {computed, onMounted, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Delete, Refresh, RefreshLeft, Lightning, Warning} from '@element-plus/icons-vue'
+import {trashApi, type TrashItem, type TrashType} from '@/api/system-trash'
 
 const typeMeta: Record<string, { label: string; tag: 'primary' | 'success' | 'warning' | 'info' }> = {
-  agent: { label: '智能体应用', tag: 'primary' },
-  dataset: { label: '知识库', tag: 'success' },
-  template: { label: '应用模板', tag: 'warning' },
-  announcement: { label: '系统公告', tag: 'info' }
+  agent: {label: '智能体应用', tag: 'primary'},
+  dataset: {label: '知识库', tag: 'success'},
+  template: {label: '应用模板', tag: 'warning'},
+  announcement: {label: '系统公告', tag: 'info'}
 }
 const typeOptions = [
-  { value: '', label: '全部' },
-  ...Object.entries(typeMeta).map(([value, m]) => ({ value, label: m.label }))
+  {value: '', label: '全部'},
+  ...Object.entries(typeMeta).map(([value, m]) => ({value, label: m.label}))
 ]
 
 const items = ref<TrashItem[]>([])
@@ -49,8 +49,8 @@ async function restore(row: TrashItem) {
 
 async function purge(row: TrashItem) {
   const cascadeNote = row.type === 'agent' || row.type === 'dataset'
-    ? '\n\n彻底删除后会连同其关联数据（版本/会话/消息 或 文档/分段）一并清理，不可恢复。'
-    : '\n\n彻底删除后不可恢复。'
+      ? '\n\n彻底删除后会连同其关联数据（版本/会话/消息 或 文档/分段）一并清理，不可恢复。'
+      : '\n\n彻底删除后不可恢复。'
   await ElMessageBox.confirm(`确定彻底删除「${row.name}」吗？${cascadeNote}`, '彻底删除', {
     type: 'warning',
     confirmButtonText: '彻底删除',
@@ -63,9 +63,9 @@ async function purge(row: TrashItem) {
 
 async function cleanup() {
   await ElMessageBox.confirm(
-    '将清理回收站中删除超过 30 天的所有数据（含关联数据），且不可恢复。是否继续？',
-    '清理过期数据',
-    { type: 'warning', confirmButtonText: '清理', cancelButtonText: '取消' }
+      '将清理回收站中删除超过 30 天的所有数据（含关联数据），且不可恢复。是否继续？',
+      '清理过期数据',
+      {type: 'warning', confirmButtonText: '清理', cancelButtonText: '取消'}
   )
   const res = await trashApi.cleanup(30)
   ElMessage.success(`已清理 ${res.removed} 条超过 ${res.days} 天的数据`)
@@ -83,7 +83,7 @@ onMounted(load)
         <p class="head-desc">误删的应用、知识库、模板与公告将在这里保留，可恢复或彻底删除</p>
       </div>
       <div class="head-actions">
-        <el-button type="danger" plain :icon="Thunderbolt" @click="cleanup">清理 30 天前</el-button>
+        <el-button type="danger" plain :icon="Lightning" @click="cleanup">清理 30 天前</el-button>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
       </div>
     </div>
@@ -101,7 +101,7 @@ onMounted(load)
           {{ opt.label }}<span class="count">{{ countByType(opt.value) }}</span>
         </el-radio-button>
       </el-radio-group>
-      <el-input v-model="keyword" placeholder="搜索资源名称" clearable style="width: 220px; margin-left: auto" />
+      <el-input v-model="keyword" placeholder="搜索资源名称" clearable style="width: 220px; margin-left: auto"/>
     </div>
 
     <el-card shadow="never">
@@ -128,11 +128,13 @@ onMounted(load)
           </template>
         </el-table-column>
         <template #empty>
-          <el-empty :image-size="90" description="暂无回收站数据" />
+          <el-empty :image-size="90" description="暂无回收站数据"/>
         </template>
       </el-table>
       <p v-if="filtered.length" class="trash-foot">
-        <el-icon><Warning /></el-icon>
+        <el-icon>
+          <Warning/>
+        </el-icon>
         回收站数据将在每次执行「清理 30 天前」时被批量彻底删除，请谨慎操作。
       </p>
     </el-card>
@@ -144,28 +146,34 @@ onMounted(load)
   max-width: 1200px;
   margin: 0 auto;
 }
+
 .trash-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
 }
+
 .head-title {
   font-size: 22px;
   font-weight: 700;
 }
+
 .head-desc {
   margin-top: 4px;
   font-size: 13px;
   color: var(--text-tertiary);
 }
+
 .head-actions {
   display: flex;
   gap: 10px;
 }
+
 .trash-tip {
   margin-bottom: 14px;
 }
+
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -174,14 +182,17 @@ onMounted(load)
   padding: 10px 14px;
   margin-bottom: 16px;
 }
+
 .count {
   margin-left: 4px;
   font-size: 12px;
   opacity: 0.7;
 }
+
 .item-name {
   font-weight: 600;
 }
+
 .trash-foot {
   display: flex;
   align-items: center;

@@ -12,6 +12,7 @@
   --brand-1: #5b6cff;
   --brand-2: #8b5cf6;
   --brand-3: #4facfe;
+  --color-primary: #5b6cff; /* 主色（与 Element 主色一致），供页面 var(--color-primary) 使用 */
   --brand-gradient: linear-gradient(135deg, #5b6cff 0%, #8b5cf6 100%);
   --brand-gradient-soft: linear-gradient(135deg, rgba(91, 108, 255, 0.12), rgba(139, 92, 246, 0.12));
 
@@ -69,6 +70,7 @@ html.dark {
   --brand-1: #7d8bff;
   --brand-2: #a78bfa;
   --brand-3: #38bdf8;
+  --color-primary: #6b78ff; /* 主色（暗色，与 Element 主色一致） */
   --brand-gradient: linear-gradient(135deg, #6b78ff 0%, #9b6bfa 100%);
   --brand-gradient-soft: linear-gradient(135deg, rgba(109, 120, 255, 0.2), rgba(155, 107, 250, 0.2));
 
@@ -164,6 +166,14 @@ html.theme-transition * {
     color 0.25s ease,
     box-shadow 0.25s ease,
     fill 0.25s ease !important;
+}
+
+/* 切换瞬间禁用滚动锚点：避免个别元素高度/位置微调时浏览器自动补偿滚动，
+   造成整页无意识地轻微上移/回弹 */
+html.theme-transition,
+html.theme-transition body,
+html.theme-transition #app {
+  overflow-anchor: none;
 }
 
 html,

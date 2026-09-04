@@ -4,6 +4,7 @@ import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.vo.model.ModelInfoVO;
+import com.agent.platform.dao.vo.model.ModelPlaygroundVO;
 import com.agent.platform.service.model.ModelService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -99,5 +100,13 @@ public class ModelController {
     @GetMapping("/models/rerank-models")
     public Result<List<ModelInfoVO>> rerankModels() {
         return Result.ok(modelService.rerankModels());
+    }
+
+    // ---------- 模型广场 ----------
+
+    /** 模型广场目录（全部供应商与模型，含可用状态），供浏览与在线试玩 */
+    @GetMapping("/models/playground-models")
+    public Result<List<ModelPlaygroundVO>> playgroundModels() {
+        return Result.ok(modelService.playgroundModels());
     }
 }

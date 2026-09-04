@@ -6,6 +6,7 @@ import type {
   ChatResponse,
   EmbeddingResult,
   ModelInfo,
+  ModelPlaygroundItem,
   ModelProvider,
   PageResult
 } from './types'
@@ -51,6 +52,10 @@ export const modelApi = {
   /** 可用重排序模型列表 */
   rerankModels() {
     return request.get<never, ChatModelInfo[]>('/model/models/rerank-models')
+  },
+  /** 模型广场目录（含供应商与模型可用状态） */
+  playgroundModels() {
+    return request.get<never, ModelPlaygroundItem[]>('/model/models/playground-models')
   },
 
   // ---------- 模型调用 ----------

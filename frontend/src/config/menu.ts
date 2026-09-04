@@ -168,8 +168,8 @@ export const menuGroups: MenuGroup[] = [
     icon: Cpu,
     items: [
       { path: '/models', title: '供应商管理', icon: Management },
-      { path: '/models/playground', title: '模型广场', icon: Box, planned: true },
-      { path: '/models/finetune', title: '模型微调', icon: EditPen, planned: true },
+      { path: '/models/playground', title: '模型广场', icon: Box },
+      { path: '/models/finetune', title: '模型微调', icon: EditPen },
       { path: '/models/gateway', title: '模型网关', icon: Connection }
     ]
   },

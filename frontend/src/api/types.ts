@@ -190,6 +190,26 @@ export interface ChatModelInfo {
   contextWindow?: number
 }
 
+/** 模型广场目录项 */
+export interface ModelPlaygroundItem {
+  modelId: number
+  modelName: string
+  /** llm / embedding / rerank / tts / asr / image */
+  modelType: string
+  contextWindow?: number
+  maxTokens?: number
+  /** 能力标签：function_call / vision / stream / json 等 */
+  capabilities?: string[]
+  /** 模型状态：0禁用 1启用 */
+  modelStatus: number
+  providerId: number
+  providerName: string
+  /** 供应商类型：openai-compatible / anthropic 等 */
+  providerType?: string
+  /** 供应商状态：0禁用 1启用 */
+  providerStatus: number
+}
+
 /** 对话消息（与后端 LLM 模型一致） */
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'

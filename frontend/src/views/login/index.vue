@@ -16,13 +16,6 @@ const form = reactive({
   password: ''
 })
 
-const features = [
-  { title: '可视化编排', desc: '拖拽式搭建智能体工作流' },
-  { title: '多模型接入', desc: '统一管理 DeepSeek 等模型供应商' },
-  { title: '知识库 RAG', desc: '数据驱动，回答更精准' },
-  { title: '一键发布 API', desc: 'Web 对话与开放接口开箱即用' }
-]
-
 async function handleLogin() {
   if (!form.username || !form.password) {
     ElMessage.warning('请输入用户名和密码')
@@ -44,44 +37,28 @@ async function handleLogin() {
 
 <template>
   <div class="login-page">
+    <!-- 背景光斑：与 Dashboard 欢迎横幅同源的柔和氛围层（纯 radial 渐变，无 filter/毛玻璃，
+         不参与任何重采样，主题切换零抖动） -->
+    <div class="deco deco-a"></div>
+    <div class="deco deco-b"></div>
+    <div class="deco deco-c"></div>
+
+    <!-- 主题切换：直接使用组件默认样式，与主页顶栏同款透明图标按钮 -->
     <div class="theme-corner">
       <ThemeSwitch />
     </div>
 
-    <!-- 品牌区（order:2，视觉上显示在右侧） -->
-    <div class="brand-panel">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
-      <div class="grid-overlay"></div>
-
-      <div class="brand-content">
-        <div class="brand-logo">
-          <div class="logo-badge">
-            <el-icon :size="22"><Monitor /></el-icon>
-          </div>
-          <span>AgentForge</span>
+    <div class="login-wrap">
+      <!-- 品牌标识：与主页侧边栏同款（渐变方块 badge + 渐变文字） -->
+      <div class="brand">
+        <div class="logo-badge">
+          <el-icon :size="20"><Monitor /></el-icon>
         </div>
-        <h1 class="slogan">
-          构建、编排、发布<br />
-          你的 AI 智能体
-        </h1>
-        <p class="sub-slogan">一站式智能体开发平台，从原型到生产仅需几步</p>
-
-        <div class="features">
-          <div v-for="(f, i) in features" :key="f.title" class="feature" :style="{ '--i': i }">
-            <div class="feature-dot"></div>
-            <div>
-              <div class="feature-title">{{ f.title }}</div>
-              <div class="feature-desc">{{ f.desc }}</div>
-            </div>
-          </div>
-        </div>
+        <span class="logo-text">AgentForge</span>
       </div>
-    </div>
+      <p class="brand-sub">一站式智能体开发平台</p>
 
-    <!-- 登录区（order:1，视觉上显示在左侧） -->
-    <div class="form-panel">
+      <!-- 表单卡片：沿用全局 hover-card 卡片体系（bg-card / border-color / radius-xl） -->
       <div class="login-card">
         <div class="card-head">
           <h2>欢迎回来</h2>
@@ -129,210 +106,123 @@ async function handleLogin() {
 </template>
 
 <style scoped>
+/* 整页复用全局主题令牌：亮色下为浅灰蓝内容页背景，暗色下自动切换为 #0f1220，
+   与登录后的主页内容区视觉同源，随主题整体切换 */
 .login-page {
   position: relative;
-  height: 100%;
-  display: flex;
-  background: var(--bg-card);
-}
-.theme-corner {
-  position: absolute;
-  top: 18px;
-  right: 20px;
-  z-index: 10;
-}
-/* 品牌区为深色，右上角主题切换按钮改为白玻璃样式以保持可读 */
-.theme-corner :deep(.theme-btn) {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  color: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-.theme-corner :deep(.theme-btn:hover) {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-/* ---------- 品牌区（右侧 · 深色高端渐变） ---------- */
-.brand-panel {
-  position: relative;
-  flex: 1.15;
-  order: 2;
-  background: linear-gradient(160deg, #1b2752 0%, #0e1734 48%, #171036 100%);
-  overflow: hidden;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  overflow: hidden;
+  padding: 32px 24px;
+  background: var(--bg-page);
 }
 
-.grid-overlay {
+.theme-corner {
   position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  top: 20px;
+  right: 24px;
+  z-index: 5;
 }
 
-.orb {
+/* ---------- 背景光斑（无动画、无模糊滤镜，仅柔和渐变圆，主题切换不会引起重绘抖动） ---------- */
+.deco {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.55;
-  animation: float 9s ease-in-out infinite;
+  pointer-events: none;
 }
-.orb-1 {
-  width: 340px;
-  height: 340px;
-  background: #5f7dff;
-  top: -90px;
-  right: -60px;
-  opacity: 0.5;
+.deco-a {
+  width: 560px;
+  height: 560px;
+  top: -180px;
+  left: -140px;
+  background: radial-gradient(closest-side, rgba(91, 108, 255, 0.18), transparent 72%);
 }
-.orb-2 {
-  width: 280px;
-  height: 280px;
-  background: #8a63ff;
-  bottom: -70px;
-  left: -50px;
-  opacity: 0.42;
-  animation-delay: 2s;
+.deco-b {
+  width: 640px;
+  height: 640px;
+  bottom: -220px;
+  right: -180px;
+  background: radial-gradient(closest-side, rgba(139, 92, 246, 0.16), transparent 72%);
 }
-.orb-3 {
-  width: 180px;
-  height: 180px;
-  background: #2fd3ff;
-  bottom: 26%;
-  right: 18%;
-  opacity: 0.4;
-  animation-delay: 4s;
+.deco-c {
+  width: 320px;
+  height: 320px;
+  top: 4%;
+  right: 10%;
+  background: radial-gradient(closest-side, rgba(79, 172, 254, 0.1), transparent 72%);
 }
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-22px) scale(1.06);
-  }
+:global(html.dark) .deco-a {
+  background: radial-gradient(closest-side, rgba(106, 122, 255, 0.22), transparent 72%);
+}
+:global(html.dark) .deco-b {
+  background: radial-gradient(closest-side, rgba(155, 107, 250, 0.2), transparent 72%);
+}
+:global(html.dark) .deco-c {
+  background: radial-gradient(closest-side, rgba(56, 189, 248, 0.12), transparent 72%);
 }
 
-.brand-content {
+.login-wrap {
   position: relative;
-  z-index: 2;
-  padding: 48px;
-  max-width: 520px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.brand-logo {
+/* ---------- 品牌标识：同 DefaultLayout 侧边栏（渐变 badge + 渐变文字） ---------- */
+.brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  animation: rise 0.8s ease both;
+  animation: rise 0.5s ease-out both;
 }
 .logo-badge {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: var(--brand-gradient);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 20px rgba(91, 108, 255, 0.28);
 }
-.brand-logo span {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+.logo-text {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-
-.slogan {
-  margin-top: 36px;
-  font-size: 40px;
-  line-height: 1.35;
-  font-weight: 700;
-  animation: rise 0.8s ease 0.1s both;
-}
-.sub-slogan {
-  margin-top: 14px;
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.75);
-  animation: rise 0.8s ease 0.2s both;
+.brand-sub {
+  margin-top: 12px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--text-tertiary);
+  animation: rise 0.5s ease-out 0.06s both;
 }
 
-.features {
-  margin-top: 40px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px 24px;
-}
-.feature {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  animation: rise 0.8s ease both;
-  animation-delay: calc(0.28s + var(--i) * 0.08s);
-}
-.feature-dot {
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: #9fb0ff;
-  box-shadow: 0 0 10px rgba(159, 176, 255, 0.85);
-  flex-shrink: 0;
-}
-.feature-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-.feature-desc {
-  margin-top: 3px;
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ---------- 登录区（左侧 · 黑色背景） ---------- */
-.form-panel {
-  flex: 1;
-  order: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000000;
-  padding: 32px;
-}
-
+/* ---------- 登录卡片：全局卡片体系（hover-card 同源） ---------- */
 .login-card {
-  width: 400px;
-  padding: 44px 40px 32px;
+  width: 420px;
+  max-width: 100%;
+  margin-top: 36px;
+  padding: 38px 40px 30px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
-  animation: rise 0.7s ease 0.15s both;
+  box-shadow: var(--shadow-card);
+  animation: rise 0.5s ease-out 0.12s both;
 }
 .card-head {
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 .card-head h2 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -344,31 +234,38 @@ async function handleLogin() {
 
 .submit {
   width: 100%;
-  margin-top: 4px;
+  margin-top: 2px;
   height: 44px;
   font-size: 15px;
-  letter-spacing: 2px;
+  letter-spacing: 4px;
 }
 .tip {
-  margin-top: 20px;
+  margin-top: 18px;
   text-align: center;
   font-size: 12px;
   color: var(--text-tertiary);
 }
 
-@media (max-width: 900px) {
-  .brand-panel {
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .login-page {
+    padding: 24px 16px;
+  }
+  .login-card {
+    padding: 28px 22px 20px;
+  }
+  .deco {
     display: none;
-  }
-  /* 品牌区隐藏后整屏为黑色登录区，主题按钮保持浅色可读 */
-  .theme-corner :deep(.theme-btn) {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.9);
-  }
-  .theme-corner :deep(.theme-btn:hover) {
-    background: rgba(255, 255, 255, 0.16);
-    color: #fff;
   }
 }
 </style>

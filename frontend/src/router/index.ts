@@ -259,28 +259,18 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/models/index.vue'),
                 meta: {title: '供应商管理'}
             },
-            planned('models/playground', 'ModelPlayground', {
-                title: '模型广场',
-                phase: 'P2',
-                desc: '浏览各供应商模型能力，在线试运行后再接入',
-                features: [
-                    {name: '模型浏览', detail: '按能力/价格/上下文分类浏览模型'},
-                    {name: '在线试玩', detail: '免配置快速体验模型效果'},
-                    {name: '一键接入', detail: '从广场直接创建模型配置'}
-                ],
-                dependency: '需后端维护模型目录与试用代理'
-            }),
-            planned('models/finetune', 'ModelFinetune', {
-                title: '模型微调',
-                phase: 'P2',
-                desc: '基于自有数据对模型进行微调训练，打造专属模型',
-                features: [
-                    {name: '训练任务', detail: '创建微调任务并跟踪训练状态'},
-                    {name: '数据校验', detail: '训练数据格式校验与统计'},
-                    {name: '效果评估', detail: '微调前后效果对比与发布'}
-                ],
-                dependency: '需对接支持微调的供应商接口'
-            }),
+            {
+                path: 'models/playground',
+                name: 'ModelPlayground',
+                component: () => import('@/views/models/playground/index.vue'),
+                meta: {title: '模型广场'}
+            },
+            {
+                path: 'models/finetune',
+                name: 'ModelFinetune',
+                component: () => import('@/views/models/finetune/index.vue'),
+                meta: {title: '模型微调'}
+            },
             {
                 path: 'models/gateway',
                 name: 'ModelGateway',
