@@ -148,7 +148,7 @@ export const menuGroups: MenuGroup[] = [
       { path: '/ops/runs', title: '运行记录', icon: Timer },
       { path: '/ops/usage', title: '用量统计', icon: Histogram },
       { path: '/ops/conversations/label', title: '对话标注', icon: CollectionTag, planned: true },
-      { path: '/ops/billing', title: '费用账单', icon: CreditCard, planned: true },
+      { path: '/ops/billing', title: '费用账单', icon: CreditCard },
       { path: '/ops/alerts', title: '告警管理', icon: WarningFilled, planned: true }
     ]
   },
@@ -157,9 +157,9 @@ export const menuGroups: MenuGroup[] = [
     title: '评测',
     icon: Aim,
     items: [
-      { path: '/eval', title: '评测中心', icon: DataAnalysis, planned: true },
-      { path: '/eval/datasets', title: '评测数据集', icon: DataBoard, planned: true },
-      { path: '/eval/experiments', title: '对比实验', icon: SemiSelect, planned: true }
+      { path: '/eval', title: '评测中心', icon: DataAnalysis },
+      { path: '/eval/datasets', title: '评测数据集', icon: DataBoard },
+      { path: '/eval/experiments', title: '对比实验', icon: SemiSelect },
     ]
   },
   {
@@ -170,7 +170,7 @@ export const menuGroups: MenuGroup[] = [
       { path: '/models', title: '供应商管理', icon: Management },
       { path: '/models/playground', title: '模型广场', icon: Box, planned: true },
       { path: '/models/finetune', title: '模型微调', icon: EditPen, planned: true },
-      { path: '/models/gateway', title: '模型网关', icon: Connection, planned: true }
+      { path: '/models/gateway', title: '模型网关', icon: Connection }
     ]
   },
   {

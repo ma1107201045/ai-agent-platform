@@ -257,17 +257,12 @@ const routes: RouteRecordRaw[] = [
                 ],
                 dependency: '需在 ChatMessage 上补充反馈与标注字段'
             }),
-            planned('ops/billing', 'OpsBilling', {
-                title: '费用账单',
-                phase: 'P1',
-                desc: '查看调用消费明细与成本构成，掌控平台使用费用',
-                features: [
-                    {name: '消费明细', detail: '按应用/模型/时间维度查看费用'},
-                    {name: '账单报表', detail: '月度账单与成本趋势导出'},
-                    {name: '额度管理', detail: '余额与预算提醒设置'}
-                ],
-                dependency: '需后端在用量统计基础上核算费用'
-            }),
+            {
+                path: 'ops/billing',
+                name: 'OpsBilling',
+                component: () => import('@/views/ops/billing/index.vue'),
+                meta: {title: '费用账单'}
+            },
             planned('ops/alerts', 'OpsAlerts', {
                 title: '告警管理',
                 phase: 'P2',
@@ -280,38 +275,24 @@ const routes: RouteRecordRaw[] = [
             }),
 
             /* ---------------- 评测 /eval ---------------- */
-            planned('eval', 'Eval', {
-                title: '评测中心',
-                phase: 'P0',
-                desc: '批量运行评测数据集评估应用效果，沉淀可量化的质量报告',
-                features: [
-                    {name: '批量评测', detail: '批量运行并输出正确率、得分与报告'},
-                    {name: '评测报告', detail: '查看历史评测结果与趋势对比'}
-                ],
-                dependency: '需后端新增评测实体及运行接口'
-            }),
-            planned('eval/datasets', 'EvalDatasets', {
-                title: '评测数据集',
-                phase: 'P1',
-                desc: '管理用于评测与微调的问答数据集，独立于知识库',
-                features: [
-                    {name: '数据集维护', detail: '导入/标注问答对，按项目组织'},
-                    {name: '数据回流', detail: '从对话标注一键回流为数据集'},
-                    {name: '导出应用', detail: '导出为评测或微调所需格式'}
-                ],
-                dependency: '需后端新增数据集实体与导入导出接口'
-            }),
-            planned('eval/experiments', 'EvalExperiments', {
-                title: '对比实验',
-                phase: 'P1',
-                desc: '同一测试集对比不同版本、模型与 Prompt 的效果差异',
-                features: [
-                    {name: '对比运行', detail: '多配置并行评测并横向对比'},
-                    {name: '差异分析', detail: '逐用例查看答案差异与评分'},
-                    {name: '最佳实践', detail: '沉淀胜出配置为推荐基线'}
-                ],
-                dependency: '需复用测试集评测能力并扩展对比存储'
-            }),
+            {
+                path: 'eval',
+                name: 'Eval',
+                component: () => import('@/views/eval/index.vue'),
+                meta: {title: '评测中心'}
+            },
+            {
+                path: 'eval/datasets',
+                name: 'EvalDatasets',
+                component: () => import('@/views/eval/datasets/index.vue'),
+                meta: {title: '评测数据集'}
+            },
+            {
+                path: 'eval/experiments',
+                name: 'EvalExperiments',
+                component: () => import('@/views/eval/experiments/index.vue'),
+                meta: {title: '对比实验'}
+            },
 
             /* ---------------- 模型 /models ---------------- */
             {
@@ -342,17 +323,12 @@ const routes: RouteRecordRaw[] = [
                 ],
                 dependency: '需对接支持微调的供应商接口'
             }),
-            planned('models/gateway', 'ModelGateway', {
-                title: '模型网关',
-                phase: 'P1',
-                desc: '统一模型路由、限流与故障回退，保障服务稳定与成本可控',
-                features: [
-                    {name: '路由策略', detail: '按模型/供应商配置路由与权重'},
-                    {name: '限流配额', detail: '模型级限流与配额控制'},
-                    {name: '故障回退', detail: '主供应商异常时自动切换备用'}
-                ],
-                dependency: '需抽象模型调用层为可路由网关'
-            }),
+            {
+                path: 'models/gateway',
+                name: 'ModelGateway',
+                component: () => import('@/views/models/gateway/index.vue'),
+                meta: {title: '模型网关'}
+            },
 
             /* ---------------- 系统管理 /system ---------------- */
             {
