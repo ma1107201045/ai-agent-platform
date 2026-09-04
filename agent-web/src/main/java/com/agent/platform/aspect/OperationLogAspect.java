@@ -34,7 +34,8 @@ public class OperationLogAspect {
 
     private static final Set<String> ACTION_WORDS = Set.of(
             "publish", "rollback", "restore", "instantiate", "enabled", "enable",
-            "run", "upload", "import", "export", "test", "cancel", "create", "remove", "save");
+            "run", "upload", "import", "export", "test", "cancel", "create", "remove", "save",
+            "purge", "cleanup");
 
     private static final Map<String, String> MODULES = Map.ofEntries(
             Map.entry("app", "应用管理"), Map.entry("agents", "智能体"), Map.entry("prompts", "提示词库"),
@@ -168,7 +169,8 @@ public class OperationLogAspect {
             case "test" -> "测试";
             case "cancel" -> "取消";
             case "create", "save" -> "新增";
-            case "remove" -> "删除";
+            case "remove", "purge" -> "删除";
+            case "cleanup" -> "清理";
             default -> "POST".equals(httpMethod) ? "新增" : "修改";
         };
     }

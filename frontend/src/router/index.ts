@@ -307,17 +307,12 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/system/workspace/index.vue'),
                 meta: {title: '工作空间'}
             },
-            planned('system/trash', 'SystemTrash', {
-                title: '回收站',
-                phase: 'P2',
-                desc: '找回误删的应用、知识库与工具，支持恢复或彻底删除',
-                features: [
-                    {name: '删除列表', detail: '集中查看已删除资源'},
-                    {name: '恢复/清除', detail: '一键恢复或彻底删除'},
-                    {name: '自动清理', detail: '过期数据自动清除策略'}
-                ],
-                dependency: '需后端为删除操作增加软删除与回收站表'
-            }),
+            {
+                path: 'system/trash',
+                name: 'SystemTrash',
+                component: () => import('@/views/system/trash/index.vue'),
+                meta: {title: '回收站'}
+            },
             {
                 path: 'system/announcements',
                 name: 'SystemAnnouncements',

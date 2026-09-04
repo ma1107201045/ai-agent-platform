@@ -37,16 +37,19 @@ CREATE TABLE `app_agent`  (
   `published_version_id` bigint NULL DEFAULT NULL COMMENT '当前发布版本ID',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL DEFAULT NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  INDEX `idx_deleted`(`deleted` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '智能体应用' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of app_agent
 -- ----------------------------
-INSERT INTO `app_agent` VALUES (6, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:34:35', '2026-08-28 01:34:35');
-INSERT INTO `app_agent` VALUES (8, 1, '多语言翻译助手', '中英互译与术语润色，支持行业术语定制', 'workflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:41:06', '2026-08-28 01:41:06');
-INSERT INTO `app_agent` VALUES (9, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, '{\"nodes\":[],\"edges\":[]}', NULL, NULL, NULL, '2026-08-28 01:42:44', '2026-08-28 03:25:50');
+INSERT INTO `app_agent` VALUES (6, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:34:35', '2026-08-28 01:34:35', 0, NULL);
+INSERT INTO `app_agent` VALUES (8, 1, '多语言翻译助手', '中英互译与术语润色，支持行业术语定制', 'workflow', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, '2026-08-28 01:41:06', '2026-08-28 01:41:06', 0, NULL);
+INSERT INTO `app_agent` VALUES (9, 1, '智能客服助手', '基于知识库回答客户问题，支持多轮追问与转人工', 'chatflow', NULL, NULL, NULL, 0, '{\"nodes\":[],\"edges\":[]}', NULL, NULL, NULL, '2026-08-28 01:42:44', '2026-08-28 03:25:50', 0, NULL);
 
 -- ----------------------------
 -- Table structure for app_agent_version
@@ -361,8 +364,11 @@ CREATE TABLE `knowledge_dataset`  (
   `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL DEFAULT NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  INDEX `idx_deleted`(`deleted` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '知识库数据集' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
@@ -1004,15 +1010,18 @@ CREATE TABLE `sys_announcement`  (
   `publisher` bigint NULL DEFAULT NULL COMMENT '发布人用户ID',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL DEFAULT NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_tenant_status`(`tenant_id` ASC, `status` ASC) USING BTREE
+  INDEX `idx_tenant_status`(`tenant_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_deleted`(`deleted` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '平台公告' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_announcement
 -- ----------------------------
-INSERT INTO `sys_announcement` VALUES (1, 1, 'AgentForge 平台 v1.2 功能升级公告', '各位用户：\n\n平台已于近期完成 v1.2 版本升级，本次升级新增以下能力：\n1. 新增费用账单与月度预算提醒；\n2. 新增发布渠道与应用市场模块；\n3. 优化多智能体编排与运行观测体验。\n\n如遇使用问题，可前往「帮助与文档」查看使用指南。', 'all', 1, 1, '2026-09-01 10:00:00', NULL, 1, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
-INSERT INTO `sys_announcement` VALUES (2, 1, '关于数据安全使用的提醒（草稿）', '请勿在知识库与提示词中上传含敏感信息的资料，注意遵守数据安全规范。', 'all', 0, 0, NULL, NULL, 1, '2026-09-02 14:20:00', '2026-09-02 14:20:00');
+INSERT INTO `sys_announcement` VALUES (1, 1, 'AgentForge 平台 v1.2 功能升级公告', '各位用户：\n\n平台已于近期完成 v1.2 版本升级，本次升级新增以下能力：\n1. 新增费用账单与月度预算提醒；\n2. 新增发布渠道与应用市场模块；\n3. 优化多智能体编排与运行观测体验。\n\n如遇使用问题，可前往「帮助与文档」查看使用指南。', 'all', 1, 1, '2026-09-01 10:00:00', NULL, 1, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
+INSERT INTO `sys_announcement` VALUES (2, 1, '关于数据安全使用的提醒（草稿）', '请勿在知识库与提示词中上传含敏感信息的资料，注意遵守数据安全规范。', 'all', 0, 0, NULL, NULL, 1, '2026-09-02 14:20:00', '2026-09-02 14:20:00', 0, NULL);
 
 -- ----------------------------
 -- Table structure for app_template 应用模板
@@ -1034,19 +1043,22 @@ CREATE TABLE `app_template`  (
   `create_by` bigint NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL DEFAULT NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  INDEX `idx_deleted`(`deleted` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '应用模板' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of app_template（平台内置）
 -- ----------------------------
-INSERT INTO `app_template` VALUES (1, 0, '智能客服助手', 'customer-service', 'chatflow', '💬', '基于知识库回答客户问题，支持多轮追问与转人工', '电商 / 企业服务', '你好，我是智能客服助手，请问有什么可以帮您？', 1, 3, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
-INSERT INTO `app_template` VALUES (2, 0, '多语言翻译助手', 'translate', 'chatflow', '🌐', '中英互译与术语润色，支持行业术语定制', '出海业务', '你好，我可以帮你完成多语言翻译与润色。', 1, 1, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
-INSERT INTO `app_template` VALUES (3, 0, '内容创作助手', 'content', 'agent', '✍️', '撰写文章 / 文案 / 脚本，自动调用写作工具', '新媒体运营', '我来帮你创作内容，告诉我主题与风格即可。', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
-INSERT INTO `app_template` VALUES (4, 0, '数据分析工作流', 'data-analysis', 'workflow', '📊', '数据接入-清洗-分析-报告一键生成', '经营分析', '', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
-INSERT INTO `app_template` VALUES (5, 0, '营销文案助手', 'marketing', 'chatflow', '📣', '生成营销文案与活动创意，可切换文案风格', '市场运营', '我可以帮你生成各平台营销文案。', 1, 2, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
-INSERT INTO `app_template` VALUES (6, 0, '编程助手', 'coding', 'agent', '👨‍💻', '代码生成 / 解释 / 重构，调用代码工具链', '研发提效', '我是编程助手，可以帮你编写与解释代码。', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00');
+INSERT INTO `app_template` VALUES (1, 0, '智能客服助手', 'customer-service', 'chatflow', '💬', '基于知识库回答客户问题，支持多轮追问与转人工', '电商 / 企业服务', '你好，我是智能客服助手，请问有什么可以帮您？', 1, 3, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
+INSERT INTO `app_template` VALUES (2, 0, '多语言翻译助手', 'translate', 'chatflow', '🌐', '中英互译与术语润色，支持行业术语定制', '出海业务', '你好，我可以帮你完成多语言翻译与润色。', 1, 1, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
+INSERT INTO `app_template` VALUES (3, 0, '内容创作助手', 'content', 'agent', '✍️', '撰写文章 / 文案 / 脚本，自动调用写作工具', '新媒体运营', '我来帮你创作内容，告诉我主题与风格即可。', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
+INSERT INTO `app_template` VALUES (4, 0, '数据分析工作流', 'data-analysis', 'workflow', '📊', '数据接入-清洗-分析-报告一键生成', '经营分析', '', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
+INSERT INTO `app_template` VALUES (5, 0, '营销文案助手', 'marketing', 'chatflow', '📣', '生成营销文案与活动创意，可切换文案风格', '市场运营', '我可以帮你生成各平台营销文案。', 1, 2, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
+INSERT INTO `app_template` VALUES (6, 0, '编程助手', 'coding', 'agent', '👨‍💻', '代码生成 / 解释 / 重构，调用代码工具链', '研发提效', '我是编程助手，可以帮你编写与解释代码。', 1, 0, 1, NULL, '2026-09-01 10:00:00', '2026-09-01 10:00:00', 0, NULL);
 
 -- ----------------------------
 -- Table structure for app_schedule 应用定时任务
