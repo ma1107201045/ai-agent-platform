@@ -21,6 +21,7 @@ import {
   Promotion,
   QuestionFilled,
   Rank,
+  Reading,
   RefreshLeft,
   RefreshRight,
   Share,
@@ -33,6 +34,7 @@ import {MiniMap} from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import {appAgentApi} from '@/api/app-agent.ts'
+import {appSkillApi} from '@/api/app-skill.ts'
 import {knowledgeApi} from '@/api/knowledge.ts'
 import {modelApi} from '@/api/model.ts'
 import {appAgentToolApi} from '@/api/tool-info.ts'
@@ -42,6 +44,7 @@ import type {
   ChatModelInfo,
   KnowledgeDataset,
   RunResult,
+  Skill,
   TraceItem,
   WorkflowNodeType
 } from '@/api/types.ts'
@@ -193,6 +196,8 @@ const datasets = ref<KnowledgeDataset[]>([])
 const allTools = ref<AppAgentTool[]>([])
 const boundToolIds = ref<number[]>([])
 const boundDatasetIds = ref<number[]>([])
+const boundSkillIds = ref<number[]>([])
+const allSkills = ref<Skill[]>([])
 const welcomeMessage = ref('')
 const openingQuestionsText = ref('')
 const saving = ref(false)
@@ -204,7 +209,7 @@ const configCollapsed = ref(false)
 /** 左侧节点面板分组（按功能归类，不影响拖拽与数据模型） */
 const paletteGroups: Array<{ title: string; types: WorkflowNodeType[] }> = [
   {title: '流程控制', types: ['start', 'end', 'condition']},
-  {title: '处理节点', types: ['llm', 'agent', 'template', 'code']},
+  {title: '处理节点', types: ['llm', 'agent', 'skill', 'template', 'code']},
   {title: '外部数据', types: ['http', 'knowledge']}
 ]
 
@@ -418,7 +423,7 @@ const hydrated = ref(false)
 let editBaseline = '' // 当前选中节点的内容基线（区分编辑与切换选中）
 
 watch(
-    [nodes, edges, boundToolIds, boundDatasetIds, welcomeMessage, openingQuestionsText],
+    [nodes, edges, boundToolIds, boundDatasetIds, boundSkillIds, welcomeMessage, openingQuestionsText],
     () => {
       if (hydrated.value) dirty.value = true
     },
@@ -435,7 +440,7 @@ const iconMap: Record<string, any> = {}
 function iconOf(name: string) {
   if (!iconMap[name]) {
     const map: Record<string, any> = {
-      Promotion, CircleCheck, Cpu, MagicStick, Share, Document, Link: LinkIcon
+      Promotion, CircleCheck, Cpu, MagicStick, Share, Document, Reading, Link: LinkIcon
     }
     iconMap[name] = markRaw(map[name] || Cpu)
   }
@@ -470,6 +475,13 @@ async function loadApp() {
       boundDatasetIds.value = JSON.parse(app.datasetIds) as number[]
     } catch {
       boundDatasetIds.value = []
+    }
+  }
+  if (app.skillIds) {
+    try {
+      boundSkillIds.value = JSON.parse(app.skillIds) as number[]
+    } catch {
+      boundSkillIds.value = []
     }
   }
   welcomeMessage.value = app.welcomeMessage || ''
@@ -513,6 +525,14 @@ async function loadTools() {
     allTools.value = await appAgentToolApi.enabled()
   } catch {
     allTools.value = []
+  }
+}
+
+async function loadSkills() {
+  try {
+    allSkills.value = await appSkillApi.enabled()
+  } catch {
+    allSkills.value = []
   }
 }
 
@@ -976,6 +996,7 @@ async function saveDraft() {
       await appAgentApi.update(appId, {
         toolIds: JSON.stringify(boundToolIds.value),
         datasetIds: JSON.stringify(boundDatasetIds.value),
+        skillIds: JSON.stringify(boundSkillIds.value),
         welcomeMessage: welcomeMessage.value,
         openingQuestions: JSON.stringify(
             openingQuestionsText.value.split('\n').map((q) => q.trim()).filter(Boolean)
@@ -1368,6 +1389,7 @@ onMounted(() => {
   loadModels()
   loadDatasets()
   loadTools()
+  loadSkills()
   // 加载后端节点 Schema（默认配置/必填校验/元数据融合；失败自动回退静态定义）
   loadNodeSchemas()
 })
@@ -1590,6 +1612,41 @@ onUnmounted(() => {
         <el-card shadow="never" class="agent-card">
           <template #header>
             <div class="agent-card-head">
+              <span>绑定技能</span>
+              <el-button link type="primary" @click="router.push('/app/skills')">技能库管理</el-button>
+            </div>
+          </template>
+          <p class="agent-tip">
+            技能是可复用能力包（指令 + 依赖工具/知识库）。启用后指令自动注入提示词，
+            依赖工具与参考数据集在运行期自动合并，让智能体学会该类任务；无需技能可留空。
+          </p>
+          <el-checkbox-group v-model="boundSkillIds" class="tool-check-list">
+            <el-checkbox v-for="s in allSkills" :key="s.id" :value="s.id" class="tool-check">
+              <div class="tool-check-body">
+                <div class="tool-check-name">
+                  <code class="tool-code">{{ s.name }}</code>
+                  <el-tag
+                    size="small"
+                    effect="plain"
+                    :type="s.type === 'tool' ? 'warning' : s.type === 'knowledge' ? 'success' : 'info'"
+                  >
+                    {{ s.type === 'tool' ? '工具复合' : s.type === 'knowledge' ? '知识技能' : '指令' }}
+                  </el-tag>
+                </div>
+                <div class="tool-check-desc">{{ s.description || '暂无描述' }}</div>
+              </div>
+            </el-checkbox>
+          </el-checkbox-group>
+          <el-empty
+              v-if="allSkills.length === 0"
+              description="暂无技能，请先在「技能库」中创建"
+              :image-size="60"
+          />
+        </el-card>
+
+        <el-card shadow="never" class="agent-card">
+          <template #header>
+            <div class="agent-card-head">
               <span>应用设置</span>
             </div>
           </template>
@@ -1798,6 +1855,7 @@ onUnmounted(() => {
                     :rerank-models="rerankModels"
                     :datasets="datasets"
                     :tools="allTools"
+                    :skills="allSkills"
                     :vars="varItemsFor(selectedNodeId || '')"
                 />
               </template>

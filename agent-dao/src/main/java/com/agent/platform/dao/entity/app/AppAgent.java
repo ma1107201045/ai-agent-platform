@@ -47,6 +47,9 @@ public class AppAgent {
     /** 关联数据集 ID 列表（JSON 数组字符串），agent 类型应用使用 */
     private String datasetIds;
 
+    /** 绑定技能 ID 列表（JSON 数组字符串），运行期自动注入技能指令/依赖 */
+    private String skillIds;
+
     /** 当前发布版本 ID */
     private Long publishedVersionId;
 

@@ -25,9 +25,12 @@ public interface AgentRunner {
      * @param toolIds       本次可用的工具 ID；为空表示由业务实现自行回退
      * @param datasetIds    本次可用的知识库数据集 ID；为空表示由业务实现自行回退
      * @param maxIterations 最大循环轮数
+     * @param skillIds      本次启用的技能 ID（可为 null/空）；技能指令自动拼入提示词，
+     *                      其依赖工具/数据集与本次显式配置（未配置时回退应用绑定）合并
      */
     record AgentTask(Long appId, Long modelId, String systemPrompt, String userMessage,
-                     List<Long> toolIds, List<Long> datasetIds, Integer maxIterations) {
+                     List<Long> toolIds, List<Long> datasetIds, Integer maxIterations,
+                     List<Long> skillIds) {
     }
 
     /**

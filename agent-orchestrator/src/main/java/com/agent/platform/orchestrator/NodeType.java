@@ -24,6 +24,7 @@ public enum NodeType {
     END("end", false, "结束"),
     LLM("llm", false, "LLM"),
     AGENT("agent", false, "Agent"),
+    SKILL("skill", false, "技能执行"),
     CONDITION("condition", true, "条件分支"),
     CODE("code", false, "表达式计算"),
     HTTP("http", false, "HTTP 请求"),

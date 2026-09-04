@@ -68,6 +68,12 @@ const routes: RouteRecordRaw[] = [
                 meta: {title: '提示词库'}
             },
             {
+                path: 'app/skills',
+                name: 'AppSkills',
+                component: () => import('@/views/app/skills/index.vue'),
+                meta: {title: '技能'}
+            },
+            {
                 path: 'app/templates',
                 name: 'AppTemplates',
                 component: () => import('@/views/app/templates/index.vue'),

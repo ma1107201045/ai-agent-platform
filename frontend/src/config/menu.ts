@@ -98,6 +98,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { path: '/app/agents', title: '智能体', icon: Grid },
       { path: '/app/prompts', title: '提示词库', icon: Collection },
+      { path: '/app/skills', title: '技能', icon: Reading },
       { path: '/app/templates', title: '应用模板', icon: CopyDocument },
       { path: '/app/marketplace', title: '应用市场', icon: Shop },
       { path: '/app/multi-agent', title: '多智能体编排', icon: Avatar },

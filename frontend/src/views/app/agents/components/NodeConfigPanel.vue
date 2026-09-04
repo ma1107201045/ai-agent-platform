@@ -9,7 +9,7 @@ import {
 import type { VarItem } from '@/utils/flow.ts'
 import { appPromptApi } from '@/api/app-prompt'
 import { fillSchemaDefaults, schemaIssues, schemaOf } from '@/utils/nodeSchema.ts'
-import type { AppAgentTool, ChatModelInfo, KnowledgeDataset, PromptTemplate, WorkflowNodeType } from '@/api/types.ts'
+import type { AppAgentTool, ChatModelInfo, KnowledgeDataset, PromptTemplate, Skill, WorkflowNodeType } from '@/api/types.ts'
 
 /** 节点配置面板：按节点类型渲染差异化配置 + 通用执行策略 */
 const props = defineProps<{
@@ -21,6 +21,8 @@ const props = defineProps<{
   rerankModels: ChatModelInfo[]
   datasets: KnowledgeDataset[]
   tools: AppAgentTool[]
+  /** 可执行技能（技能节点选择） */
+  skills: Skill[]
   /** 当前节点可引用的变量 */
   vars: VarItem[]
 }>()
@@ -437,6 +439,44 @@ const TIP_BRANCH_OFF = '表达式为真走「是」分支，为假走「否」�
           >
             <el-option v-for="d in datasets" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="最大循环轮数">
+          <el-input-number v-model="cfg.maxIterations" :min="1" :max="20" />
+        </el-form-item>
+        <el-form-item label="输出附带工具调用过程">
+          <el-switch v-model="cfg.includeSteps" />
+          <span class="field-tip inline">开启后节点输出末尾追加每步工具调用与结果</span>
+        </el-form-item>
+      </template>
+
+      <!-- ---------- 技能执行 ---------- -->
+      <template v-else-if="type === 'skill'">
+        <el-form-item label="模型">
+          <el-select v-model="cfg.modelId" placeholder="选择对话模型" style="width: 100%">
+            <el-option
+              v-for="m in chatModels"
+              :key="m.id"
+              :label="`${m.providerName} / ${m.modelName}`"
+              :value="m.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="执行技能">
+          <el-select v-model="cfg.skillId" filterable placeholder="选择要执行的技能" style="width: 100%">
+            <el-option v-for="s in skills" :key="s.id" :value="s.id" :label="`${s.name}（${s.code}）`">
+              <div class="skill-option">
+                <span>{{ s.name }}</span>
+                <el-tag size="small" effect="plain" :type="s.type === 'tool' ? 'warning' : s.type === 'knowledge' ? 'success' : 'info'">
+                  {{ s.type === 'tool' ? '工具复合' : s.type === 'knowledge' ? '知识' : '指令' }}
+                </el-tag>
+              </div>
+            </el-option>
+          </el-select>
+          <span class="field-tip inline">技能指令与依赖工具/知识库在运行期自动注入</span>
+        </el-form-item>
+        <el-form-item label="用户提示词">
+          <el-input v-model="cfg.userPrompt" type="textarea" :rows="3" placeholder="默认 {{input}}" />
+          <VarChips :vars="vars" :target="cfg" field="userPrompt" />
         </el-form-item>
         <el-form-item label="最大循环轮数">
           <el-input-number v-model="cfg.maxIterations" :min="1" :max="20" />

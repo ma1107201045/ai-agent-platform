@@ -74,7 +74,7 @@ public class AgentNodeHandler implements NodeHandler {
         AgentRunner.AgentOutcome outcome = runner.run(new AgentRunner.AgentTask(
                 ctx.appId(), modelId,
                 systemPrompt == null || systemPrompt.isBlank() ? null : systemPrompt,
-                userPrompt, toolIds, datasetIds, maxIterations));
+                userPrompt, toolIds, datasetIds, maxIterations, null));
 
         String answer = outcome == null ? "" : (outcome.answer() == null ? "" : outcome.answer());
         if (ctx.cfgBool("includeSteps", false) && outcome != null && !outcome.steps().isEmpty()) {

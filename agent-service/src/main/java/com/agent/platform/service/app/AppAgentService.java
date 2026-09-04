@@ -33,7 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 智能体应用服务：应用生命周期 + 版本发布 + 工作流 DSL + Agent 自主执行
@@ -63,6 +65,10 @@ public class AppAgentService {
     /** Agent 循环默认最大迭代轮数 */
     private static final int DEFAULT_MAX_ITERATIONS = 6;
 
+    /** Agent 默认系统提示词（技能注入时以此为基底追加技能指令） */
+    private static final String DEFAULT_SYSTEM_PROMPT =
+            "你是一个智能助手。请根据对话内容判断是否需要调用工具来完成任务，如果工具结果对回答有帮助，请结合工具结果作答。";
+
     private final AppAgentMapper appAgentMapper;
     private final AppAgentVersionMapper appAgentVersionMapper;
     private final ChatConversationMapper chatConversationMapper;
@@ -71,6 +77,7 @@ public class AppAgentService {
     private final ModelRuntimeService modelRuntimeService;
     private final ToolInfoService appToolService;
     private final KnowledgeService knowledgeService;
+    private final AppSkillService skillService;
     private final ObjectMapper objectMapper;
 
     // ==================== 应用 CRUD ====================
@@ -131,6 +138,7 @@ public class AppAgentService {
         if (app.getWorkflowJson() != null) uw.set(AppAgent::getWorkflowJson, app.getWorkflowJson());
         if (app.getToolIds() != null) uw.set(AppAgent::getToolIds, app.getToolIds());
         if (app.getDatasetIds() != null) uw.set(AppAgent::getDatasetIds, app.getDatasetIds());
+        if (app.getSkillIds() != null) uw.set(AppAgent::getSkillIds, app.getSkillIds());
         appAgentMapper.update(null, uw);
     }
 
@@ -267,8 +275,62 @@ public class AppAgentService {
     public AgentChatVO chat(Long appId, Long modelId, String systemPrompt,
                             List<ChatMessage> history, Integer maxIterations) {
         AppAgent app = getById(appId);
-        return doChat(modelId, systemPrompt, loadTools(app.getToolIds()),
-                app.getDatasetIds(), history, maxIterations);
+        // 应用绑定技能：无绑定走原始路径（完全向后兼容）
+        if (app.getSkillIds() == null || app.getSkillIds().isBlank()
+                || "null".equals(app.getSkillIds().trim())) {
+            return doChat(modelId, systemPrompt, loadTools(app.getToolIds()),
+                    app.getDatasetIds(), history, maxIterations);
+        }
+        String query = lastUserInput(history);
+        AppSkillService.SkillRuntimeBO skillCtx = skillService.resolveRuntime(app.getSkillIds(), query);
+        String finalPrompt = skillCtx.instructions().isBlank()
+                ? systemPrompt
+                : withSkillInstructions(systemPrompt, skillCtx.instructions());
+        String toolJson = mergeIdJson(app.getToolIds(), skillCtx.toolIds());
+        String datasetJson = mergeIdJson(app.getDatasetIds(), skillCtx.datasetIds());
+        return doChat(modelId, finalPrompt, loadTools(toolJson), datasetJson, history, maxIterations);
+    }
+
+    /** 将技能指令追加到系统提示词（未显式配置时使用默认提示词为基底） */
+    private String withSkillInstructions(String systemPrompt, String instructions) {
+        String base = systemPrompt == null || systemPrompt.isBlank()
+                ? DEFAULT_SYSTEM_PROMPT
+                : systemPrompt;
+        return base + "\n\n【已启用技能】请仅在相关场景按对应技能要求作答，技能要求与通用指令冲突时以技能为准。\n\n"
+                + instructions;
+    }
+
+    /** 合并应用绑定 ID 与技能依赖 ID 为去重后的 JSON 数组字符串（无可合并返回 null） */
+    private String mergeIdJson(String baseJson, List<Long> extra) {
+        if ((baseJson == null || baseJson.isBlank()) && (extra == null || extra.isEmpty())) {
+            return null;
+        }
+        Set<Long> merged = new LinkedHashSet<>();
+        List<Long> base = parseIdList(baseJson);
+        if (base != null) {
+            merged.addAll(base);
+        }
+        if (extra != null) {
+            merged.addAll(extra);
+        }
+        try {
+            return objectMapper.writeValueAsString(merged);
+        } catch (Exception e) {
+            return baseJson;
+        }
+    }
+
+    /** 解析 JSON ID 数组；空/非法返回 null */
+    private List<Long> parseIdList(String json) {
+        if (json == null || json.isBlank() || "null".equals(json.trim())) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Long>>() {
+            });
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -296,7 +358,7 @@ public class AppAgentService {
 
         // 组装消息
         String finalSystemPrompt = systemPrompt == null || systemPrompt.isBlank()
-                ? "你是一个智能助手。请根据对话内容判断是否需要调用工具来完成任务，如果工具结果对回答有帮助，请结合工具结果作答。"
+                ? DEFAULT_SYSTEM_PROMPT
                 : systemPrompt;
         String kbContext = buildKnowledgeContext(datasetIdsJson, lastUserInput(history));
         if (!kbContext.isBlank()) {

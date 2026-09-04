@@ -11,6 +11,7 @@ export const NODE_TYPE_META: Record<
   end: { label: '结束', icon: 'CircleCheck', color: '#ef4444', gradient: 'linear-gradient(135deg, #f87171 0%, #dc2626 100%)', desc: '流程出口' },
   llm: { label: 'LLM', icon: 'Cpu', color: '#2970ff', gradient: 'linear-gradient(135deg, #60a5fa 0%, #2970ff 100%)', desc: '大模型对话' },
   agent: { label: 'Agent', icon: 'MagicStick', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)', desc: '自主规划+工具调用' },
+  skill: { label: '技能', icon: 'Reading', color: '#0ea5e9', gradient: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', desc: '执行绑定的技能' },
   condition: { label: '条件分支', icon: 'Share', color: '#f59e0b', gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', desc: 'IF / ELSE 判断' },
   code: { label: '表达式计算', icon: 'Document', color: '#7a5af8', gradient: 'linear-gradient(135deg, #a78bfa 0%, #7a5af8 100%)', desc: 'MVEL 表达式求值' },
   http: { label: 'HTTP 请求', icon: 'Link', color: '#2ea9b0', gradient: 'linear-gradient(135deg, #4fd1c5 0%, #2ea9b0 100%)', desc: '调用外部 API' },
@@ -75,6 +76,14 @@ export function defaultConfig(type: WorkflowNodeType): Record<string, unknown> {
         userPrompt: '{{input}}',
         toolIds: [],
         datasetIds: [],
+        maxIterations: 6,
+        includeSteps: false
+      }
+    case 'skill':
+      return {
+        modelId: undefined,
+        skillId: undefined,
+        userPrompt: '{{input}}',
         maxIterations: 6,
         includeSteps: false
       }

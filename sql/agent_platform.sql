@@ -1229,3 +1229,71 @@ CREATE TABLE `ops_alert_event`  (
 -- ----------------------------
 INSERT INTO `ops_alert_event` VALUES (1, 1, 1, '错误率过高预警', 'error_rate', 'warning', '【手动测试】规则「错误率过高预警」触发：错误率 >= 5（60 分钟窗口）', 'handled', 'manual', '2026-09-03 15:24:00', '2026-09-03 15:30:12');
 INSERT INTO `ops_alert_event` VALUES (2, 1, 2, '运行失败数突增', 'failures', 'critical', '【手动测试】规则「运行失败数突增」触发：运行失败数 >= 10（60 分钟窗口）', 'open', 'manual', '2026-09-04 09:20:00', NULL);
+
+-- ============================================================
+-- Skill 技能模块（应用 -> 技能：可复用能力包）
+-- 说明：app_agent 增量列以 ALTER 追加（避免改写上方 seed INSERT 的列序）
+-- ============================================================
+
+-- 应用绑定技能列（JSON 数组，agent/chatflow 通用）
+ALTER TABLE `app_agent` ADD COLUMN `skill_ids` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '绑定技能ID列表(JSON数组)' AFTER `dataset_ids`;
+
+-- ----------------------------
+-- Table structure for app_skill 技能定义（主表）
+-- ----------------------------
+DROP TABLE IF EXISTS `app_skill`;
+CREATE TABLE `app_skill`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户ID',
+  `name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '技能名称',
+  `code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '技能唯一标识(小写kebab-case，租户内唯一)',
+  `description` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '技能描述(何时使用该技能)',
+  `category` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'general' COMMENT '分类: general通用/system系统/business业务/custom自定义',
+  `type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'instruction' COMMENT '类型: instruction指令型/tool工具复合型/knowledge知识技能型',
+  `icon` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '图标',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '技能指令正文(Markdown，支持{{var}}占位)',
+  `variables` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '变量定义(JSON数组:[{"name":"var","desc":"说明"}])',
+  `tool_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '依赖工具ID列表(JSON数组)',
+  `dataset_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '参考数据集ID列表(JSON数组)',
+  `version` int NOT NULL DEFAULT 1 COMMENT '当前版本号',
+  `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `created_by` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_tenant_code`(`tenant_id` ASC, `code` ASC) USING BTREE,
+  INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
+  INDEX `idx_category_type`(`category` ASC, `type` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '技能定义(可复用能力包)' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of app_skill
+-- ----------------------------
+INSERT INTO `app_skill` (`id`, `tenant_id`, `name`, `code`, `description`, `category`, `type`, `icon`, `content`, `variables`, `tool_ids`, `dataset_ids`, `version`, `status`, `created_by`) VALUES
+(1, 1, '专家顾问应答', 'expert-advisor', '以资深领域顾问口吻，先给结论再分层论证，适用于专业咨询类问答。', 'system', 'instruction', NULL, '# 专家顾问应答技能\n\n当你需要以资深专家身份解答问题时，请遵循：\n\n1. 先给出明确结论（开头 1-2 句），再分条阐述依据；\n2. 使用准确的行业术语，必要时用通俗语言补充解释；\n3. 区分「事实」与「推测」，推测必须显式标注；\n4. 信息不足时先向用户澄清，不要臆测；\n5. 回答语言与用户保持一致。', '[]', NULL, NULL, 1, 1, 1),
+(2, 1, '数据统计汇报', 'report-assistant', '基于当前时间与文本统计工具，输出结构化数据汇报。适用于数据统计、指标换算类任务。', 'system', 'tool', NULL, '# 数据统计汇报技能\n\n当你被要求统计、换算或汇报数据时，请按以下步骤执行：\n\n1. 先调用「获取当前时间」确认基准时间；\n2. 对用户给出的文本调用「统计文本」获取字符数/单词数/行数；\n3. 以「指标 - 数值 - 口径」表格形式汇报，口径需注明；\n4. 数值来源为工具结果，不得虚构。', '[]', '[1,2]', NULL, 1, 1, 1),
+(3, 1, '合规客服应答', 'compliant-cs', '基于企业知识库的合规应答，话术严谨，引用知识来源，适合客服/售后场景。', 'system', 'knowledge', NULL, '# 合规客服应答技能\n\n当用户询问客服/售后/政策类问题时：\n\n1. 仅依据知识库资料作答，禁止编造条款；\n2. 每项答复尽量标注知识库依据编号；\n3. 资料未覆盖时引导留下联系方式并承诺转人工；\n4. 措辞礼貌、克制，不做过度承诺。', '[]', NULL, '[1]', 1, 1, 1);
+
+-- ----------------------------
+-- Table structure for app_skill_version 技能版本快照
+-- ----------------------------
+DROP TABLE IF EXISTS `app_skill_version`;
+CREATE TABLE `app_skill_version`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `skill_id` bigint NOT NULL COMMENT '技能ID(app_skill.id)',
+  `version` int NOT NULL COMMENT '版本号(从1自增)',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '该版本指令正文',
+  `variables` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '该版本变量定义(JSON)',
+  `tool_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '该版本依赖工具(JSON)',
+  `dataset_ids` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '该版本参考数据集(JSON)',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '版本说明',
+  `created_by` bigint NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_skill_version`(`skill_id` ASC, `version` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '技能版本快照' ROW_FORMAT = DYNAMIC;
+
+INSERT INTO `app_skill_version` (`id`, `skill_id`, `version`, `content`, `variables`, `tool_ids`, `dataset_ids`, `remark`, `created_by`) VALUES
+(1, 1, 1, '# 专家顾问应答技能\n\n当你需要以资深专家身份解答问题时，请遵循：\n\n1. 先给出明确结论（开头 1-2 句），再分条阐述依据；\n2. 使用准确的行业术语，必要时用通俗语言补充解释；\n3. 区分「事实」与「推测」，推测必须显式标注；\n4. 信息不足时先向用户澄清，不要臆测；\n5. 回答语言与用户保持一致。', '[]', NULL, NULL, '初始版本', 1),
+(2, 2, 1, '# 数据统计汇报技能\n\n当你被要求统计、换算或汇报数据时，请按以下步骤执行：\n\n1. 先调用「获取当前时间」确认基准时间；\n2. 对用户给出的文本调用「统计文本」获取字符数/单词数/行数；\n3. 以「指标 - 数值 - 口径」表格形式汇报，口径需注明；\n4. 数值来源为工具结果，不得虚构。', '[]', '[1,2]', NULL, '初始版本', 1),
+(3, 3, 1, '# 合规客服应答技能\n\n当用户询问客服/售后/政策类问题时：\n\n1. 仅依据知识库资料作答，禁止编造条款；\n2. 每项答复尽量标注知识库依据编号；\n3. 资料未覆盖时引导留下联系方式并承诺转人工；\n4. 措辞礼貌、克制，不做过度承诺。', '[]', NULL, '[1]', '初始版本', 1);
