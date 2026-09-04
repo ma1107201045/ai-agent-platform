@@ -5,7 +5,7 @@ import com.agent.platform.dao.entity.datastore.DataRecord;
 import com.agent.platform.dao.entity.datastore.DataTable;
 import com.agent.platform.dao.mapper.datastore.DataRecordMapper;
 import com.agent.platform.dao.mapper.datastore.DataTableMapper;
-import com.agent.platform.dao.dto.datastore.ColumnDefDTO;
+import com.agent.platform.dao.dto.datastore.DataColumnDefDTO;
 import com.agent.platform.dao.vo.datastore.DataRecordVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -74,7 +74,7 @@ public class DataStoreService {
         return table;
     }
 
-    public DataTable createTable(String name, String label, String description, List<ColumnDefDTO> columns) {
+    public DataTable createTable(String name, String label, String description, List<DataColumnDefDTO> columns) {
         if (!StringUtils.hasText(name)) {
             throw new BizException("请输入数据表名称");
         }
@@ -97,7 +97,7 @@ public class DataStoreService {
     }
 
     public DataTable updateTable(Long id, String name, String label, String description,
-                                 List<ColumnDefDTO> columns, Integer status) {
+                                 List<DataColumnDefDTO> columns, Integer status) {
         DataTable table = getTable(id);
         if (name != null && StringUtils.hasText(name)) {
             String trimName = name.trim();
@@ -137,7 +137,7 @@ public class DataStoreService {
     /** 分页返回行记录（data 为列键值对象，便于前端直接渲染） */
     public Page<DataRecordVO> pageRecords(Long tableId, long page, long size, String keyword) {
         DataTable table = getTable(tableId);
-        List<ColumnDefDTO> columns = parseColumns(table.getColumnsJson());
+        List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         LambdaQueryWrapper<DataRecord> wrapper = new LambdaQueryWrapper<DataRecord>()
                 .eq(DataRecord::getTableId, tableId)
                 .orderByDesc(DataRecord::getId);
@@ -161,7 +161,7 @@ public class DataStoreService {
 
     public DataRecordVO createRecord(Long tableId, Map<String, Object> data) {
         DataTable table = getTable(tableId);
-        List<ColumnDefDTO> columns = parseColumns(table.getColumnsJson());
+        List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         Map<String, Object> row = normalizeRow(columns, data);
         LocalDateTime now = LocalDateTime.now();
         DataRecord record = new DataRecord();
@@ -179,7 +179,7 @@ public class DataStoreService {
     public DataRecordVO updateRecord(Long id, Map<String, Object> data) {
         DataRecord record = requireRecord(id);
         DataTable table = getTable(record.getTableId());
-        List<ColumnDefDTO> columns = parseColumns(table.getColumnsJson());
+        List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         Map<String, Object> row = normalizeRow(columns, data);
         record.setDataJson(toDataJson(row));
         record.setUpdateTime(LocalDateTime.now());
@@ -208,7 +208,7 @@ public class DataStoreService {
             throw new BizException("没有可导入的数据");
         }
         DataTable table = getTable(tableId);
-        List<ColumnDefDTO> columns = parseColumns(table.getColumnsJson());
+        List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         LocalDateTime now = LocalDateTime.now();
         int count = 0;
         for (int i = 0; i < rows.size(); i++) {
@@ -238,7 +238,7 @@ public class DataStoreService {
             throw new BizException("请选择要导入的 CSV 文件");
         }
         DataTable table = getTable(tableId);
-        List<ColumnDefDTO> columns = parseColumns(table.getColumnsJson());
+        List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         List<List<String>> lines;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             lines = readCsv(reader);
@@ -276,7 +276,7 @@ public class DataStoreService {
     /** CSV 导出：返回带 UTF-8 BOM 的文本，含表头（列名） */
     public String exportCsv(Long tableId) {
         DataTable table = getTable(tableId);
-        List<ColumnDefDTO> columns = parseColumns(table.getColumnsJson());
+        List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         List<DataRecord> records = recordMapper.selectList(new LambdaQueryWrapper<DataRecord>()
                 .eq(DataRecord::getTableId, tableId)
                 .orderByAsc(DataRecord::getId));
@@ -306,12 +306,12 @@ public class DataStoreService {
         return sb.toString();
     }
 
-    public List<ColumnDefDTO> parseColumns(String columnsJson) {
+    public List<DataColumnDefDTO> parseColumns(String columnsJson) {
         if (columnsJson == null || columnsJson.isBlank()) {
             throw new BizException("数据表尚未定义列");
         }
         try {
-            List<ColumnDefDTO> columns = objectMapper.readValue(columnsJson, new TypeReference<List<ColumnDefDTO>>() {});
+            List<DataColumnDefDTO> columns = objectMapper.readValue(columnsJson, new TypeReference<List<DataColumnDefDTO>>() {});
             if (columns == null || columns.isEmpty()) {
                 throw new BizException("数据表尚未定义列");
             }
@@ -333,12 +333,12 @@ public class DataStoreService {
         }
     }
 
-    private void validateColumns(List<ColumnDefDTO> columns) {
+    private void validateColumns(List<DataColumnDefDTO> columns) {
         if (columns == null || columns.isEmpty()) {
             throw new BizException("至少需要定义一个列");
         }
         Set<String> keys = new HashSet<>();
-        for (ColumnDefDTO col : columns) {
+        for (DataColumnDefDTO col : columns) {
             if (col == null || !StringUtils.hasText(col.getKey())) {
                 throw new BizException("列的 key 不能为空");
             }
@@ -355,7 +355,7 @@ public class DataStoreService {
         }
     }
 
-    private String toColumnsJson(List<ColumnDefDTO> columns) {
+    private String toColumnsJson(List<DataColumnDefDTO> columns) {
         try {
             return objectMapper.writeValueAsString(columns);
         } catch (JsonProcessingException e) {
@@ -371,12 +371,12 @@ public class DataStoreService {
         }
     }
 
-    private Map<String, Object> normalizeRow(List<ColumnDefDTO> columns, Map<String, Object> data) {
+    private Map<String, Object> normalizeRow(List<DataColumnDefDTO> columns, Map<String, Object> data) {
         if (data == null) {
             throw new BizException("行数据不能为空");
         }
         Map<String, Object> row = new LinkedHashMap<>();
-        for (ColumnDefDTO col : columns) {
+        for (DataColumnDefDTO col : columns) {
             if (!data.containsKey(col.getKey())) {
                 continue; // 缺列时按空处理，方便导入模板不全的场景
             }
@@ -385,7 +385,7 @@ public class DataStoreService {
         return row;
     }
 
-    private Object coerceValue(ColumnDefDTO col, Object raw) {
+    private Object coerceValue(DataColumnDefDTO col, Object raw) {
         if (raw == null) {
             return null;
         }
@@ -420,13 +420,13 @@ public class DataStoreService {
         }
     }
 
-    private int matchColumn(List<ColumnDefDTO> columns, String header) {
+    private int matchColumn(List<DataColumnDefDTO> columns, String header) {
         if (header == null) {
             return -1;
         }
         String text = header.trim();
         for (int i = 0; i < columns.size(); i++) {
-            ColumnDefDTO col = columns.get(i);
+            DataColumnDefDTO col = columns.get(i);
             if (text.equals(col.getKey()) || text.equals(col.getLabel())) {
                 return i;
             }

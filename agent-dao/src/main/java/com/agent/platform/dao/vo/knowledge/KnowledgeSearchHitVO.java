@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SearchHitVO {
+public class KnowledgeSearchHitVO {
     private Long id;
     private Long documentId;
     private Integer chunkIndex;

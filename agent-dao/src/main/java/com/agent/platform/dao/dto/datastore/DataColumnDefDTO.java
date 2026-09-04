@@ -12,7 +12,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ColumnDefDTO {
+public class DataColumnDefDTO {
     private String key;
     private String label;
     /** text/number/boolean/date/select */

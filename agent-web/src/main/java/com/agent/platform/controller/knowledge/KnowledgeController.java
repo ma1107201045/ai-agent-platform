@@ -6,7 +6,7 @@ import com.agent.platform.dao.dto.knowledge.KnowledgeSearchDTO;
 import com.agent.platform.dao.entity.knowledge.KnowledgeChunk;
 import com.agent.platform.dao.entity.knowledge.KnowledgeDataset;
 import com.agent.platform.dao.entity.knowledge.KnowledgeDocument;
-import com.agent.platform.dao.vo.knowledge.SearchHitVO;
+import com.agent.platform.dao.vo.knowledge.KnowledgeSearchHitVO;
 import com.agent.platform.service.knowledge.KnowledgeService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -100,8 +100,8 @@ public class KnowledgeController {
     // ---------- 检索 ----------
 
     @PostMapping("/datasets/{datasetId}/search")
-    public Result<List<SearchHitVO>> search(@PathVariable Long datasetId,
-                                            @RequestBody KnowledgeSearchDTO req) {
+    public Result<List<KnowledgeSearchHitVO>> search(@PathVariable Long datasetId,
+                                                     @RequestBody KnowledgeSearchDTO req) {
         int topK = req.getTopK() == null ? 3 : req.getTopK();
         return Result.ok(knowledgeService.search(datasetId, req.getQuery(), topK, req.getRerankModelId()));
     }

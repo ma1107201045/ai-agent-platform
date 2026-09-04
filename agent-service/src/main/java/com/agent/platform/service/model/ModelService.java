@@ -5,7 +5,7 @@ import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.mapper.model.ModelInfoMapper;
 import com.agent.platform.dao.mapper.model.ModelProviderMapper;
-import com.agent.platform.dao.vo.model.ChatModelInfoVO;
+import com.agent.platform.dao.vo.model.ModelInfoVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -109,18 +109,18 @@ public class ModelService {
     /**
      * 可用的对话模型列表（供应商启用 + 模型启用），供前端下拉选择
      */
-    public List<ChatModelInfoVO> chatModels() {
+    public List<ModelInfoVO> chatModels() {
         List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
                 .eq(ModelInfo::getModelType, "llm")
                 .eq(ModelInfo::getStatus, 1)
                 .orderByAsc(ModelInfo::getId));
-        List<ChatModelInfoVO> result = new ArrayList<>();
+        List<ModelInfoVO> result = new ArrayList<>();
         for (ModelInfo info : infos) {
             ModelProvider provider = providerMapper.selectById(info.getProviderId());
             if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
                 continue;
             }
-            result.add(new ChatModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
     }
@@ -128,17 +128,17 @@ public class ModelService {
     /**
      * 全部启用的模型列表（不限类型，供模型网关等场景下拉选择）
      */
-    public List<ChatModelInfoVO> allModels() {
+    public List<ModelInfoVO> allModels() {
         List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
                 .eq(ModelInfo::getStatus, 1)
                 .orderByAsc(ModelInfo::getId));
-        List<ChatModelInfoVO> result = new ArrayList<>();
+        List<ModelInfoVO> result = new ArrayList<>();
         for (ModelInfo info : infos) {
             ModelProvider provider = providerMapper.selectById(info.getProviderId());
             if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
                 continue;
             }
-            result.add(new ChatModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
     }
@@ -147,25 +147,25 @@ public class ModelService {
      * 获取默认对话模型 ID（第一个启用的 LLM），无可用模型返回 null
      */
     public Long defaultChatModelId() {
-        List<ChatModelInfoVO> list = chatModels();
+        List<ModelInfoVO> list = chatModels();
         return list.isEmpty() ? null : list.get(0).getId();
     }
 
     /**
      * 可用的向量模型列表（供知识库配置下拉）
      */
-    public List<ChatModelInfoVO> embeddingModels() {
+    public List<ModelInfoVO> embeddingModels() {
         List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
                 .eq(ModelInfo::getModelType, "embedding")
                 .eq(ModelInfo::getStatus, 1)
                 .orderByAsc(ModelInfo::getId));
-        List<ChatModelInfoVO> result = new ArrayList<>();
+        List<ModelInfoVO> result = new ArrayList<>();
         for (ModelInfo info : infos) {
             ModelProvider provider = providerMapper.selectById(info.getProviderId());
             if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
                 continue;
             }
-            result.add(new ChatModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
     }
@@ -173,18 +173,18 @@ public class ModelService {
     /**
      * 可用的重排序模型列表
      */
-    public List<ChatModelInfoVO> rerankModels() {
+    public List<ModelInfoVO> rerankModels() {
         List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
                 .eq(ModelInfo::getModelType, "rerank")
                 .eq(ModelInfo::getStatus, 1)
                 .orderByAsc(ModelInfo::getId));
-        List<ChatModelInfoVO> result = new ArrayList<>();
+        List<ModelInfoVO> result = new ArrayList<>();
         for (ModelInfo info : infos) {
             ModelProvider provider = providerMapper.selectById(info.getProviderId());
             if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
                 continue;
             }
-            result.add(new ChatModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
     }

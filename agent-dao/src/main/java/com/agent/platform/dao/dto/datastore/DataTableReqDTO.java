@@ -12,7 +12,7 @@ public class DataTableReqDTO {
     private String name;
     private String label;
     private String description;
-    private List<ColumnDefDTO> columns;
+    private List<DataColumnDefDTO> columns;
     /** 更新时的目标状态（创建时忽略） */
     private Integer status;
 }

@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
-public class ChatModelInfoVO {
+public class ModelInfoVO {
     private Long id;
     private String providerName;
     private String modelName;

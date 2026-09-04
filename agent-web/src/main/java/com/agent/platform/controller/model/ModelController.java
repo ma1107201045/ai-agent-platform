@@ -3,7 +3,7 @@ package com.agent.platform.controller.model;
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
-import com.agent.platform.dao.vo.model.ChatModelInfoVO;
+import com.agent.platform.dao.vo.model.ModelInfoVO;
 import com.agent.platform.service.model.ModelService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -79,25 +79,25 @@ public class ModelController {
 
     /** 全部启用的模型列表（含供应商名，供模型网关目标选择等） */
     @GetMapping("/models/all")
-    public Result<List<ChatModelInfoVO>> allModels() {
+    public Result<List<ModelInfoVO>> allModels() {
         return Result.ok(modelService.allModels());
     }
 
     /** 可用对话模型列表 */
     @GetMapping("/models/chat-models")
-    public Result<List<ChatModelInfoVO>> chatModels() {
+    public Result<List<ModelInfoVO>> chatModels() {
         return Result.ok(modelService.chatModels());
     }
 
     /** 可用向量模型列表（供知识库配置下拉） */
     @GetMapping("/models/embedding-models")
-    public Result<List<ChatModelInfoVO>> embeddingModels() {
+    public Result<List<ModelInfoVO>> embeddingModels() {
         return Result.ok(modelService.embeddingModels());
     }
 
     /** 可用重排序模型列表 */
     @GetMapping("/models/rerank-models")
-    public Result<List<ChatModelInfoVO>> rerankModels() {
+    public Result<List<ModelInfoVO>> rerankModels() {
         return Result.ok(modelService.rerankModels());
     }
 }

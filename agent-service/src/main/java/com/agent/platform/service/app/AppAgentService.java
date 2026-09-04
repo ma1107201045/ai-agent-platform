@@ -13,7 +13,7 @@ import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
 import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
 import com.agent.platform.dao.vo.app.AgentChatVO;
 import com.agent.platform.dao.vo.app.AgentStepVO;
-import com.agent.platform.dao.vo.knowledge.SearchHitVO;
+import com.agent.platform.dao.vo.knowledge.KnowledgeSearchHitVO;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -410,8 +410,8 @@ public class AppAgentService {
             int idx = 1;
             for (Long id : ids) {
                 try {
-                    List<SearchHitVO> hits = knowledgeService.search(id, query, 3, null);
-                    for (SearchHitVO hit : hits) {
+                    List<KnowledgeSearchHitVO> hits = knowledgeService.search(id, query, 3, null);
+                    for (KnowledgeSearchHitVO hit : hits) {
                         sb.append("[").append(idx++).append("] ").append(hit.getContent()).append("\n\n");
                     }
                 } catch (Exception ignore) {
