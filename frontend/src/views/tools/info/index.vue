@@ -10,7 +10,6 @@ import HeadersEditor from '@/components/tool/HeadersEditor.vue'
 
 const NAME_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/
 const typeLabels: Record<string, string> = { http: 'HTTP 请求', code: '代码脚本' }
-const authLabels: Record<string, string> = { none: '无', bearer: 'Bearer Token' }
 
 /* ---------------- 列表 ---------------- */
 const loading = ref(false)

@@ -77,6 +77,12 @@ public class ModelController {
 
     // ---------- 可用模型列表（供前端下拉） ----------
 
+    /** 全部启用的模型列表（含供应商名，供模型网关目标选择等） */
+    @GetMapping("/models/all")
+    public Result<List<ChatModelInfoVO>> allModels() {
+        return Result.ok(modelService.allModels());
+    }
+
     /** 可用对话模型列表 */
     @GetMapping("/models/chat-models")
     public Result<List<ChatModelInfoVO>> chatModels() {

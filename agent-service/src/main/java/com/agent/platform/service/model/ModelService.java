@@ -126,6 +126,24 @@ public class ModelService {
     }
 
     /**
+     * 全部启用的模型列表（不限类型，供模型网关等场景下拉选择）
+     */
+    public List<ChatModelInfoVO> allModels() {
+        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
+                .eq(ModelInfo::getStatus, 1)
+                .orderByAsc(ModelInfo::getId));
+        List<ChatModelInfoVO> result = new ArrayList<>();
+        for (ModelInfo info : infos) {
+            ModelProvider provider = providerMapper.selectById(info.getProviderId());
+            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
+                continue;
+            }
+            result.add(new ChatModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
+        }
+        return result;
+    }
+
+    /**
      * 获取默认对话模型 ID（第一个启用的 LLM），无可用模型返回 null
      */
     public Long defaultChatModelId() {

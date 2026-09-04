@@ -36,6 +36,10 @@ export const modelApi = {
     return request.delete<never, void>(`/model/models/${id}`)
   },
   // ---------- 可用模型列表 ----------
+  /** 全部启用模型（含供应商名，模型网关等场景使用） */
+  allModels() {
+    return request.get<never, ChatModelInfo[]>('/model/models/all')
+  },
   /** 可用对话模型列表 */
   chatModels() {
     return request.get<never, ChatModelInfo[]>('/model/models/chat-models')

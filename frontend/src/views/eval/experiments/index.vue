@@ -327,7 +327,12 @@ onMounted(() => {
             </el-option>
           </el-select>
           <el-select v-else v-model="runForm.modelId" placeholder="选择对话模型" filterable style="width: 100%">
-            <el-option v-for="m in modelOptions" :key="m.id" :label="m.name" :value="m.id" />
+            <el-option
+              v-for="m in modelOptions"
+              :key="m.id"
+              :label="`${m.providerName} · ${m.modelName}`"
+              :value="m.id"
+            />
           </el-select>
         </div>
       </div>

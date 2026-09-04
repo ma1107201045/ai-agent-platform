@@ -351,7 +351,12 @@ async function loadCases() {
         <div v-else class="field-group">
           <label>被测模型 <span class="req">*</span></label>
           <el-select v-model="form.modelId" placeholder="选择启用的对话模型" filterable style="width: 100%">
-            <el-option v-for="m in modelOptions" :key="m.id" :label="m.name" :value="m.id" />
+            <el-option
+              v-for="m in modelOptions"
+              :key="m.id"
+              :label="`${m.providerName} · ${m.modelName}`"
+              :value="m.id"
+            />
           </el-select>
         </div>
         <el-alert
