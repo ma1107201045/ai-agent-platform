@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 
@@ -21,9 +22,11 @@ public class ChatAgentRunService {
 
     /** 应用运行记录分页（可按状态过滤，按开始时间倒序） */
     public Page<ChatAgentRun> page(Long appId, String status, long page, long size) {
+        boolean hasStatus = StringUtils.hasText(status);
         LambdaQueryWrapper<ChatAgentRun> qw = new LambdaQueryWrapper<ChatAgentRun>()
                 .eq(appId != null, ChatAgentRun::getAppId, appId)
-                .eq(status != null && !status.isBlank(), ChatAgentRun::getStatus, status.trim())
+                // 第三个参数会被 LambdaQueryWrapper 立即求值，必须避免 status=null 时调用 trim() 抛 NPE
+                .eq(hasStatus, ChatAgentRun::getStatus, hasStatus ? status.trim() : null)
                 .orderByDesc(ChatAgentRun::getCreateTime);
         return chatAgentRunMapper.selectPage(new Page<>(page, size), qw);
     }
