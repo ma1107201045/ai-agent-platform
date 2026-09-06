@@ -3,10 +3,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, EditPen, Link, Plus, ShoppingCart, VideoPlay } from '@element-plus/icons-vue'
-import { appAgentToolApi } from '@/api/tool-info.ts'
+import { appAgentToolApi } from '@/api/app-tool-info.ts'
 import type { AppAgentTool } from '@/api/types'
 import ParamsSchemaEditor from '@/components/tool/ParamsSchemaEditor.vue'
 import HeadersEditor from '@/components/tool/HeadersEditor.vue'
+
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const NAME_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/
 const typeLabels: Record<string, string> = { http: 'HTTP 请求', code: '代码脚本' }
@@ -248,7 +250,7 @@ const paramsSummary = computed(() => {
 </script>
 
 <template>
-  <div class="page-container info-page">
+  <div :class="['info-page', { 'page-container': !props.embedded, embedded: props.embedded }]">
     <!-- 引导条 -->
     <el-alert type="info" :closable="false" class="info-banner">
       <div class="banner-inner">
@@ -484,6 +486,11 @@ const paramsSummary = computed(() => {
 .info-page {
   max-width: 1400px;
   margin: 0 auto;
+}
+.info-page.embedded {
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 .info-banner {
   margin-bottom: 16px;

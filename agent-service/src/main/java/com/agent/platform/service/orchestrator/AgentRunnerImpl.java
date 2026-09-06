@@ -1,8 +1,8 @@
 package com.agent.platform.service.orchestrator;
 
 import com.agent.platform.dao.entity.app.AppAgent;
-import com.agent.platform.dao.entity.tool.ToolInfo;
-import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.entity.app.AppTool;
+import com.agent.platform.dao.vo.app.AppAgentChatVO;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.orchestrator.spi.AgentRunner;
 import com.agent.platform.service.app.AppAgentService;
@@ -65,11 +65,11 @@ public class AgentRunnerImpl implements AgentRunner {
             datasetIds = mergeIds(datasetIds, rt.datasetIds());
         }
 
-        List<ToolInfo> tools = appAgentService.loadTools(toJsonArray(toolIds));
+        List<AppTool> tools = appAgentService.loadTools(toJsonArray(toolIds));
         List<ChatMessage> history = List.of(ChatMessage.user(
                 task.userMessage() == null ? "" : task.userMessage()));
 
-        AgentChatVO result = appAgentService.chat(
+        AppAgentChatVO result = appAgentService.chat(
                 task.modelId(), systemPrompt, tools, toJsonArray(datasetIds), history, task.maxIterations());
 
         List<AgentStep> steps = result.getSteps() == null ? List.of()

@@ -7,7 +7,7 @@ import com.agent.platform.dao.dto.app.AppAgentPublishDTO;
 import com.agent.platform.dao.dto.app.AppAgentRunDTO;
 import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
-import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.app.AppAgentChatVO;
 import com.agent.platform.dao.vo.chat.ChatAppAgentStatsVO;
 import com.agent.platform.orchestrator.RunResult;
 import com.agent.platform.orchestrator.WorkflowEngine;
@@ -290,7 +290,7 @@ public class AppAgentController {
      * Agent 自主对话（非流式）：规划-工具调用-观察循环
      */
     @PostMapping("/{id}/agent/chat")
-    public Result<AgentChatVO> agentChat(@PathVariable Long id, @RequestBody AppAgentChatDTO request) {
+    public Result<AppAgentChatVO> agentChat(@PathVariable Long id, @RequestBody AppAgentChatDTO request) {
         if (request.getModelId() == null) {
             throw new BizException("请选择对话模型");
         }

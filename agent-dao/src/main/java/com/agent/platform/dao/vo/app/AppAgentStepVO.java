@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @AllArgsConstructor
-public class AgentStepVO {
+public class AppAgentStepVO {
     private String toolName;
     private String arguments;
     private String result;

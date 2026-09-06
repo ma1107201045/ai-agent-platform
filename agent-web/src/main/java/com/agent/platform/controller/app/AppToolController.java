@@ -1,9 +1,9 @@
-package com.agent.platform.controller.tool;
+package com.agent.platform.controller.app;
 
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.dto.tool.ToolTestDTO;
-import com.agent.platform.dao.entity.tool.ToolInfo;
-import com.agent.platform.service.tool.ToolInfoService;
+import com.agent.platform.dao.dto.app.AppToolTestDTO;
+import com.agent.platform.dao.entity.app.AppTool;
+import com.agent.platform.service.app.AppToolService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -21,35 +21,35 @@ import java.util.List;
  * </pre>
  */
 @RestController
-@RequestMapping("/api/tool/infos")
+@RequestMapping("/api/app/tools")
 @RequiredArgsConstructor
-public class ToolInfoController {
+public class AppToolController {
 
-    private final ToolInfoService toolService;
+    private final AppToolService toolService;
 
     @GetMapping
-    public Result<Page<ToolInfo>> page(@RequestParam(defaultValue = "1") long page,
-                                       @RequestParam(defaultValue = "20") long size) {
+    public Result<Page<AppTool>> page(@RequestParam(defaultValue = "1") long page,
+                                      @RequestParam(defaultValue = "20") long size) {
         return Result.ok(toolService.page(page, size));
     }
 
     @GetMapping("/enabled")
-    public Result<List<ToolInfo>> enabled() {
+    public Result<List<AppTool>> enabled() {
         return Result.ok(toolService.listEnabled());
     }
 
     @GetMapping("/{id}")
-    public Result<ToolInfo> getById(@PathVariable Long id) {
+    public Result<AppTool> getById(@PathVariable Long id) {
         return Result.ok(toolService.getById(id));
     }
 
     @PostMapping
-    public Result<ToolInfo> create(@RequestBody ToolInfo tool) {
+    public Result<AppTool> create(@RequestBody AppTool tool) {
         return Result.ok(toolService.create(tool));
     }
 
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody ToolInfo tool) {
+    public Result<Void> update(@PathVariable Long id, @RequestBody AppTool tool) {
         tool.setId(id);
         toolService.update(tool);
         return Result.ok();
@@ -63,7 +63,7 @@ public class ToolInfoController {
 
     /** 工具执行测试 */
     @PostMapping("/{id}/test")
-    public Result<String> test(@PathVariable Long id, @RequestBody ToolTestDTO req) {
+    public Result<String> test(@PathVariable Long id, @RequestBody AppToolTestDTO req) {
         return Result.ok(toolService.execute(toolService.getById(id), req.getArguments()));
     }
 }

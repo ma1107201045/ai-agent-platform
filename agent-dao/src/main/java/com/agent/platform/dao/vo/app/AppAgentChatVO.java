@@ -10,11 +10,11 @@ import java.util.List;
  */
 @Data
 @AllArgsConstructor
-public class AgentChatVO {
+public class AppAgentChatVO {
     /** 最终回答 */
     private String answer;
     /** 工具调用步骤 */
-    private List<AgentStepVO> steps;
+    private List<AppAgentStepVO> steps;
     /** 输入 Token（含工具调用轮次累计） */
     private long promptTokens;
     /** 输出 Token（含工具调用轮次累计） */

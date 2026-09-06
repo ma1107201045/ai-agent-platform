@@ -1,8 +1,8 @@
-package com.agent.platform.service.tool;
+package com.agent.platform.service.app;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.dao.entity.tool.ToolInfo;
-import com.agent.platform.dao.mapper.tool.ToolInfoMapper;
+import com.agent.platform.dao.entity.app.AppTool;
+import com.agent.platform.dao.mapper.app.AppToolMapper;
 import com.agent.platform.llm.model.FunctionTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -32,33 +32,33 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
-public class ToolInfoService {
+public class AppToolService {
 
-    private final ToolInfoMapper toolMapper;
+    private final AppToolMapper toolMapper;
     private final ObjectMapper objectMapper;
 
     // ---------- CRUD ----------
 
-    public Page<ToolInfo> page(long page, long size) {
+    public Page<AppTool> page(long page, long size) {
         return toolMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<ToolInfo>().orderByDesc(ToolInfo::getId));
+                new LambdaQueryWrapper<AppTool>().orderByDesc(AppTool::getId));
     }
 
-    public List<ToolInfo> listEnabled() {
-        return toolMapper.selectList(new LambdaQueryWrapper<ToolInfo>()
-                .eq(ToolInfo::getStatus, 1)
-                .orderByAsc(ToolInfo::getId));
+    public List<AppTool> listEnabled() {
+        return toolMapper.selectList(new LambdaQueryWrapper<AppTool>()
+                .eq(AppTool::getStatus, 1)
+                .orderByAsc(AppTool::getId));
     }
 
-    public ToolInfo getById(Long id) {
-        ToolInfo tool = toolMapper.selectById(id);
+    public AppTool getById(Long id) {
+        AppTool tool = toolMapper.selectById(id);
         if (tool == null) {
             throw new BizException("工具不存在: " + id);
         }
         return tool;
     }
 
-    public ToolInfo create(ToolInfo tool) {
+    public AppTool create(AppTool tool) {
         validate(tool);
         tool.setId(null);
         if (tool.getTenantId() == null) {
@@ -80,7 +80,7 @@ public class ToolInfoService {
         return tool;
     }
 
-    public void update(ToolInfo tool) {
+    public void update(AppTool tool) {
         getById(tool.getId());
         validate(tool);
         toolMapper.updateById(tool);
@@ -91,7 +91,7 @@ public class ToolInfoService {
         toolMapper.deleteById(id);
     }
 
-    private void validate(ToolInfo tool) {
+    private void validate(AppTool tool) {
         if (tool.getName() == null || tool.getName().isBlank()) {
             throw new BizException("工具名称不能为空");
         }
@@ -117,16 +117,16 @@ public class ToolInfoService {
     // ---------- 转换与执行 ----------
 
     /** 转换为 LLM FunctionTool（供 ChatRequest.tools 使用） */
-    public FunctionTool toFunctionTool(ToolInfo tool) {
+    public FunctionTool toFunctionTool(AppTool tool) {
         String parameters = tool.getParameters() == null || tool.getParameters().isBlank()
                 ? "{\"type\":\"object\",\"properties\":{}}"
                 : tool.getParameters();
         return new FunctionTool(tool.getName(), tool.getDescription(), parameters);
     }
 
-    public List<FunctionTool> toFunctionTools(List<ToolInfo> tools) {
+    public List<FunctionTool> toFunctionTools(List<AppTool> tools) {
         List<FunctionTool> result = new ArrayList<>();
-        for (ToolInfo t : tools) {
+        for (AppTool t : tools) {
             result.add(toFunctionTool(t));
         }
         return result;
@@ -139,7 +139,7 @@ public class ToolInfoService {
      * @param arguments 模型生成的参数（JSON 对象字符串，可为 null）
      * @return 执行结果文本
      */
-    public String execute(ToolInfo tool, String arguments) {
+    public String execute(AppTool tool, String arguments) {
         Map<String, Object> args = parseArguments(arguments);
         if ("http".equals(tool.getType())) {
             return executeHttp(tool, args);
@@ -166,7 +166,7 @@ public class ToolInfoService {
     }
 
     /** HTTP 工具：GET 参数拼 query，其他方法参数作为 JSON body */
-    private String executeHttp(ToolInfo tool, Map<String, Object> args) {
+    private String executeHttp(AppTool tool, Map<String, Object> args) {
         try {
             String url = tool.getUrl();
             String method = tool.getMethod() == null ? "GET" : tool.getMethod().toUpperCase();
@@ -222,7 +222,7 @@ public class ToolInfoService {
     }
 
     /** 代码工具：MVEL 执行，变量含各参数与 input（参数整体 JSON 字符串） */
-    private String executeCode(ToolInfo tool, Map<String, Object> args) {
+    private String executeCode(AppTool tool, Map<String, Object> args) {
         try {
             Map<String, Object> vars = new LinkedHashMap<>(args);
             try {

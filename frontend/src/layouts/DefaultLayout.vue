@@ -27,12 +27,13 @@ let unreadTimer: number | undefined
 /** 侧边栏收起：仅保留 64px 图标导航 */
 const collapsed = ref(false)
 
-/** 高亮匹配：精确命中优先，其次子路径前缀命中（如 /app/agents/1/edit 高亮“智能体”） */
+/** 高亮匹配：精确命中优先，其次子路径前缀命中，最后按路由一级分组命中首个菜单 */
 const activeMenu = computed(() => {
   const p = route.path
   return (
     menuItems.find((item) => p === item.path)?.path ||
     menuItems.find((item) => p.startsWith(item.path + '/'))?.path ||
+    menuGroups.find((g) => p.startsWith('/' + g.key))?.items[0]?.path ||
     DEFAULT_HOME
   )
 })

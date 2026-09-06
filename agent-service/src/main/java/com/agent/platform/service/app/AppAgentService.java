@@ -2,17 +2,15 @@ package com.agent.platform.service.app;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.dao.entity.app.AppAgent;
-import com.agent.platform.dao.entity.tool.ToolInfo;
+import com.agent.platform.dao.entity.app.AppTool;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
-import com.agent.platform.dao.entity.chat.ChatConversation;
-import com.agent.platform.dao.entity.chat.ChatUsage;
 import com.agent.platform.dao.mapper.app.AppAgentMapper;
 import com.agent.platform.dao.mapper.app.AppAgentVersionMapper;
 import com.agent.platform.dao.mapper.chat.ChatConversationMapper;
 import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
 import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
-import com.agent.platform.dao.vo.app.AgentChatVO;
-import com.agent.platform.dao.vo.app.AgentStepVO;
+import com.agent.platform.dao.vo.app.AppAgentChatVO;
+import com.agent.platform.dao.vo.app.AppAgentStepVO;
 import com.agent.platform.dao.vo.knowledge.KnowledgeSearchHitVO;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
@@ -21,7 +19,6 @@ import com.agent.platform.llm.model.ToolCall;
 import com.agent.platform.llm.spi.ChatModel;
 import com.agent.platform.service.knowledge.KnowledgeService;
 import com.agent.platform.service.model.ModelRuntimeService;
-import com.agent.platform.service.tool.ToolInfoService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -75,7 +72,7 @@ public class AppAgentService {
     private final ChatMessageMapper chatMessageMapper;
     private final ChatUsageMapper chatUsageMapper;
     private final ModelRuntimeService modelRuntimeService;
-    private final ToolInfoService appToolService;
+    private final AppToolService appToolService;
     private final KnowledgeService knowledgeService;
     private final AppSkillService skillService;
     private final ObjectMapper objectMapper;
@@ -272,8 +269,8 @@ public class AppAgentService {
      * @param history       历史消息（不含 system）
      * @param maxIterations 最大循环轮数
      */
-    public AgentChatVO chat(Long appId, Long modelId, String systemPrompt,
-                            List<ChatMessage> history, Integer maxIterations) {
+    public AppAgentChatVO chat(Long appId, Long modelId, String systemPrompt,
+                               List<ChatMessage> history, Integer maxIterations) {
         AppAgent app = getById(appId);
         // 应用绑定技能：无绑定走原始路径（完全向后兼容）
         if (app.getSkillIds() == null || app.getSkillIds().isBlank()
@@ -344,14 +341,14 @@ public class AppAgentService {
      * @param history        历史消息（不含 system）
      * @param maxIterations  最大循环轮数
      */
-    public AgentChatVO chat(Long modelId, String systemPrompt, List<ToolInfo> tools,
-                            String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
+    public AppAgentChatVO chat(Long modelId, String systemPrompt, List<AppTool> tools,
+                               String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         return doChat(modelId, systemPrompt, tools, datasetIdsJson, history, maxIterations);
     }
 
     /** Agent 循环核心实现 */
-    private AgentChatVO doChat(Long modelId, String systemPrompt, List<ToolInfo> tools,
-                               String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
+    private AppAgentChatVO doChat(Long modelId, String systemPrompt, List<AppTool> tools,
+                                  String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
         int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
 
         ChatModel chatModel = modelRuntimeService.chatModelOf(modelId);
@@ -375,7 +372,7 @@ public class AppAgentService {
             }
         }
 
-        List<AgentStepVO> steps = new ArrayList<>();
+        List<AppAgentStepVO> steps = new ArrayList<>();
         String answer = null;
         long promptTokens = 0;
         long completionTokens = 0;
@@ -406,7 +403,7 @@ public class AppAgentService {
                 long start = System.currentTimeMillis();
                 String result;
                 try {
-                    ToolInfo tool = tools.stream()
+                    AppTool tool = tools.stream()
                             .filter(t -> t.getName().equals(tc.name()))
                             .findFirst()
                             .orElse(null);
@@ -419,14 +416,14 @@ public class AppAgentService {
                     result = "工具执行异常: " + e.getMessage();
                 }
                 long cost = System.currentTimeMillis() - start;
-                steps.add(new AgentStepVO(tc.name(), tc.arguments(), result, cost));
+                steps.add(new AppAgentStepVO(tc.name(), tc.arguments(), result, cost));
                 messages.add(ChatMessage.tool(tc.id(), result));
             }
         }
         if (answer == null) {
             answer = "已达到最大迭代次数（" + maxIter + "），请调整问题或检查工具配置。";
         }
-        return new AgentChatVO(answer, steps, promptTokens, completionTokens, totalTokens);
+        return new AppAgentChatVO(answer, steps, promptTokens, completionTokens, totalTokens);
     }
 
     /** 取历史中最后一条用户消息作为知识库检索查询 */
@@ -476,17 +473,17 @@ public class AppAgentService {
     /**
      * 解析工具 ID JSON 数组并加载启用的工具（应用绑定或节点级配置均可）
      */
-    public List<ToolInfo> loadTools(String toolIdsJson) {
+    public List<AppTool> loadTools(String toolIdsJson) {
         if (toolIdsJson == null || toolIdsJson.isBlank() || "null".equals(toolIdsJson.trim())) {
             return List.of();
         }
         try {
             List<Long> ids = objectMapper.readValue(toolIdsJson, new TypeReference<List<Long>>() {
             });
-            List<ToolInfo> result = new ArrayList<>();
+            List<AppTool> result = new ArrayList<>();
             if (ids != null) {
                 for (Long id : ids) {
-                    ToolInfo tool = appToolService.getById(id);
+                    AppTool tool = appToolService.getById(id);
                     if (tool.getStatus() != null && tool.getStatus() == 1) {
                         result.add(tool);
                     }

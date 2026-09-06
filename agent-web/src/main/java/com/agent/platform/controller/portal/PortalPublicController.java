@@ -4,7 +4,7 @@ import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
 import com.agent.platform.dao.dto.portal.PortalPublicChatDTO;
 import com.agent.platform.dao.entity.app.AppAgent;
-import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.app.AppAgentChatVO;
 import com.agent.platform.dao.vo.portal.PortalAppInfoVO;
 import com.agent.platform.dao.vo.portal.PortalChatResultVO;
 import com.agent.platform.orchestrator.RunResult;
@@ -108,7 +108,7 @@ public class PortalPublicController {
             if (modelId == null) {
                 throw new BizException("尚未配置可用的对话模型");
             }
-            AgentChatVO result = appAgentService.chat(id, modelId, null, history, null);
+            AppAgentChatVO result = appAgentService.chat(id, modelId, null, history, null);
             answer = result.getAnswer();
             detail = result.getSteps();
             recordUsageSafely(app, modelId, new Usage(result.getPromptTokens(), result.getCompletionTokens(),

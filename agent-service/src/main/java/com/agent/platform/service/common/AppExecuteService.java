@@ -2,7 +2,7 @@ package com.agent.platform.service.common;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.dao.entity.app.AppAgent;
-import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.app.AppAgentChatVO;
 import com.agent.platform.llm.model.ChatMessage;
 import com.agent.platform.llm.model.ChatRequest;
 import com.agent.platform.llm.model.ChatResponse;
@@ -78,7 +78,7 @@ public class AppExecuteService {
             if (modelId == null) {
                 throw new BizException("尚未配置可用的对话模型");
             }
-            AgentChatVO result = appAgentService.chat(appId, modelId, null, List.of(), null);
+            AppAgentChatVO result = appAgentService.chat(appId, modelId, null, List.of(), null);
             answer = result.getAnswer();
             detail = result.getSteps();
         } else {

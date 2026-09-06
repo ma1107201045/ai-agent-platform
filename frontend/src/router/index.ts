@@ -1,5 +1,5 @@
 import {createRouter, createWebHistory} from 'vue-router'
-import type {RouteMeta, RouteRecordRaw} from 'vue-router'
+import type {RouteRecordRaw} from 'vue-router'
 import {useUserStore} from '@/stores/user'
 import {DEFAULT_HOME} from '@/config/menu'
 
@@ -13,14 +13,14 @@ import {DEFAULT_HOME} from '@/config/menu'
  */
 
 /** 规划中的模块：统一指向“建设中”占位页 */
-function planned(path: string, name: string, meta: RouteMeta): RouteRecordRaw {
-    return {
-        path,
-        name,
-        component: () => import('@/views/placeholder/index.vue'),
-        meta: {planned: true, ...meta}
-    }
-}
+// function planned(path: string, name: string, meta: RouteMeta): RouteRecordRaw {
+//     return {
+//         path,
+//         name,
+//         component: () => import('@/views/placeholder/index.vue'),
+//         meta: {planned: true, ...meta}
+//     }
+// }
 
 const routes: RouteRecordRaw[] = [
     {
@@ -73,15 +73,22 @@ const routes: RouteRecordRaw[] = [
                 component: () => import('@/views/app/skills/index.vue'),
                 meta: {title: '技能'}
             },
+            /* ---------------- 工具 /tools ---------------- */
             {
-                path: 'app/templates',
-                name: 'AppTemplates',
+                path: 'app/tools',
+                name: 'AppTools',
+                component: () => import('@/views/app/tools/index.vue'),
+                meta: {title: '工具'}
+            },
+            {
+                path: 'app/tool-templates',
+                name: 'AppToolTemplates',
                 component: () => import('@/views/app/templates/index.vue'),
                 meta: {title: '应用模板'}
             },
             {
-                path: 'app/marketplace',
-                name: 'AppMarketplace',
+                path: 'app/tool-marketplace',
+                name: 'AppToolMarketplace',
                 component: () => import('@/views/app/marketplace/index.vue'),
                 meta: {title: '应用市场'}
             },
@@ -142,25 +149,6 @@ const routes: RouteRecordRaw[] = [
                 meta: {title: '素材管理'}
             },
 
-            /* ---------------- 工具 /tools ---------------- */
-            {
-                path: 'tool/infos',
-                name: 'ToolInfos',
-                component: () => import('@/views/tools/info/index.vue'),
-                meta: {title: '工具管理'}
-            },
-            {
-                path: 'tool/marketplace',
-                name: 'ToolMarketplace',
-                component: () => import('@/views/tools/marketplace/index.vue'),
-                meta: {title: '插件市场'}
-            },
-            {
-                path: 'tool/integrations',
-                name: 'ToolIntegrations',
-                component: () => import('@/views/tools/integrations/index.vue'),
-                meta: {title: '数据集成'}
-            },
 
             /* ---------------- 发布 /publish ---------------- */
             {

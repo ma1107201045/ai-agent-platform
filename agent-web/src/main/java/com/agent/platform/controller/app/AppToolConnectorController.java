@@ -1,10 +1,10 @@
-package com.agent.platform.controller.tool;
+package com.agent.platform.controller.app;
 
 import com.agent.platform.common.result.Result;
-import com.agent.platform.dao.dto.tool.ToolConnectorStatusDTO;
-import com.agent.platform.dao.entity.tool.ToolInfo;
-import com.agent.platform.dao.entity.tool.ToolConnector;
-import com.agent.platform.service.tool.ToolConnectorService;
+import com.agent.platform.dao.dto.app.AppToolConnectorStatusDTO;
+import com.agent.platform.dao.entity.app.AppTool;
+import com.agent.platform.dao.entity.app.AppToolConnector;
+import com.agent.platform.service.app.AppToolConnectorService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -20,33 +20,33 @@ import org.springframework.web.bind.annotation.*;
  * </pre>
  */
 @RestController
-@RequestMapping("/api/tool/connectors")
+@RequestMapping("/api/app/tool-connectors")
 @RequiredArgsConstructor
-public class ToolConnectorController {
+public class AppToolConnectorController {
 
-    private final ToolConnectorService connectorService;
+    private final AppToolConnectorService connectorService;
 
     @GetMapping
-    public Result<Page<ToolConnector>> page(@RequestParam(defaultValue = "1") long page,
-                                            @RequestParam(defaultValue = "20") long size,
-                                            @RequestParam(required = false) String keyword,
-                                            @RequestParam(required = false) String type,
-                                            @RequestParam(required = false) Integer status) {
+    public Result<Page<AppToolConnector>> page(@RequestParam(defaultValue = "1") long page,
+                                               @RequestParam(defaultValue = "20") long size,
+                                               @RequestParam(required = false) String keyword,
+                                               @RequestParam(required = false) String type,
+                                               @RequestParam(required = false) Integer status) {
         return Result.ok(connectorService.page(page, size, keyword, type, status));
     }
 
     @GetMapping("/{id}")
-    public Result<ToolConnector> getById(@PathVariable Long id) {
+    public Result<AppToolConnector> getById(@PathVariable Long id) {
         return Result.ok(connectorService.getById(id));
     }
 
     @PostMapping
-    public Result<ToolConnector> create(@RequestBody ToolConnector connector) {
+    public Result<AppToolConnector> create(@RequestBody AppToolConnector connector) {
         return Result.ok(connectorService.create(connector));
     }
 
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody ToolConnector connector) {
+    public Result<Void> update(@PathVariable Long id, @RequestBody AppToolConnector connector) {
         connectorService.update(id, connector);
         return Result.ok();
     }
@@ -59,7 +59,7 @@ public class ToolConnectorController {
 
     /** 启用 / 禁用 */
     @PostMapping("/{id}/status")
-    public Result<Void> updateStatus(@PathVariable Long id, @RequestBody ToolConnectorStatusDTO req) {
+    public Result<Void> updateStatus(@PathVariable Long id, @RequestBody AppToolConnectorStatusDTO req) {
         connectorService.updateStatus(id, req.getStatus());
         return Result.ok();
     }
@@ -72,7 +72,7 @@ public class ToolConnectorController {
 
     /** 一键将 HTTP 连接器生成为可被智能体调用的 HTTP 工具 */
     @PostMapping("/{id}/as-tool")
-    public Result<ToolInfo> asTool(@PathVariable Long id) {
+    public Result<AppTool> asTool(@PathVariable Long id) {
         return Result.ok(connectorService.createHttpTool(id));
     }
 }

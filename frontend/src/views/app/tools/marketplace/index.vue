@@ -3,8 +3,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Operation, Refresh, Search, View } from '@element-plus/icons-vue'
-import { toolMarketplaceApi } from '@/api/tool-marketplace'
+import { toolMarketplaceApi } from '@/api/app-tool-marketplace.ts'
 import type { ToolTemplate } from '@/api/types'
+
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const loading = ref(false)
 const list = ref<ToolTemplate[]>([])
@@ -106,9 +108,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page-container mp-page">
+  <div :class="['mp-page', { 'page-container': !props.embedded, embedded: props.embedded }]">
     <div class="mp-head">
-      <div>
+      <div v-if="!props.embedded">
         <h2 class="head-title">插件市场</h2>
         <p class="head-desc">
           内置常用工具模板，零配置安装即用 ·
@@ -278,6 +280,11 @@ onMounted(load)
 .mp-page {
   max-width: 1400px;
   margin: 0 auto;
+}
+.mp-page.embedded {
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 .mp-banner {
   margin-bottom: 16px;

@@ -7,7 +7,7 @@ import com.agent.platform.dao.entity.chat.ChatUsage;
 import com.agent.platform.dao.mapper.chat.ChatConversationMapper;
 import com.agent.platform.dao.mapper.chat.ChatMessageMapper;
 import com.agent.platform.dao.mapper.chat.ChatUsageMapper;
-import com.agent.platform.dao.vo.app.AgentChatVO;
+import com.agent.platform.dao.vo.app.AppAgentChatVO;
 import com.agent.platform.dao.vo.chat.ChatAppAgentStatsVO;
 import com.agent.platform.llm.model.ChatChunk;
 import com.agent.platform.llm.model.ChatRequest;
@@ -209,7 +209,7 @@ public class ChatConversationService {
             List<ChatMessage> history = messages(conversationId, userId);
             List<com.agent.platform.llm.model.ChatMessage> llmHistory = toLlmMessages(history);
             llmHistory.add(com.agent.platform.llm.model.ChatMessage.user(content));
-            AgentChatVO result = appAgentService.chat(conv.getAppId(), mid, null, llmHistory, null);
+            AppAgentChatVO result = appAgentService.chat(conv.getAppId(), mid, null, llmHistory, null);
             answer = result.getAnswer();
             traceJson = toJson(result.getSteps());
             tokens = result.getTotalTokens();

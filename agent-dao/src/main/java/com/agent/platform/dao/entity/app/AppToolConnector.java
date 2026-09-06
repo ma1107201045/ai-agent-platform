@@ -1,4 +1,4 @@
-package com.agent.platform.dao.entity.tool;
+package com.agent.platform.dao.entity.app;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -19,8 +19,8 @@ import java.time.LocalDateTime;
  * </ul>
  */
 @Data
-@TableName("tool_connector")
-public class ToolConnector {
+@TableName("app_tool_connector")
+public class AppToolConnector {
 
     @TableId(type = IdType.AUTO)
     private Long id;

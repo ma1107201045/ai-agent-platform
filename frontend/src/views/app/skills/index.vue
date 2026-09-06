@@ -12,9 +12,14 @@ import {
   UploadFilled
 } from '@element-plus/icons-vue'
 import { appSkillApi } from '@/api/app-skill'
-import { appAgentToolApi } from '@/api/tool-info'
+import { appAgentToolApi } from '@/api/app-tool-info.ts'
 import { knowledgeApi } from '@/api/knowledge'
 import type { Skill, SkillVersion } from '@/api/types'
+
+/** 模板中用于展示字面量花括号占位（避免 {{ }} 嵌套被编译器误解析） */
+const M_OPEN = '{{'
+const M_CLOSE = '}}'
+const VAR_SAMPLE = '{{var}}'
 
 const loading = ref(false)
 const list = ref<Skill[]>([])
@@ -436,6 +441,14 @@ onMounted(() => {
           <div class="card-tags">
             <el-tag size="small" effect="dark" type="info">{{ categoryLabelOf(row.category) }}</el-tag>
             <el-tag size="small" :type="typeMeta[row.type]?.type || 'info'">{{ typeLabelOf(row.type) }}</el-tag>
+            <el-switch
+              :model-value="row.status === 1"
+              inline-prompt
+              active-text="启用"
+              inactive-text="停用"
+              class="status-switch"
+              @change="toggleStatus(row)"
+            />
           </div>
         </div>
         <div class="card-name">
@@ -471,15 +484,6 @@ onMounted(() => {
             <el-button size="small" link @click="openEdit(row)">编辑</el-button>
             <el-button size="small" link type="danger" @click="remove(row)">删除</el-button>
           </div>
-        </div>
-        <div class="card-status">
-          <el-switch
-            :model-value="row.status === 1"
-            inline-prompt
-            active-text="启用"
-            inactive-text="停用"
-            @change="toggleStatus(row)"
-          />
         </div>
       </div>
     </div>
@@ -562,13 +566,13 @@ onMounted(() => {
 
         <div class="field-group">
           <div class="label-row">
-            <label>技能指令正文（Markdown，支持 {{ '{{var}}' }} 占位）*</label>
+            <label>技能指令正文（Markdown，支持 {{ VAR_SAMPLE }} 占位）*</label>
             <el-button link type="primary" size="small" :icon="RefreshLeft" @click="extractVars">从正文提取变量</el-button>
           </div>
-          <el-input v-model="form.content" type="textarea" :rows="7" maxlength="10000" show-word-limit placeholder="编写可复用的指令正文，使用 {{var}} 引用下方定义的变量，例如：请按 {{tone}} 的语气，审核以下内容并给出通过/拦截结论。" />
+          <el-input v-model="form.content" type="textarea" :rows="7" maxlength="10000" show-word-limit :placeholder="`编写可复用的指令正文，使用 ${VAR_SAMPLE} 引用下方定义的变量，例如：请按 {{tone}} 的语气，审核以下内容并给出通过/拦截结论。`" />
           <div v-if="varItems.length" class="var-chips">
             <span class="var-title">变量占位（点击插入正文）</span>
-            <span v-for="(v, i) in varItems" :key="i" class="var-chip" @click="appendVar(v)">{{ '{{' }}{{ v.name }}{{ '}}' }}</span>
+            <span v-for="(v, i) in varItems" :key="i" class="var-chip" @click="appendVar(v)">{{ M_OPEN }}{{ v.name }}{{ M_CLOSE }}</span>
           </div>
         </div>
 
@@ -579,12 +583,12 @@ onMounted(() => {
           </div>
           <div v-if="varItems.length" class="var-table">
             <div v-for="(v, i) in varItems" :key="i" class="var-row">
-              <el-input v-model="v.name" maxlength="32" placeholder="变量名（不带 {{}}）" />
+              <el-input v-model="v.name" maxlength="32" :placeholder="`变量名（不带 ${M_OPEN}${M_CLOSE}）`" />
               <el-input v-model="v.desc" maxlength="64" placeholder="变量说明（选填）" />
               <el-button link type="danger" :icon="Delete" @click="varItems.splice(i, 1)" />
             </div>
           </div>
-          <p v-else class="hint-text">暂无变量。技能正文中的 {{ '{{var}}' }} 占位会在保存后自动供应用编排时填写。</p>
+          <p v-else class="hint-text">暂无变量。技能正文中的 {{ VAR_SAMPLE }} 占位会在保存后自动供应用编排时填写。</p>
         </div>
       </div>
       <template #footer>
@@ -655,6 +659,7 @@ onMounted(() => {
 
 .skill-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -665,6 +670,8 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .chip {
   border: none;
@@ -689,6 +696,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .skill-grid {
@@ -724,6 +732,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .card-name {
   margin-top: 12px;
@@ -809,14 +819,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
 }
-.card-status {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 1;
+/* 状态开关已合并到右上角 card-tags 中，不再使用 .card-status */
+.status-switch {
+  flex-shrink: 0;
 }
-.card-status :deep(.el-switch.is-checked) .el-switch__core {
+.status-switch :deep(.el-switch.is-checked) .el-switch__core {
   background: var(--brand-1);
+}
+.status-switch :deep(.el-switch__core) {
+  border-color: var(--border-color);
 }
 .empty-card {
   padding: 30px;

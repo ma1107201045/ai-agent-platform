@@ -37,7 +37,7 @@ import {appAgentApi} from '@/api/app-agent.ts'
 import {appSkillApi} from '@/api/app-skill.ts'
 import {knowledgeApi} from '@/api/knowledge.ts'
 import {modelApi} from '@/api/model.ts'
-import {appAgentToolApi} from '@/api/tool-info.ts'
+import {appAgentToolApi} from '@/api/app-tool-info.ts'
 import type {
   AppAgentTool,
   AppAgentVersion,

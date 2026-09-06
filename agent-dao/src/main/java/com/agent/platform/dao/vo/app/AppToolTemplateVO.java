@@ -1,4 +1,4 @@
-package com.agent.platform.dao.vo.tool;
+package com.agent.platform.dao.vo.app;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import lombok.Data;
  * 插件市场卡片视图：模板字段 + 是否已安装
  */
 @Data
-public class ToolTemplateVO {
+public class AppToolTemplateVO {
     private String key;
     private String name;
     private String description;

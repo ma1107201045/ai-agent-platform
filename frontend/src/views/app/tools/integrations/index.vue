@@ -2,11 +2,13 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, EditPen, MagicStick, Plus, Search, VideoPlay } from '@element-plus/icons-vue'
-import { toolConnectorApi } from '@/api/tool-connector'
-import { appAgentToolApi } from '@/api/tool-info'
+import { toolConnectorApi } from '@/api/app-tool-connector.ts'
+import { appAgentToolApi } from '@/api/app-tool-info.ts'
 import type { AppAgentTool, ToolConnector } from '@/api/types'
 import HeadersEditor from '@/components/tool/HeadersEditor.vue'
 import ParamsSchemaEditor from '@/components/tool/ParamsSchemaEditor.vue'
+
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const loading = ref(false)
 const list = ref<ToolConnector[]>([])
@@ -310,9 +312,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page-container int-page">
+  <div :class="['int-page', { 'page-container': !props.embedded, embedded: props.embedded }]">
     <div class="int-head">
-      <div>
+      <div v-if="!props.embedded">
         <h2 class="head-title">数据集成</h2>
         <p class="head-desc">
           连接外部 API 与数据库等数据源，经连通性校验后可一键生成可被智能体调用的工具 ·
@@ -587,6 +589,11 @@ onMounted(load)
 .int-page {
   max-width: 1400px;
   margin: 0 auto;
+}
+.int-page.embedded {
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 .int-head {
   display: flex;

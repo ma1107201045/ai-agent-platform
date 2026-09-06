@@ -1,4 +1,4 @@
-package com.agent.platform.dao.entity.tool;
+package com.agent.platform.dao.entity.app;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  * 应用-智能体工具注册表
  */
 @Data
-@TableName("tool_info")
-public class ToolInfo {
+@TableName("app_tool")
+public class AppTool {
 
     @TableId(type = IdType.AUTO)
     private Long id;

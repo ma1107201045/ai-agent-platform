@@ -1,10 +1,10 @@
-package com.agent.platform.service.tool;
+package com.agent.platform.service.app;
 
 import com.agent.platform.common.exception.BizException;
-import com.agent.platform.dao.entity.tool.ToolInfo;
-import com.agent.platform.dao.entity.tool.ToolConnector;
-import com.agent.platform.dao.mapper.tool.ToolInfoMapper;
-import com.agent.platform.dao.mapper.tool.ToolConnectorMapper;
+import com.agent.platform.dao.entity.app.AppTool;
+import com.agent.platform.dao.entity.app.AppToolConnector;
+import com.agent.platform.dao.mapper.app.AppToolMapper;
+import com.agent.platform.dao.mapper.app.AppToolConnectorMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,40 +30,40 @@ import java.time.Duration;
  */
 @Service
 @RequiredArgsConstructor
-public class ToolConnectorService {
+public class AppToolConnectorService {
 
     private static final String DEFAULT_SCHEMA = "{\"type\":\"object\",\"properties\":{}}";
 
-    private final ToolConnectorMapper connectorMapper;
-    private final ToolInfoMapper toolMapper;
+    private final AppToolConnectorMapper connectorMapper;
+    private final AppToolMapper toolMapper;
     private final ObjectMapper objectMapper;
 
     // ---------- CRUD ----------
 
-    public Page<ToolConnector> page(long page, long size, String keyword, String type, Integer status) {
-        LambdaQueryWrapper<ToolConnector> qw = new LambdaQueryWrapper<>();
+    public Page<AppToolConnector> page(long page, long size, String keyword, String type, Integer status) {
+        LambdaQueryWrapper<AppToolConnector> qw = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isBlank()) {
-            qw.and(w -> w.like(ToolConnector::getName, keyword).or().like(ToolConnector::getDescription, keyword));
+            qw.and(w -> w.like(AppToolConnector::getName, keyword).or().like(AppToolConnector::getDescription, keyword));
         }
         if (type != null && !type.isBlank()) {
-            qw.eq(ToolConnector::getType, type);
+            qw.eq(AppToolConnector::getType, type);
         }
         if (status != null) {
-            qw.eq(ToolConnector::getStatus, status);
+            qw.eq(AppToolConnector::getStatus, status);
         }
-        qw.orderByDesc(ToolConnector::getId);
+        qw.orderByDesc(AppToolConnector::getId);
         return connectorMapper.selectPage(new Page<>(page, size), qw);
     }
 
-    public ToolConnector getById(Long id) {
-        ToolConnector connector = connectorMapper.selectById(id);
+    public AppToolConnector getById(Long id) {
+        AppToolConnector connector = connectorMapper.selectById(id);
         if (connector == null) {
             throw new BizException("连接器不存在: " + id);
         }
         return connector;
     }
 
-    public ToolConnector create(ToolConnector connector) {
+    public AppToolConnector create(AppToolConnector connector) {
         validate(connector);
         connector.setId(null);
         if (connector.getTenantId() == null) {
@@ -85,7 +85,7 @@ public class ToolConnectorService {
         return connector;
     }
 
-    public void update(Long id, ToolConnector connector) {
+    public void update(Long id, AppToolConnector connector) {
         getById(id);
         connector.setId(id);
         validate(connector);
@@ -96,7 +96,7 @@ public class ToolConnectorService {
         if (status == null || (status != 0 && status != 1)) {
             throw new BizException("状态值不合法（0/1）");
         }
-        ToolConnector connector = getById(id);
+        AppToolConnector connector = getById(id);
         connector.setStatus(status);
         connectorMapper.updateById(connector);
     }
@@ -106,7 +106,7 @@ public class ToolConnectorService {
         connectorMapper.deleteById(id);
     }
 
-    private void validate(ToolConnector connector) {
+    private void validate(AppToolConnector connector) {
         if (connector.getName() == null || connector.getName().isBlank()) {
             throw new BizException("连接器名称不能为空");
         }
@@ -154,14 +154,14 @@ public class ToolConnectorService {
      * 连通性测试：不抛异常，以可读文本返回成功或失败原因（便于前端直接展示）。
      */
     public String test(Long id) {
-        ToolConnector connector = getById(id);
+        AppToolConnector connector = getById(id);
         if ("mysql".equals(connector.getType())) {
             return testMysql(connector);
         }
         return testHttp(connector);
     }
 
-    private String testHttp(ToolConnector connector) {
+    private String testHttp(AppToolConnector connector) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(connector.getUrl()))
@@ -197,7 +197,7 @@ public class ToolConnectorService {
         }
     }
 
-    private String testMysql(ToolConnector connector) {
+    private String testMysql(AppToolConnector connector) {
         String username = connector.getAuthUsername() == null ? "" : connector.getAuthUsername();
         String password = connector.getAuthPassword() == null ? "" : connector.getAuthPassword();
         try (Connection connection = DriverManager.getConnection(connector.getUrl(), username, password)) {
@@ -227,17 +227,17 @@ public class ToolConnectorService {
     /**
      * 将 HTTP 连接器一键生成为可被智能体调用的 HTTP 工具（app_agent_tool），打通「数据集成 → 工具 → 模型调用」。
      */
-    public ToolInfo createHttpTool(Long connectorId) {
-        ToolConnector connector = getById(connectorId);
+    public AppTool createHttpTool(Long connectorId) {
+        AppToolConnector connector = getById(connectorId);
         if (!"http".equals(connector.getType())) {
             throw new BizException("仅 HTTP 类型连接器可直接生成工具；MySQL 连接器可在「工具管理」中编写数据库查询脚本使用");
         }
-        Long exists = toolMapper.selectCount(new LambdaQueryWrapper<ToolInfo>()
-                .eq(ToolInfo::getName, connector.getName()));
+        Long exists = toolMapper.selectCount(new LambdaQueryWrapper<AppTool>()
+                .eq(AppTool::getName, connector.getName()));
         if (exists != null && exists > 0) {
             throw new BizException("已存在同名工具「" + connector.getName() + "」，可在工具管理中直接使用或重命名连接器后再生成");
         }
-        ToolInfo tool = new ToolInfo();
+        AppTool tool = new AppTool();
         tool.setTenantId(1L);
         tool.setName(connector.getName());
         tool.setDescription(connector.getDescription() == null || connector.getDescription().isBlank()
