@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
+import {ref, watch} from 'vue'
 import AppToolInfo from './info/index.vue'
 import AppToolMarketplace from './marketplace/index.vue'
 import AppToolIntegrations from './integrations/index.vue'
@@ -11,8 +11,23 @@ const tabs = [
 ]
 
 /** 当前激活 tab，纯本地状态切换，不经过路由 */
-const activeName: any = ref('infos')
-const currentTab = computed(() => tabs.find((t) => t.name === activeName.value))
+const activeName = ref<any>('infos')
+
+/**
+ * 已挂载过的 tab（懒挂载 + 状态保留，替代 keep-alive 动态组件缓存）。
+ * 首次切入才创建组件实例，之后切换仅 v-show 显隐，不再卸载重建。
+ */
+const mountedTabs = ref<string[]>(['infos'])
+
+watch(
+    activeName,
+    (name) => {
+      if (!mountedTabs.value.includes(name)) {
+        mountedTabs.value = [...mountedTabs.value, name]
+      }
+    },
+    {immediate: true}
+)
 
 /** 子组件内部引导（如「去插件市场 / 去数据集成 / 去工具管理」）→ 页内切换 tab */
 function onSwitchTab(name: string | number) {
@@ -36,9 +51,15 @@ function onSwitchTab(name: string | number) {
     </el-tabs>
 
     <div class="tab-content">
-      <keep-alive>
-        <component :is="currentTab?.component" v-if="currentTab" :embedded="true" @switch-tab="onSwitchTab"/>
-      </keep-alive>
+      <template v-for="t in tabs" :key="t.name">
+        <component
+            v-if="mountedTabs.includes(t.name)"
+            v-show="activeName === t.name"
+            :is="t.component"
+            :embedded="true"
+            @switch-tab="onSwitchTab"
+        />
+      </template>
     </div>
   </div>
 </template>
