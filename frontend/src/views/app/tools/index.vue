@@ -1,37 +1,23 @@
 <script setup lang="ts">
-import {ref, watch, computed} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
+import {computed, ref} from 'vue'
 import AppToolInfo from './info/index.vue'
 import AppToolMarketplace from './marketplace/index.vue'
 import AppToolIntegrations from './integrations/index.vue'
 
-const route = useRoute()
-const router = useRouter()
-
 const tabs = [
-  {name: 'infos', label: '工具管理', path: '/app/tools', component: AppToolInfo},
-  {name: 'marketplace', label: '插件市场', path: '/app/tool-marketplace', component: AppToolMarketplace},
-  {name: 'integrations', label: '数据集成', path: '/app/tool-integrations', component: AppToolIntegrations}
+  {name: 'infos', label: '工具管理', component: AppToolInfo},
+  {name: 'marketplace', label: '插件市场', component: AppToolMarketplace},
+  {name: 'integrations', label: '数据集成', component: AppToolIntegrations}
 ]
 
-function resolveTabName(path: string) {
-  return tabs.find((t) => path === t.path || path.startsWith(t.path + '/'))?.name || 'infos'
-}
-
-const activeName = ref(resolveTabName(route.path))
+/** 当前激活 tab，纯本地状态切换，不经过路由 */
+const activeName: any = ref('infos')
 const currentTab = computed(() => tabs.find((t) => t.name === activeName.value))
 
-watch(
-    () => route.path,
-    (path) => {
-      activeName.value = resolveTabName(path)
-    }
-)
-
-function onTabChange(name: string | number) {
-  const tab = tabs.find((t) => t.name === name)
-  if (tab && route.path !== tab.path) {
-    router.push(tab.path)
+/** 子组件内部引导（如「去插件市场 / 去数据集成 / 去工具管理」）→ 页内切换 tab */
+function onSwitchTab(name: string | number) {
+  if (tabs.some((t) => t.name === name)) {
+    activeName.value = name
   }
 }
 </script>
@@ -45,13 +31,13 @@ function onTabChange(name: string | number) {
       </div>
     </div>
 
-    <el-tabs v-model="activeName" type="border-card" class="workspace-tabs" @tab-change="onTabChange">
+    <el-tabs v-model="activeName" type="border-card" class="workspace-tabs">
       <el-tab-pane v-for="t in tabs" :key="t.name" :label="t.label" :name="t.name"/>
     </el-tabs>
 
     <div class="tab-content">
       <keep-alive>
-        <component :is="currentTab?.component" v-if="currentTab" :embedded="true"/>
+        <component :is="currentTab?.component" v-if="currentTab" :embedded="true" @switch-tab="onSwitchTab"/>
       </keep-alive>
     </div>
   </div>

@@ -7,6 +7,7 @@ import { toolMarketplaceApi } from '@/api/app-tool-marketplace.ts'
 import type { ToolTemplate } from '@/api/types'
 
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+const emit = defineEmits<{ (e: 'switch-tab', name: string): void }>()
 
 const loading = ref(false)
 const list = ref<ToolTemplate[]>([])
@@ -27,7 +28,11 @@ const installedCount = computed(() => list.value.filter((t) => t.installed).leng
 const router = useRouter()
 
 function goTools() {
-  router.push('/tool/infos')
+  if (props.embedded) {
+    emit('switch-tab', 'infos')
+  } else {
+    router.push('/app/tools')
+  }
 }
 
 async function load() {

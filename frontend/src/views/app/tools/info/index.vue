@@ -9,6 +9,7 @@ import ParamsSchemaEditor from '@/components/tool/ParamsSchemaEditor.vue'
 import HeadersEditor from '@/components/tool/HeadersEditor.vue'
 
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+const emit = defineEmits<{ (e: 'switch-tab', name: string): void }>()
 
 const NAME_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/
 const typeLabels: Record<string, string> = { http: 'HTTP 请求', code: '代码脚本' }
@@ -217,10 +218,18 @@ const route = useRoute()
 const router = useRouter()
 
 function goMarket() {
-  router.push('/tool/marketplace')
+  if (props.embedded) {
+    emit('switch-tab', 'marketplace')
+  } else {
+    router.push('/app/tools')
+  }
 }
 function goIntegrations() {
-  router.push('/tool/integrations')
+  if (props.embedded) {
+    emit('switch-tab', 'integrations')
+  } else {
+    router.push('/app/tools')
+  }
 }
 
 onMounted(async () => {
