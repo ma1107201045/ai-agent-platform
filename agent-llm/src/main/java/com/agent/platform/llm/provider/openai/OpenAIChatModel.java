@@ -5,6 +5,7 @@ import com.agent.platform.llm.exception.LlmException;
 import com.agent.platform.llm.model.*;
 import com.agent.platform.llm.spi.ChatModel;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -103,32 +104,7 @@ public class OpenAIChatModel implements ChatModel {
     private Map<String, Object> buildBody(ChatRequest request, boolean stream) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", request.getModel() != null ? request.getModel() : modelName);
-        List<Map<String, Object>> messages = new ArrayList<>();
-        for (ChatMessage m : request.getMessages()) {
-            Map<String, Object> msg = new LinkedHashMap<>();
-            msg.put("role", m.role());
-            msg.put("content", m.content());
-            // assistant 消息携带工具调用
-            if (m.toolCalls() != null && !m.toolCalls().isEmpty()) {
-                List<Map<String, Object>> tcs = new ArrayList<>();
-                for (ToolCall tc : m.toolCalls()) {
-                    Map<String, Object> fn = new LinkedHashMap<>();
-                    fn.put("name", tc.name());
-                    fn.put("arguments", tc.arguments());
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("id", tc.id());
-                    item.put("type", "function");
-                    item.put("function", fn);
-                    tcs.add(item);
-                }
-                msg.put("tool_calls", tcs);
-            }
-            // tool 消息回填工具调用 ID
-            if (m.toolCallId() != null) {
-                msg.put("tool_call_id", m.toolCallId());
-            }
-            messages.add(msg);
-        }
+        List<Map<String, Object>> messages = createMessages(request);
         body.put("messages", messages);
         if (request.getTemperature() != null) {
             body.put("temperature", request.getTemperature());
@@ -148,6 +124,43 @@ public class OpenAIChatModel implements ChatModel {
         body.putAll(extraBody);
         body.put("stream", stream);
         return body;
+    }
+
+    @NonNull
+    private static List<Map<String, Object>> createMessages(ChatRequest request) {
+        List<Map<String, Object>> messages = new ArrayList<>();
+        for (ChatMessage m : request.getMessages()) {
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("role", m.role());
+            msg.put("content", m.content());
+            // assistant 消息携带工具调用
+            if (m.toolCalls() != null && !m.toolCalls().isEmpty()) {
+                List<Map<String, Object>> tcs = createTcs(m);
+                msg.put("tool_calls", tcs);
+            }
+            // tool 消息回填工具调用 ID
+            if (m.toolCallId() != null) {
+                msg.put("tool_call_id", m.toolCallId());
+            }
+            messages.add(msg);
+        }
+        return messages;
+    }
+
+    @NonNull
+    private static List<Map<String, Object>> createTcs(ChatMessage m) {
+        List<Map<String, Object>> tcs = new ArrayList<>();
+        for (ToolCall tc : m.toolCalls()) {
+            Map<String, Object> fn = new LinkedHashMap<>();
+            fn.put("name", tc.name());
+            fn.put("arguments", tc.arguments());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", tc.id());
+            item.put("type", "function");
+            item.put("function", fn);
+            tcs.add(item);
+        }
+        return tcs;
     }
 
     private List<Map<String, Object>> buildTools(List<FunctionTool> tools) {
