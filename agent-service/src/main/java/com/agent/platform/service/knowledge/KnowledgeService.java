@@ -29,6 +29,8 @@ import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -56,6 +58,7 @@ public class KnowledgeService {
     private final KnowledgeChunkMapper chunkMapper;
     private final ModelRuntimeService modelRuntimeService;
     private final ObjectMapper objectMapper;
+    private final ChunkVectorCache chunkVectorCache;
 
     // ---------- 数据集 ----------
 
@@ -104,6 +107,7 @@ public class KnowledgeService {
         getDataset(id);
         // 回收站软删：保留文档与分段以便完整恢复，彻底删除在回收站执行
         datasetMapper.markDeleted(id);
+        evictCacheAfterCommit(id);
     }
 
     // ---------- 文档 ----------
@@ -175,6 +179,7 @@ public class KnowledgeService {
         }
         doc.setUpdateTime(LocalDateTime.now());
         documentMapper.updateById(doc);
+        evictCacheAfterCommit(datasetId);
         return doc;
     }
 
@@ -272,6 +277,7 @@ public class KnowledgeService {
         KnowledgeDocument doc = getDocument(documentId);
         // 删除旧分块
         chunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDocumentId, documentId));
+        evictCacheAfterCommit(doc.getDatasetId());
         return createDocument(doc.getDatasetId(), doc.getName(), doc.getContent());
     }
 
@@ -280,6 +286,7 @@ public class KnowledgeService {
         KnowledgeDocument doc = getDocument(id);
         chunkMapper.delete(new LambdaQueryWrapper<KnowledgeChunk>().eq(KnowledgeChunk::getDocumentId, id));
         documentMapper.deleteById(id);
+        evictCacheAfterCommit(doc.getDatasetId());
     }
 
     // ---------- 分块 ----------
@@ -296,6 +303,9 @@ public class KnowledgeService {
     /**
      * 向量检索：对 query 向量化 → 与数据集所有分块计算余弦相似度 → 取 topK。
      * 可选 rerankModelId 时，对 topK 候选再用 rerank 模型精排。
+     * <p>
+     * 分块向量通过 {@link ChunkVectorCache} 缓存（解析后的 float[] + 预计算模长），
+     * 检索时不再全量查库与 JSON 反序列化。
      */
     public List<KnowledgeSearchHitVO> search(Long datasetId, String query, int topK, Long rerankModelId) {
         KnowledgeDataset ds = getDataset(datasetId);
@@ -304,17 +314,13 @@ public class KnowledgeService {
         }
         EmbeddingModel embedModel = modelRuntimeService.embeddingModelOf(ds.getEmbeddingModel());
         float[] queryVec = embedModel.embed(List.of(query)).vectors().get(0);
+        double queryNorm = norm(queryVec);
 
-        List<KnowledgeChunk> all = chunkMapper.selectList(new LambdaQueryWrapper<KnowledgeChunk>()
-                .eq(KnowledgeChunk::getDatasetId, datasetId));
-        List<KnowledgeSearchHitVO> hits = new ArrayList<>();
-        for (KnowledgeChunk c : all) {
-            float[] vec = fromJson(c.getVector());
-            if (vec == null) {
-                continue;
-            }
-            double score = cosine(queryVec, vec);
-            hits.add(new KnowledgeSearchHitVO(c.getId(), c.getDocumentId(), c.getChunkIndex(), c.getContent(), score));
+        List<ChunkVectorCache.CachedChunk> chunks = chunkVectorCache.get(datasetId, () -> loadChunks(datasetId));
+        List<KnowledgeSearchHitVO> hits = new ArrayList<>(chunks.size());
+        for (ChunkVectorCache.CachedChunk c : chunks) {
+            double score = cosineWithNorms(queryVec, queryNorm, c.vector(), c.norm());
+            hits.add(new KnowledgeSearchHitVO(c.id(), c.documentId(), c.chunkIndex(), c.content(), score));
         }
         hits.sort(Comparator.comparingDouble(KnowledgeSearchHitVO::getScore).reversed());
         List<KnowledgeSearchHitVO> top = hits.size() > topK ? hits.subList(0, topK) : hits;
@@ -393,6 +399,59 @@ public class KnowledgeService {
         }
         if (na == 0 || nb == 0) return 0;
         return dot / (Math.sqrt(na) * Math.sqrt(nb));
+    }
+
+    /** 预计算模长下的余弦相似度（检索热路径） */
+    static double cosineWithNorms(float[] a, double normA, float[] b, double normB) {
+        if (a == null || b == null || a.length != b.length || a.length == 0 || normA == 0 || normB == 0) {
+            return 0;
+        }
+        double dot = 0;
+        for (int i = 0; i < a.length; i++) {
+            dot += a[i] * b[i];
+        }
+        return dot / (normA * normB);
+    }
+
+    static double norm(float[] v) {
+        if (v == null || v.length == 0) {
+            return 0;
+        }
+        double sum = 0;
+        for (float x : v) {
+            sum += x * x;
+        }
+        return Math.sqrt(sum);
+    }
+
+    /** 从数据库加载数据集的全部分块并解析向量（缓存未命中时调用一次） */
+    private List<ChunkVectorCache.CachedChunk> loadChunks(Long datasetId) {
+        List<KnowledgeChunk> all = chunkMapper.selectList(new LambdaQueryWrapper<KnowledgeChunk>()
+                .eq(KnowledgeChunk::getDatasetId, datasetId));
+        List<ChunkVectorCache.CachedChunk> result = new ArrayList<>(all.size());
+        for (KnowledgeChunk c : all) {
+            float[] vec = fromJson(c.getVector());
+            if (vec == null) {
+                continue;
+            }
+            result.add(new ChunkVectorCache.CachedChunk(c.getId(), c.getDocumentId(),
+                    c.getChunkIndex(), c.getContent(), vec, norm(vec)));
+        }
+        return result;
+    }
+
+    /** 事务提交后失效缓存；无事务时立即失效（保证搜索不会拿到事务中的中间态） */
+    private void evictCacheAfterCommit(Long datasetId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    chunkVectorCache.evict(datasetId);
+                }
+            });
+        } else {
+            chunkVectorCache.evict(datasetId);
+        }
     }
 
     private String toJson(float[] vector) {

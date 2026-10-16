@@ -30,6 +30,15 @@ jwt:
   secret: ${JWT_SECRET:}
   expire-hours: ${JWT_EXPIRE_HOURS:24}
 
+# 公开门户（免鉴权分享页）防护
+portal:
+  public:
+    rate-limit:
+      # 匿名访问：每 IP 每分钟上限
+      anon-per-minute: ${PORTAL_ANON_RATE_LIMIT:30}
+      # 携带合法 API Key：每 IP 每分钟上限（应用级配额仍由 API Key 控制）
+      keyed-per-minute: ${PORTAL_KEYED_RATE_LIMIT:120}
+
 logging:
   level:
     com.agent.platform: ${LOG_LEVEL:info}

@@ -20,7 +20,9 @@ import com.agent.platform.service.app.AppApiKeyService;
 import com.agent.platform.service.chat.ChatUsageStatsService;
 import com.agent.platform.service.model.ModelRuntimeService;
 import com.agent.platform.service.model.ModelService;
+import com.agent.platform.support.PortalPublicGuard;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +47,7 @@ public class PortalPublicController {
     private final WorkflowEngine workflowEngine;
     private final ObjectMapper objectMapper;
     private final ChatUsageStatsService usageStatsService;
+    private final PortalPublicGuard portalPublicGuard;
 
     /** 公开应用信息（仅已发布） */
     @GetMapping("/app-agents/{id}")
@@ -73,12 +76,15 @@ public class PortalPublicController {
     public Result<PortalChatResultVO> chat(@PathVariable Long id,
                                            @RequestHeader(value = "Authorization", required = false) String authorization,
                                            @RequestHeader(value = "X-API-Key", required = false) String apiKeyHeader,
-                                           @RequestBody PortalPublicChatDTO req) {
+                                           @RequestBody PortalPublicChatDTO req,
+                                           HttpServletRequest httpRequest) {
         AppAgent app = requirePublished(id);
         String presentedKey = resolveApiKey(authorization, apiKeyHeader);
         if (presentedKey != null) {
             appApiKeyService.authenticate(app.getId(), presentedKey);
         }
+        // IP 级限流（匿名/带 key 两档阈值），防刷量
+        portalPublicGuard.check(PortalPublicGuard.resolveClientIp(httpRequest), presentedKey != null);
         List<ChatMessage> messages = req.getMessages();
         if (messages == null || messages.isEmpty()) {
             throw new BizException("请输入消息");
