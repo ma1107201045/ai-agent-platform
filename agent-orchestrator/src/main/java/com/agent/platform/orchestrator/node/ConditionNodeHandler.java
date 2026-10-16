@@ -1,7 +1,8 @@
 package com.agent.platform.orchestrator.node;
 
+import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.script.SafeMvel;
 import com.agent.platform.orchestrator.NodeType;
-import org.mvel2.MVEL;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -105,11 +106,14 @@ public class ConditionNodeHandler implements NodeHandler {
         try {
             Map<String, Object> vars = new HashMap<>(ctx.outputs());
             vars.put("input", ctx.outputs().getOrDefault("input", ""));
-            Object result = MVEL.eval(rendered, vars);
+            Object result = SafeMvel.eval(rendered, vars);
             if (result instanceof Boolean b) {
                 return b;
             }
             return result != null && !String.valueOf(result).isBlank();
+        } catch (BizException e) {
+            // 沙箱拦截：直接抛出，避免被「非空即真」兜底吞掉
+            throw e;
         } catch (Exception e) {
             // 表达式语法不支持或变量未渲染为可比较值：按非空即真处理
             return !rendered.isEmpty();

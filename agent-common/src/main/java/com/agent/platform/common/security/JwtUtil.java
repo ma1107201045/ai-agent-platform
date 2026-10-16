@@ -19,8 +19,12 @@ public class JwtUtil {
     private final SecretKey key;
     private final long expireMillis;
 
-    public JwtUtil(@Value("${jwt.secret}") String secret,
+    public JwtUtil(@Value("${jwt.secret:}") String secret,
                    @Value("${jwt.expire-hours:24}") long expireHours) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT 密钥未配置或过短：请通过环境变量 JWT_SECRET 注入至少 32 字节的随机字符串（jwt.secret）");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expireMillis = expireHours * 3600_000L;
     }

@@ -19,3 +19,8 @@ Thumbs.db
 logs/
 *.log
 /.workbuddy/
+
+# 本地敏感配置（含真实密钥，禁止提交）
+.env
+**/application-local.yml
+**/application-local.yaml

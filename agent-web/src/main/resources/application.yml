@@ -1,14 +1,14 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: agent-platform
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/agent_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: 199726ma.
+    url: ${DB_URL:jdbc:mysql://localhost:3306/agent_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
   servlet:
     multipart:
       max-file-size: 20MB
@@ -26,10 +26,10 @@ springdoc:
     path: /swagger-ui.html
 
 jwt:
-  # HS256 密钥，生产环境务必替换为随机长字符串（>=32字节）
-  secret: agent-platform-jwt-secret-change-me-in-production-2026
-  expire-hours: 24
+  # HS256 密钥，必须通过环境变量 JWT_SECRET 注入（>=32字节随机字符串），禁止提交真实密钥
+  secret: ${JWT_SECRET:}
+  expire-hours: ${JWT_EXPIRE_HOURS:24}
 
 logging:
   level:
-    com.agent.platform: info
+    com.agent.platform: ${LOG_LEVEL:info}

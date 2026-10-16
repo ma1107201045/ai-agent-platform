@@ -1,8 +1,8 @@
 package com.agent.platform.orchestrator.node;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.script.SafeMvel;
 import com.agent.platform.orchestrator.NodeType;
-import org.mvel2.MVEL;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -49,7 +49,7 @@ public class CodeNodeHandler implements NodeHandler {
             Map<String, Object> vars = new HashMap<>(ctx.outputs());
             vars.put("input", ctx.userInput());
             vars.put("outputs", ctx.outputs());
-            Object result = MVEL.executeExpression(MVEL.compileExpression(code), vars);
+            Object result = SafeMvel.execute(SafeMvel.compile(code), vars);
             String text = result == null ? "" : String.valueOf(result);
             ctx.emit(text);
             return NodeResult.of(text);

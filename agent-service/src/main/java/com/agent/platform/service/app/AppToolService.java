@@ -1,6 +1,7 @@
 package com.agent.platform.service.app;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.script.SafeMvel;
 import com.agent.platform.dao.entity.app.AppTool;
 import com.agent.platform.dao.mapper.app.AppToolMapper;
 import com.agent.platform.llm.model.FunctionTool;
@@ -10,7 +11,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.mvel2.MVEL;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -221,7 +221,7 @@ public class AppToolService {
         }
     }
 
-    /** 代码工具：MVEL 执行，变量含各参数与 input（参数整体 JSON 字符串） */
+    /** 代码工具：MVEL 沙箱执行，变量含各参数与 input（参数整体 JSON 字符串） */
     private String executeCode(AppTool tool, Map<String, Object> args) {
         try {
             Map<String, Object> vars = new LinkedHashMap<>(args);
@@ -230,7 +230,7 @@ public class AppToolService {
             } catch (JsonProcessingException e) {
                 vars.put("input", String.valueOf(args));
             }
-            Object result = MVEL.executeExpression(MVEL.compileExpression(tool.getCode()), vars);
+            Object result = SafeMvel.eval(tool.getCode(), vars);
             return result == null ? "" : String.valueOf(result);
         } catch (BizException e) {
             throw e;
