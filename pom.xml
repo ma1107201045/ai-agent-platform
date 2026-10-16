@@ -33,7 +33,8 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
-        <mysql.version>8.3.0</mysql.version>
+        <postgresql.version>42.7.4</postgresql.version>
+        <pgvector.version>0.1.6</pgvector.version>
         <springdoc.version>2.5.0</springdoc.version>
         <lombok.version>1.18.48</lombok.version>
         <jjwt.version>0.12.5</jjwt.version>
@@ -102,9 +103,14 @@
                 <version>${mybatis-plus.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.mysql</groupId>
-                <artifactId>mysql-connector-j</artifactId>
-                <version>${mysql.version}</version>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.pgvector</groupId>
+                <artifactId>pgvector</artifactId>
+                <version>${pgvector.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springdoc</groupId>
@@ -137,4 +143,33 @@
 
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <!-- JDK 23+ 起 javac 不再默认从 classpath 发现注解处理器，需显式声明 Lombok -->
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <!-- Mockito/ByteBuddy 在 Windows 下自附加 agent 需要该参数 -->
+                        <argLine>-Djdk.attach.allowAttachSelf=true</argLine>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>

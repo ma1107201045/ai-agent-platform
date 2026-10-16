@@ -30,7 +30,10 @@ export const userSecurityApi = {
   },
   /** MFA 初始化（需当前登录密码），返回 {secret, otpauthUrl} */
   mfaInit(data: { password: string }) {
-    return request.post<never, { secret: string; otpauthUrl: string }>('/sys/profile/mfa/init', data)
+    return request.post<never, { secret: string; otpauthUrl: string }>(
+      '/sys/profile/mfa/init',
+      data
+    )
   },
   /** MFA 启用确认（动态口令） */
   mfaConfirm(data: { code: string }) {

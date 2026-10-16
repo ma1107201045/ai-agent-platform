@@ -29,7 +29,12 @@ async function load() {
     trend.value = t
     byApp.value = apps
     byModel.value = models
-    maxCost.value = Math.max(1, ...t.map((p) => p.cost), ...apps.map((a) => a.cost), ...models.map((c) => c.cost))
+    maxCost.value = Math.max(
+      1,
+      ...t.map((p) => p.cost),
+      ...apps.map((a) => a.cost),
+      ...models.map((c) => c.cost)
+    )
   } finally {
     loading.value = false
   }
@@ -62,7 +67,11 @@ async function saveBudget() {
   if (budgetForm.budget < 0) return ElMessage.warning('预算不能为负')
   saving.value = true
   try {
-    await billingApi.setBudget({ month: budgetForm.month, budget: budgetForm.budget, notifyEnabled: budgetForm.notifyEnabled })
+    await billingApi.setBudget({
+      month: budgetForm.month,
+      budget: budgetForm.budget,
+      notifyEnabled: budgetForm.notifyEnabled
+    })
     ElMessage.success('预算已保存')
     budgetVisible.value = false
     load()
@@ -91,7 +100,14 @@ onMounted(load)
         <p class="head-desc">按月查看模型调用成本，按应用 / 模型拆解消费构成并设置预算提醒</p>
       </div>
       <div class="head-actions">
-        <el-date-picker v-model="month" type="month" value-format="YYYY-MM" placeholder="选择月份" style="width: 150px" @change="(v: string) => onMonthChange(v)" />
+        <el-date-picker
+          v-model="month"
+          type="month"
+          value-format="YYYY-MM"
+          placeholder="选择月份"
+          style="width: 150px"
+          @change="(v: string) => onMonthChange(v)"
+        />
         <el-button @click="openBudget">预算设置</el-button>
       </div>
     </div>
@@ -110,7 +126,10 @@ onMounted(load)
       <div class="stat-card">
         <span class="stat-label">Token 用量</span>
         <span class="stat-num">{{ fmtTokens(summary?.totalTokens) }}</span>
-        <span class="dim-text">输入 {{ fmtTokens(summary?.promptTokens) }} · 输出 {{ fmtTokens(summary?.completionTokens) }}</span>
+        <span class="dim-text"
+          >输入 {{ fmtTokens(summary?.promptTokens) }} · 输出
+          {{ fmtTokens(summary?.completionTokens) }}</span
+        >
       </div>
       <div class="stat-card">
         <span class="stat-label">预算使用</span>
@@ -141,9 +160,18 @@ onMounted(load)
         </el-progress>
       </div>
       <div class="bars">
-        <div v-for="(t, i) in trend" :key="t.date" class="bar-col" :title="`${t.date}：${money(t.cost)}`">
+        <div
+          v-for="(t, i) in trend"
+          :key="t.date"
+          class="bar-col"
+          :title="`${t.date}：${money(t.cost)}`"
+        >
           <div class="bar-wrap">
-            <div class="bar" :class="t.cost > 0 ? 'hot' : ''" :style="{ height: `${barHeight(t.cost)}px` }"></div>
+            <div
+              class="bar"
+              :class="t.cost > 0 ? 'hot' : ''"
+              :style="{ height: `${barHeight(t.cost)}px` }"
+            ></div>
           </div>
           <span class="bar-date">{{ i % 5 === 0 || i === trend.length - 1 ? t.date : '·' }}</span>
         </div>
@@ -156,7 +184,12 @@ onMounted(load)
         <div v-if="byApp.length" class="break-list">
           <div v-for="row in byApp" :key="'a' + (row.appId ?? 0)" class="break-row">
             <div class="break-name" :title="row.appName">{{ row.appName }}</div>
-            <div class="break-bar-wrap"><div class="break-bar" :style="{ width: `${Math.max(2, (row.cost / maxCost) * 100)}%` }"></div></div>
+            <div class="break-bar-wrap">
+              <div
+                class="break-bar"
+                :style="{ width: `${Math.max(2, (row.cost / maxCost) * 100)}%` }"
+              ></div>
+            </div>
             <div class="break-val">{{ money(row.cost) }}</div>
             <div class="dim-text">{{ row.calls }} 次 · {{ fmtTokens(row.tokens) }} tok</div>
           </div>
@@ -169,7 +202,12 @@ onMounted(load)
         <div v-if="byModel.length" class="break-list">
           <div v-for="row in byModel" :key="'m' + (row.modelId ?? 0)" class="break-row">
             <div class="break-name" :title="row.modelName">{{ row.modelName }}</div>
-            <div class="break-bar-wrap"><div class="break-bar" :style="{ width: `${Math.max(2, (row.cost / maxCost) * 100)}%` }"></div></div>
+            <div class="break-bar-wrap">
+              <div
+                class="break-bar"
+                :style="{ width: `${Math.max(2, (row.cost / maxCost) * 100)}%` }"
+              ></div>
+            </div>
             <div class="break-val">{{ money(row.cost) }}</div>
             <div class="dim-text">{{ row.calls }} 次 · {{ fmtTokens(row.tokens) }} tok</div>
           </div>
@@ -179,24 +217,50 @@ onMounted(load)
     </div>
 
     <!-- 预算设置 -->
-    <el-dialog v-model="budgetVisible" title="月度预算设置" width="480px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="budgetVisible"
+      title="月度预算设置"
+      width="480px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>预算月份</label>
-          <el-date-picker v-model="budgetForm.month" type="month" value-format="YYYY-MM" placeholder="选择月份" style="width: 100%" />
+          <el-date-picker
+            v-model="budgetForm.month"
+            type="month"
+            value-format="YYYY-MM"
+            placeholder="选择月份"
+            style="width: 100%"
+          />
         </div>
         <div class="field-group">
           <label>月度预算（元）</label>
-          <el-input-number v-model="budgetForm.budget" :min="0" :precision="2" :step="100" style="width: 100%" />
+          <el-input-number
+            v-model="budgetForm.budget"
+            :min="0"
+            :precision="2"
+            :step="100"
+            style="width: 100%"
+          />
         </div>
         <div class="field-group">
-          <el-switch v-model="budgetForm.notifyEnabled" :active-value="1" :inactive-value="0" active-text="超预算提醒" />
-          <div class="dim-text" style="margin-top: 4px">启用后当费用超过预算时会在账单页高亮提示。</div>
+          <el-switch
+            v-model="budgetForm.notifyEnabled"
+            :active-value="1"
+            :inactive-value="0"
+            active-text="超预算提醒"
+          />
+          <div class="dim-text" style="margin-top: 4px">
+            启用后当费用超过预算时会在账单页高亮提示。
+          </div>
         </div>
       </div>
       <template #footer>
         <el-button @click="budgetVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="saveBudget">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="saveBudget"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>

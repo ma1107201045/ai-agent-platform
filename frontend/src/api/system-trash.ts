@@ -1,6 +1,16 @@
 import request from './request'
 
-export type TrashType = 'agent' | 'dataset' | 'template' | 'announcement'
+export type TrashType =
+  | 'agent'
+  | 'dataset'
+  | 'template'
+  | 'announcement'
+  | 'team'
+  | 'tool'
+  | 'skill'
+  | 'prompt_template'
+  | 'conversation'
+  | 'data_table'
 
 export interface TrashItem {
   id: number

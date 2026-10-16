@@ -135,14 +135,18 @@ async function save() {
   if (editId.value == null && !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(form.name.trim())) {
     return ElMessage.warning('连接器名称须为英文标识符（字母/数字/下划线，首字符非数字）')
   }
-  if (!form.url.trim()) return ElMessage.warning(form.type === 'http' ? '请输入 API 地址' : '请输入 JDBC URL')
+  if (!form.url.trim())
+    return ElMessage.warning(form.type === 'http' ? '请输入 API 地址' : '请输入 JDBC URL')
   if (form.type === 'http' && !/^https?:\/\//.test(form.url.trim())) {
     return ElMessage.warning('API 地址须以 http:// 或 https:// 开头')
   }
   if (form.type === 'mysql' && !form.url.trim().startsWith('jdbc:mysql://')) {
-    return ElMessage.warning('JDBC URL 须以 jdbc:mysql:// 开头，如 jdbc:mysql://127.0.0.1:3306/agent_platform')
+    return ElMessage.warning(
+      'JDBC URL 须以 jdbc:mysql:// 开头，如 jdbc:mysql://127.0.0.1:3306/agent_platform'
+    )
   }
-  if (form.type === 'mysql' && !form.authUsername.trim()) return ElMessage.warning('请输入数据库用户名')
+  if (form.type === 'mysql' && !form.authUsername.trim())
+    return ElMessage.warning('请输入数据库用户名')
   let headers: string | undefined
   const raw = headersText.value.trim()
   if (raw) {
@@ -162,7 +166,10 @@ async function save() {
     method: form.type === 'http' ? form.method : undefined,
     headers: form.type === 'http' ? headers : undefined,
     authType: form.type === 'http' ? (form.authType as ToolConnector['authType']) : 'none',
-    authToken: form.type === 'http' && form.authType === 'bearer' && form.authToken.trim() ? form.authToken.trim() : undefined,
+    authToken:
+      form.type === 'http' && form.authType === 'bearer' && form.authToken.trim()
+        ? form.authToken.trim()
+        : undefined,
     authUsername: form.authUsername.trim() || undefined,
     authPassword: form.authPassword ? form.authPassword : undefined
   }
@@ -317,11 +324,13 @@ onMounted(load)
       <div v-if="!props.embedded">
         <h2 class="head-title">数据集成</h2>
         <p class="head-desc">
-          连接外部 API 与数据库等数据源，经连通性校验后可一键生成可被智能体调用的工具 ·
-          共 {{ total }} 个连接器
+          连接外部 API 与数据库等数据源，经连通性校验后可一键生成可被智能体调用的工具 · 共
+          {{ total }} 个连接器
         </p>
       </div>
-      <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新建连接器</el-button>
+      <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+        >新建连接器</el-button
+      >
     </div>
 
     <el-alert type="info" :closable="false" class="int-banner">
@@ -346,13 +355,32 @@ onMounted(load)
             @keyup.enter="search"
             @clear="search"
           >
-            <template #prefix><el-icon><Search /></el-icon></template>
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
-          <el-select v-model="filterType" placeholder="全部类型" clearable class="toolbar-type" @change="search">
+          <el-select
+            v-model="filterType"
+            placeholder="全部类型"
+            clearable
+            class="toolbar-type"
+            @change="search"
+          >
             <el-option v-for="t in typeOptions" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
-          <el-select v-model="filterStatus" placeholder="全部状态" clearable class="toolbar-status" @change="search">
-            <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
+          <el-select
+            v-model="filterStatus"
+            placeholder="全部状态"
+            clearable
+            class="toolbar-status"
+            @change="search"
+          >
+            <el-option
+              v-for="s in statusOptions"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
         </div>
       </div>
@@ -440,7 +468,12 @@ onMounted(load)
     </el-card>
 
     <!-- 新建 / 编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editId != null ? '编辑连接器' : '新建连接器'" width="640px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editId != null ? '编辑连接器' : '新建连接器'"
+      width="640px"
+      :close-on-click-modal="false"
+    >
       <div class="form-body">
         <div class="field-group">
           <div class="field-label">连接器名称 <span class="req">*</span></div>
@@ -453,7 +486,13 @@ onMounted(load)
         </div>
         <div class="field-group">
           <div class="field-label">描述</div>
-          <el-input v-model="form.description" type="textarea" :rows="2" placeholder="用途说明（可选）" maxlength="255" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            placeholder="用途说明（可选）"
+            maxlength="255"
+          />
         </div>
         <div class="field-group">
           <div class="field-label">连接类型 <span class="req">*</span></div>
@@ -473,7 +512,12 @@ onMounted(load)
             <div class="field-group grow">
               <div class="field-label">请求方式</div>
               <el-select v-model="form.method" style="width: 100%">
-                <el-option v-for="m in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']" :key="m" :label="m" :value="m" />
+                <el-option
+                  v-for="m in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']"
+                  :key="m"
+                  :label="m"
+                  :value="m"
+                />
               </el-select>
             </div>
             <div class="field-group" style="width: 220px">
@@ -487,7 +531,12 @@ onMounted(load)
           </div>
           <div v-if="form.authType === 'bearer'" class="field-group">
             <div class="field-label">Bearer Token</div>
-            <el-input v-model="form.authToken" type="password" show-password placeholder="连接目标的访问令牌" />
+            <el-input
+              v-model="form.authToken"
+              type="password"
+              show-password
+              placeholder="连接目标的访问令牌"
+            />
           </div>
           <div v-if="form.authType === 'basic'" class="field-row">
             <div class="field-group grow">
@@ -496,7 +545,12 @@ onMounted(load)
             </div>
             <div class="field-group grow">
               <div class="field-label">密码</div>
-              <el-input v-model="form.authPassword" type="password" show-password :placeholder="editId != null ? '留空保持不变' : 'Basic 认证密码'" />
+              <el-input
+                v-model="form.authPassword"
+                type="password"
+                show-password
+                :placeholder="editId != null ? '留空保持不变' : 'Basic 认证密码'"
+              />
             </div>
           </div>
           <div class="field-group">
@@ -509,7 +563,10 @@ onMounted(load)
         <template v-else>
           <div class="field-group">
             <div class="field-label">JDBC URL <span class="req">*</span></div>
-            <el-input v-model="form.url" placeholder="jdbc:mysql://127.0.0.1:3306/agent_platform?useSSL=false&amp;serverTimezone=Asia/Shanghai" />
+            <el-input
+              v-model="form.url"
+              placeholder="jdbc:mysql://127.0.0.1:3306/agent_platform?useSSL=false&amp;serverTimezone=Asia/Shanghai"
+            />
           </div>
           <div class="field-row">
             <div class="field-group grow">
@@ -518,15 +575,25 @@ onMounted(load)
             </div>
             <div class="field-group grow">
               <div class="field-label">密码</div>
-              <el-input v-model="form.authPassword" type="password" show-password :placeholder="editId != null ? '留空保持不变' : '数据库密码'" />
+              <el-input
+                v-model="form.authPassword"
+                type="password"
+                show-password
+                :placeholder="editId != null ? '留空保持不变' : '数据库密码'"
+              />
             </div>
           </div>
-          <p class="field-tip">当前提供连接连通性与账号权限校验（SELECT 1）；数据库查询类工具可在「工具管理」中以代码脚本方式扩展。</p>
+          <p class="field-tip">
+            当前提供连接连通性与账号权限校验（SELECT
+            1）；数据库查询类工具可在「工具管理」中以代码脚本方式扩展。
+          </p>
         </template>
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
@@ -536,7 +603,9 @@ onMounted(load)
         <el-tag :type="testSuccess() ? 'success' : 'danger'" effect="light">
           {{ testSuccess() ? '连接成功' : '连接失败' }}
         </el-tag>
-        <span class="dim-text">{{ typeLabels[testRow?.type || 'http'] }} · {{ targetText(testRow!) }}</span>
+        <span class="dim-text"
+          >{{ typeLabels[testRow?.type || 'http'] }} · {{ targetText(testRow!) }}</span
+        >
       </div>
       <el-input
         :model-value="testResult"
@@ -551,7 +620,12 @@ onMounted(load)
     </el-dialog>
 
     <!-- 生成工具后的参数配置引导（同页完成，无需跳转工具管理） -->
-    <el-dialog v-model="genVisible" :title="`配置工具 - ${genToolInfo?.name || ''}`" width="640px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="genVisible"
+      :title="`配置工具 - ${genToolInfo?.name || ''}`"
+      width="640px"
+      :close-on-click-modal="false"
+    >
       <el-alert type="success" :closable="false" class="gen-tip">
         HTTP 工具已创建并启用。补齐下方描述与参数说明后即可在智能体对话 / 工作流编排中调用该 API。
       </el-alert>
@@ -574,12 +648,15 @@ onMounted(load)
           <ParamsSchemaEditor v-model="genParams" />
         </div>
         <p class="field-tip">
-          参数说明用于让模型知道调用时应传哪些入参。若该接口无需入参（如 GET 健康检查），保持为空直接保存即可。
+          参数说明用于让模型知道调用时应传哪些入参。若该接口无需入参（如 GET
+          健康检查），保持为空直接保存即可。
         </p>
       </div>
       <template #footer>
         <el-button @click="genVisible = false">暂不配置</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="genSaving" @click="saveGenTool">保存并投入使用</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="genSaving" @click="saveGenTool"
+          >保存并投入使用</el-button
+        >
       </template>
     </el-dialog>
   </div>

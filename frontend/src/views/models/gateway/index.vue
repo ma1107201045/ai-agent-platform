@@ -8,7 +8,12 @@ import type { ChatModelInfo } from '@/api/types'
 
 // ---------------- 常量与映射 ----------------
 
-const STRATEGIES: { value: string; label: string; desc: string; tag: 'primary' | 'success' | 'warning' | 'danger' }[] = [
+const STRATEGIES: {
+  value: string
+  label: string
+  desc: string
+  tag: 'primary' | 'success' | 'warning' | 'danger'
+}[] = [
   { value: 'priority', label: '加权优先', desc: '按权重随机挑选一个目标模型', tag: 'primary' },
   { value: 'failover', label: '故障回退', desc: '始终选择优先级最高的目标', tag: 'danger' },
   { value: 'round_robin', label: '轮询调度', desc: '按列表顺序依次轮询使用', tag: 'success' }
@@ -243,7 +248,10 @@ async function onDefaultChange(row: GatewayRoute) {
 }
 
 function remove(row: GatewayRoute) {
-  ElMessageBox.confirm(`删除路由「${row.name}」？`, '删除确认', { type: 'error', confirmButtonText: '删除' })
+  ElMessageBox.confirm(`删除路由「${row.name}」？`, '删除确认', {
+    type: 'error',
+    confirmButtonText: '删除'
+  })
     .then(async () => {
       await gatewayApi.remove(row.id)
       ElMessage.success('删除成功')
@@ -287,7 +295,9 @@ function strategyExplain(strategy?: string) {
     <div class="gateway-head">
       <div>
         <h2 class="head-title">模型网关</h2>
-        <p class="head-desc">将多个同能力模型编排为一条路由：加权优先 / 故障回退 / 轮询，统一调度入口</p>
+        <p class="head-desc">
+          将多个同能力模型编排为一条路由：加权优先 / 故障回退 / 轮询，统一调度入口
+        </p>
       </div>
       <div class="head-actions">
         <el-input
@@ -298,10 +308,14 @@ function strategyExplain(strategy?: string) {
           @keyup.enter="onSearch"
           @clear="onSearch"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-tooltip content="刷新">
-          <el-button circle @click="load"><el-icon><Refresh /></el-icon></el-button>
+          <el-button circle @click="load"
+            ><el-icon><Refresh /></el-icon
+          ></el-button>
         </el-tooltip>
         <el-button type="primary" class="btn-gradient" @click="openCreate">
           <el-icon style="margin-right: 4px"><Plus /></el-icon>新建路由
@@ -339,7 +353,9 @@ function strategyExplain(strategy?: string) {
         <el-table-column label="路由" min-width="220">
           <template #default="{ row }">
             <div class="route-name">{{ row.name }}</div>
-            <div v-if="row.description" class="route-desc" :title="row.description">{{ row.description }}</div>
+            <div v-if="row.description" class="route-desc" :title="row.description">
+              {{ row.description }}
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="策略" width="150">
@@ -381,7 +397,12 @@ function strategyExplain(strategy?: string) {
         </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
-            <el-switch v-model="row.enabled" :active-value="1" :inactive-value="0" @change="onEnabledChange(row)" />
+            <el-switch
+              v-model="row.enabled"
+              :active-value="1"
+              :inactive-value="0"
+              @change="onEnabledChange(row)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="累计调用" width="110" align="right">
@@ -423,7 +444,12 @@ function strategyExplain(strategy?: string) {
         <el-row :gutter="16">
           <el-col :span="14">
             <el-form-item label="路由名称" required>
-              <el-input v-model="form.name" placeholder="如 主力对话路由 / DeepSeek 备用" maxlength="50" show-word-limit />
+              <el-input
+                v-model="form.name"
+                placeholder="如 主力对话路由 / DeepSeek 备用"
+                maxlength="50"
+                show-word-limit
+              />
             </el-form-item>
           </el-col>
           <el-col :span="10">
@@ -440,13 +466,24 @@ function strategyExplain(strategy?: string) {
           </el-col>
         </el-row>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="2" placeholder="路由用途 / 适用场景说明（可选）" maxlength="200" show-word-limit />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            placeholder="路由用途 / 适用场景说明（可选）"
+            maxlength="200"
+            show-word-limit
+          />
         </el-form-item>
 
         <el-form-item label="目标模型" required>
           <div class="target-editor">
             <div class="target-editor-head">
-              <span class="dim-text">{{ strategyInfo(form.routeType).label }}策略：{{ strategyInfo(form.routeType).desc }}</span>
+              <span class="dim-text"
+                >{{ strategyInfo(form.routeType).label }}策略：{{
+                  strategyInfo(form.routeType).desc
+                }}</span
+              >
               <el-button type="primary" plain size="small" @click="addTarget">
                 <el-icon style="margin-right: 4px"><Plus /></el-icon>添加目标
               </el-button>
@@ -460,16 +497,36 @@ function strategyExplain(strategy?: string) {
                 class="target-model"
                 :style="{ width: '100%' }"
               >
-                <template #prefix><el-icon><Cpu /></el-icon></template>
-                <el-option v-for="c in candidates" :key="c.id" :value="c.id" :label="`${c.providerName} · ${c.modelName}`">
+                <template #prefix
+                  ><el-icon><Cpu /></el-icon
+                ></template>
+                <el-option
+                  v-for="c in candidates"
+                  :key="c.id"
+                  :value="c.id"
+                  :label="`${c.providerName} · ${c.modelName}`"
+                >
                   <div class="model-option">
-                    <span>{{ c.providerName }} · <b>{{ c.modelName }}</b></span>
-                    <span v-if="c.contextWindow" class="muted">{{ (c.contextWindow / 1024).toFixed(0) }}K ctx</span>
+                    <span
+                      >{{ c.providerName }} · <b>{{ c.modelName }}</b></span
+                    >
+                    <span v-if="c.contextWindow" class="muted"
+                      >{{ (c.contextWindow / 1024).toFixed(0) }}K ctx</span
+                    >
                   </div>
                 </el-option>
               </el-select>
-              <div class="target-param" :title="strategyInfo(form.routeType).value === 'failover' ? '数值越小优先级越高' : '加权随机命中权重'">
-                <span class="param-label">{{ form.routeType === 'failover' ? '优先级' : '权重' }}</span>
+              <div
+                class="target-param"
+                :title="
+                  strategyInfo(form.routeType).value === 'failover'
+                    ? '数值越小优先级越高'
+                    : '加权随机命中权重'
+                "
+              >
+                <span class="param-label">{{
+                  form.routeType === 'failover' ? '优先级' : '权重'
+                }}</span>
                 <el-input-number
                   v-model="t.weight"
                   :min="1"
@@ -487,25 +544,42 @@ function strategyExplain(strategy?: string) {
                   controls-position="right"
                 />
               </div>
-              <el-button link type="danger" :disabled="form.targets.length <= 1" @click="removeTarget(i)">
+              <el-button
+                link
+                type="danger"
+                :disabled="form.targets.length <= 1"
+                @click="removeTarget(i)"
+              >
                 <el-icon><Delete /></el-icon>
               </el-button>
             </div>
-            <div v-if="form.routeType === 'round_robin'" class="form-tip">轮询策略按上列顺序依次命中，可通过拖拽调整顺序</div>
+            <div v-if="form.routeType === 'round_robin'" class="form-tip">
+              轮询策略按上列顺序依次命中，可通过拖拽调整顺序
+            </div>
           </div>
         </el-form-item>
 
         <el-form-item label="启用状态">
-          <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+          <el-switch
+            v-model="form.enabled"
+            :active-value="1"
+            :inactive-value="0"
+            active-text="启用"
+            inactive-text="停用"
+          />
         </el-form-item>
         <el-form-item label="设为默认">
           <el-switch v-model="form.isDefault" :active-value="1" :inactive-value="0" />
-          <div class="form-tip" style="margin-left: 8px">设为默认路由后，平台内未显式指定路由的调用将走该路由</div>
+          <div class="form-tip" style="margin-left: 8px">
+            设为默认路由后，平台内未显式指定路由的调用将走该路由
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
@@ -533,7 +607,9 @@ function strategyExplain(strategy?: string) {
               {{ modelLabel(simResult.selected.modelId) }}
             </div>
             <div class="picked-extra">
-              <span v-if="simResult.strategy === 'failover'">优先级 {{ simResult.selected.priority }}</span>
+              <span v-if="simResult.strategy === 'failover'"
+                >优先级 {{ simResult.selected.priority }}</span
+              >
               <span v-else>权重 {{ simResult.selected.weight }}</span>
             </div>
           </div>

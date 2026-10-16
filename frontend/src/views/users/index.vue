@@ -66,7 +66,9 @@ onMounted(load)
           <template #default="{ row }">
             <div class="user-cell">
               <div class="user-avatar-ring">
-                <el-avatar :size="30" class="user-avatar">{{ (row.nickname || row.username).charAt(0) }}</el-avatar>
+                <el-avatar :size="30" class="user-avatar">{{
+                  (row.nickname || row.username).charAt(0)
+                }}</el-avatar>
               </div>
               <div>
                 <div class="user-name">{{ row.nickname || row.username }}</div>

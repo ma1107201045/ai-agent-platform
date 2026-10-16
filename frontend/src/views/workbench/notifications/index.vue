@@ -62,6 +62,18 @@ async function load() {
 async function refreshUnread() {
   await notificationStore.refresh()
 }
+
+/** 切换类型/已读筛选并重查 */
+function setTypeFilter(v: string) {
+  typeFilter.value = v
+  search()
+}
+
+function setReadFilter(v: number) {
+  readFilter.value = v
+  search()
+}
+
 async function search() {
   page.value = 1
   await Promise.all([load(), refreshUnread()])
@@ -126,11 +138,17 @@ onMounted(() => {
         <div class="stat-card">
           <div class="stat-num">{{ unread }}</div>
           <div class="stat-label">未读消息</div>
-          <div class="stat-tip">共 {{ total }} 条{{ readFilter === -1 ? '' : readFilter === 0 ? '未读' : '已读' }}</div>
+          <div class="stat-tip">
+            共 {{ total }} 条{{ readFilter === -1 ? '' : readFilter === 0 ? '未读' : '已读' }}
+          </div>
         </div>
         <div class="filter-card">
           <div class="filter-title">消息类型</div>
-          <div class="filter-item" :class="{ active: typeFilter === '' }" @click="typeFilter = ''; search()">
+          <div
+            class="filter-item"
+            :class="{ active: typeFilter === '' }"
+            @click="setTypeFilter('')"
+          >
             全部类型
           </div>
           <div
@@ -138,18 +156,22 @@ onMounted(() => {
             :key="key"
             class="filter-item"
             :class="{ active: typeFilter === key }"
-            @click="typeFilter = key; search()"
+            @click="setTypeFilter(key)"
           >
             <span class="dot" :class="meta.color"></span>{{ meta.label }}
           </div>
           <div class="filter-divider"></div>
-          <div class="filter-item" :class="{ active: readFilter === -1 }" @click="readFilter = -1; search()">
+          <div
+            class="filter-item"
+            :class="{ active: readFilter === -1 }"
+            @click="setReadFilter(-1)"
+          >
             全部消息
           </div>
-          <div class="filter-item" :class="{ active: readFilter === 0 }" @click="readFilter = 0; search()">
+          <div class="filter-item" :class="{ active: readFilter === 0 }" @click="setReadFilter(0)">
             未读消息
           </div>
-          <div class="filter-item" :class="{ active: readFilter === 1 }" @click="readFilter = 1; search()">
+          <div class="filter-item" :class="{ active: readFilter === 1 }" @click="setReadFilter(1)">
             已读消息
           </div>
         </div>
@@ -170,7 +192,12 @@ onMounted(() => {
             <div class="notif-content">
               <div class="notif-top">
                 <span class="notif-title">{{ row.title }}</span>
-                <el-tag size="small" effect="plain" :type="(typeInfo(row.type).color as any)" class="notif-type">
+                <el-tag
+                  size="small"
+                  effect="plain"
+                  :type="typeInfo(row.type).color as any"
+                  class="notif-type"
+                >
                   {{ typeInfo(row.type).label }}
                 </el-tag>
                 <span v-if="row.read !== 1" class="unread-dot"></span>
@@ -178,7 +205,9 @@ onMounted(() => {
               <div class="notif-text">{{ row.content || row.title }}</div>
               <div class="notif-meta">
                 <span>{{ fmt(row.createTime) }}</span>
-                <span v-if="row.read === 1 && row.readTime" class="read-time">已读于 {{ fmt(row.readTime) }}</span>
+                <span v-if="row.read === 1 && row.readTime" class="read-time"
+                  >已读于 {{ fmt(row.readTime) }}</span
+                >
               </div>
             </div>
             <div class="notif-actions" @click.stop>
@@ -188,14 +217,18 @@ onMounted(() => {
                 type="primary"
                 :icon="Check"
                 @click="markRead(row)"
-              >标为已读</el-button>
+                >标为已读</el-button
+              >
               <el-button link type="info" :icon="View" @click="openDetail(row)">查看</el-button>
               <el-button link type="danger" :icon="Delete" @click="remove(row)">删除</el-button>
             </div>
           </div>
 
           <div v-if="!loading && list.length === 0" class="empty-box">
-            <el-empty :description="unread === 0 && readFilter !== -1 ? '暂无该状态消息' : '暂无通知消息'" :image-size="90" />
+            <el-empty
+              :description="unread === 0 && readFilter !== -1 ? '暂无该状态消息' : '暂无通知消息'"
+              :image-size="90"
+            />
           </div>
         </div>
 
@@ -214,7 +247,7 @@ onMounted(() => {
     <!-- 消息详情 -->
     <el-dialog v-model="detailVisible" :title="detail?.title" width="560px">
       <div class="detail-head">
-        <el-tag size="small" effect="plain" :type="(typeInfo(detail?.type).color as any)">
+        <el-tag size="small" effect="plain" :type="typeInfo(detail?.type).color as any">
           {{ typeInfo(detail?.type).label }}
         </el-tag>
         <span class="dim-text">{{ fmt(detail?.createTime) }}</span>
@@ -310,7 +343,9 @@ onMounted(() => {
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
   user-select: none;
 }
 .filter-item:hover {
@@ -327,10 +362,18 @@ onMounted(() => {
   height: 8px;
   border-radius: 50%;
 }
-.dot.info { background: #909399; }
-.dot.primary { background: var(--brand-1); }
-.dot.success { background: #67c23a; }
-.dot.danger { background: #f56c6c; }
+.dot.info {
+  background: #909399;
+}
+.dot.primary {
+  background: var(--brand-1);
+}
+.dot.success {
+  background: #67c23a;
+}
+.dot.danger {
+  background: #f56c6c;
+}
 .filter-divider {
   height: 1px;
   background: var(--border-color);
@@ -354,7 +397,10 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 .notif-item:hover {
   border-color: rgba(91, 108, 255, 0.4);
@@ -374,10 +420,22 @@ onMounted(() => {
   justify-content: center;
   margin-top: 2px;
 }
-.notif-icon.info { background: rgba(144, 147, 153, 0.15); color: #909399; }
-.notif-icon.primary { background: rgba(91, 108, 255, 0.14); color: var(--brand-1); }
-.notif-icon.success { background: rgba(103, 194, 58, 0.14); color: #67c23a; }
-.notif-icon.danger { background: rgba(245, 108, 108, 0.14); color: #f56c6c; }
+.notif-icon.info {
+  background: rgba(144, 147, 153, 0.15);
+  color: #909399;
+}
+.notif-icon.primary {
+  background: rgba(91, 108, 255, 0.14);
+  color: var(--brand-1);
+}
+.notif-icon.success {
+  background: rgba(103, 194, 58, 0.14);
+  color: #67c23a;
+}
+.notif-icon.danger {
+  background: rgba(245, 108, 108, 0.14);
+  color: #f56c6c;
+}
 
 .notif-content {
   flex: 1;

@@ -55,7 +55,10 @@ const phaseMap: Record<string, string> = {
       <div class="ph-meta">
         <div class="ph-meta-item">
           <span class="ph-meta-label">优先级</span>
-          <el-tag size="small" :type="meta.phase === 'P0' ? 'danger' : meta.phase === 'P1' ? 'warning' : 'info'">
+          <el-tag
+            size="small"
+            :type="meta.phase === 'P0' ? 'danger' : meta.phase === 'P1' ? 'warning' : 'info'"
+          >
             {{ meta.phase }}
           </el-tag>
           <span class="ph-meta-text">{{ meta.phase ? phaseMap[meta.phase] : '' }}</span>

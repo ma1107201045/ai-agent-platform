@@ -14,7 +14,11 @@
   --brand-3: #4facfe;
   --color-primary: #5b6cff; /* 主色（与 Element 主色一致），供页面 var(--color-primary) 使用 */
   --brand-gradient: linear-gradient(135deg, #5b6cff 0%, #8b5cf6 100%);
-  --brand-gradient-soft: linear-gradient(135deg, rgba(91, 108, 255, 0.12), rgba(139, 92, 246, 0.12));
+  --brand-gradient-soft: linear-gradient(
+    135deg,
+    rgba(91, 108, 255, 0.12),
+    rgba(139, 92, 246, 0.12)
+  );
 
   /* 背景 & 表面 */
   --bg-page: #f5f7fc;
@@ -58,8 +62,9 @@
   --el-border-radius-base: 8px;
   --el-border-radius-small: 6px;
   --el-border-radius-round: 20px;
-  --el-font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', Arial, sans-serif;
+  --el-font-family:
+    'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial,
+    sans-serif;
   --el-box-shadow-light: var(--shadow-card);
 }
 
@@ -72,7 +77,11 @@ html.dark {
   --brand-3: #38bdf8;
   --color-primary: #6b78ff; /* 主色（暗色，与 Element 主色一致） */
   --brand-gradient: linear-gradient(135deg, #6b78ff 0%, #9b6bfa 100%);
-  --brand-gradient-soft: linear-gradient(135deg, rgba(109, 120, 255, 0.2), rgba(155, 107, 250, 0.2));
+  --brand-gradient-soft: linear-gradient(
+    135deg,
+    rgba(109, 120, 255, 0.2),
+    rgba(155, 107, 250, 0.2)
+  );
 
   --bg-page: #0f1220;
   --bg-card: #171a2b;
@@ -204,7 +213,10 @@ body,
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 .hover-card:hover {
   border-color: rgba(91, 108, 255, 0.45);
@@ -216,7 +228,9 @@ body,
   border: none !important;
   background: var(--brand-1) !important;
   color: #fff !important;
-  transition: background-color 0.18s ease, opacity 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    opacity 0.18s ease;
 }
 .btn-gradient:hover {
   background: var(--el-color-primary-dark-2) !important;
@@ -228,7 +242,9 @@ body,
 /* ---------- 页面切换过渡 ---------- */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
 }
 .fade-slide-enter-from {
   opacity: 0;
@@ -305,5 +321,7 @@ html.dark .el-table {
 }
 .el-input__wrapper,
 .el-textarea__inner {
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }

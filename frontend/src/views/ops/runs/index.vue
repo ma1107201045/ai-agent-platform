@@ -35,7 +35,10 @@ const statusOptions = [
   { value: 'timeout', label: '超时' }
 ]
 
-const statusMeta: Record<string, { type: 'success' | 'danger' | 'warning' | 'info'; text: string }> = {
+const statusMeta: Record<
+  string,
+  { type: 'success' | 'danger' | 'warning' | 'info'; text: string }
+> = {
   running: { type: 'warning', text: '运行中' },
   success: { type: 'success', text: '成功' },
   failed: { type: 'danger', text: '失败' },
@@ -192,7 +195,9 @@ onMounted(() => {
                 </div>
               </div>
               <div v-else class="rd-muted">
-                本次运行未产生节点轨迹（{{ row.mode === 'agent' ? '智能体模式' : '可能为直接对话或链路未被记录' }}）
+                本次运行未产生节点轨迹（{{
+                  row.mode === 'agent' ? '智能体模式' : '可能为直接对话或链路未被记录'
+                }}）
               </div>
             </div>
           </div>

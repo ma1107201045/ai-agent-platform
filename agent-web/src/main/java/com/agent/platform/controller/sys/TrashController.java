@@ -25,7 +25,7 @@ public class TrashController {
 
     private final TrashService trashService;
 
-    /** 回收站列表（type 为空返回全部，支持 agent/dataset/template/announcement） */
+    /** 回收站列表（type 为空返回全部，支持 agent/dataset/template/announcement/team/tool/skill/prompt_template/conversation/data_table） */
     @GetMapping
     public Result<List<Map<String, Object>>> list(@RequestParam(required = false) String type) {
         return Result.ok(trashService.list(type));

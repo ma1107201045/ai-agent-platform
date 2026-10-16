@@ -21,14 +21,9 @@ function insert(item: VarItem) {
 <template>
   <div v-if="vars.length" class="var-chips">
     <span class="var-chips-title">可用变量</span>
-    <span
-      v-for="v in vars"
-      :key="v.text"
-      class="var-chip"
-      :title="v.desc"
-      @click="insert(v)"
-      >{{ v.text }}</span
-    >
+    <span v-for="v in vars" :key="v.text" class="var-chip" :title="v.desc" @click="insert(v)">{{
+      v.text
+    }}</span>
   </div>
 </template>
 

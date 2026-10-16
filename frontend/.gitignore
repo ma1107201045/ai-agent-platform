@@ -3,3 +3,6 @@ dist
 dist-ssr
 *.local
 .vite
+.tmp
+src/auto-imports.d.ts
+src/components.d.ts

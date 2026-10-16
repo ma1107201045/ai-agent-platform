@@ -52,7 +52,10 @@ const categoryLabelOf = (c?: string) => {
   return it ? it.label : c || ''
 }
 
-const typeMeta: Record<string, { label: string; type: 'primary' | 'success' | 'warning'; icon: string }> = {
+const typeMeta: Record<
+  string,
+  { label: string; type: 'primary' | 'success' | 'warning'; icon: string }
+> = {
   instruction: { label: '指令型', type: 'primary', icon: '🧠' },
   tool: { label: '工具复合', type: 'warning', icon: '🛠️' },
   knowledge: { label: '知识技能', type: 'success', icon: '📚' }
@@ -63,7 +66,8 @@ const typeLabelOf = (t?: string) => (t ? typeMeta[t]?.label || t : '')
 const toolOptions = ref<{ id: number; name: string }[]>([])
 const datasetOptions = ref<{ id: number; name: string }[]>([])
 const toolNameOf = (id: number) => toolOptions.value.find((t) => t.id === id)?.name || `#${id}`
-const datasetNameOf = (id: number) => datasetOptions.value.find((d) => d.id === id)?.name || `#${id}`
+const datasetNameOf = (id: number) =>
+  datasetOptions.value.find((d) => d.id === id)?.name || `#${id}`
 
 async function loadMaps() {
   try {
@@ -110,6 +114,12 @@ async function load() {
     loading.value = false
   }
 }
+/** 切换分类筛选并重查 */
+function setCategoryFilter(v: string) {
+  categoryFilter.value = v
+  search()
+}
+
 function search() {
   page.value = 1
   load()
@@ -181,7 +191,10 @@ function appendVar(item: { name: string }) {
 
 /** 由名称推断 code（小写 kebab-case），无 ASCII 时降级为带时间戳的标识 */
 function guessCode() {
-  const ascii = form.name.replace(/[^a-zA-Z0-9\s_-]/g, ' ').trim().toLowerCase()
+  const ascii = form.name
+    .replace(/[^a-zA-Z0-9\s_-]/g, ' ')
+    .trim()
+    .toLowerCase()
   const kebab = ascii.replace(/\s+/g, '-').replace(/-+/g, '-')
   form.code = kebab || `skill-${Date.now().toString(36)}`
 }
@@ -222,7 +235,10 @@ function openEdit(row: Skill) {
   try {
     const arr = row.variables ? JSON.parse(row.variables) : []
     varItems.value = Array.isArray(arr)
-      ? arr.map((v: { name?: string; desc?: string }) => ({ name: v?.name || '', desc: v?.desc || '' }))
+      ? arr.map((v: { name?: string; desc?: string }) => ({
+          name: v?.name || '',
+          desc: v?.desc || ''
+        }))
       : []
   } catch {
     varItems.value = []
@@ -290,11 +306,18 @@ async function save() {
 async function remove(row: Skill) {
   const refs = (await appSkillApi.apps(row.id).catch(() => [])) as { id: number; name: string }[]
   if (refs.length) {
-    const names = refs.slice(0, 5).map((a) => `「${a.name}」`).join('、')
-    ElMessage.warning(`技能已被 ${refs.length} 个应用引用（${names}${refs.length > 5 ? ' 等' : ''}），请先解除绑定`)
+    const names = refs
+      .slice(0, 5)
+      .map((a) => `「${a.name}」`)
+      .join('、')
+    ElMessage.warning(
+      `技能已被 ${refs.length} 个应用引用（${names}${refs.length > 5 ? ' 等' : ''}），请先解除绑定`
+    )
     return
   }
-  ElMessageBox.confirm(`确认删除技能「${row.name}」？历史版本将一并清除，不可恢复。`, '删除确认', { type: 'error' })
+  ElMessageBox.confirm(`确认删除技能「${row.name}」？历史版本将一并清除，不可恢复。`, '删除确认', {
+    type: 'error'
+  })
     .then(async () => {
       await appSkillApi.remove(row.id)
       ElMessage.success('删除成功')
@@ -371,7 +394,8 @@ async function onImportFile(e: Event) {
   try {
     const text = await file.text()
     const data = JSON.parse(text) as Partial<Skill>
-    if (!data.name || !data.content) throw new Error('文件缺少 name / content 字段，不是有效的技能 JSON')
+    if (!data.name || !data.content)
+      throw new Error('文件缺少 name / content 字段，不是有效的技能 JSON')
     const skill = await appSkillApi.importSkill(data)
     ElMessage.success(`技能「${skill.name}」导入成功，当前版本 v${skill.version}`)
     load()
@@ -394,28 +418,54 @@ onMounted(() => {
     <div class="skill-head">
       <div>
         <h2 class="head-title">技能</h2>
-        <p class="head-desc">将指令、变量与工具/数据集封装为可复用能力包，绑定到应用后自动注入运行循环</p>
+        <p class="head-desc">
+          将指令、变量与工具/数据集封装为可复用能力包，绑定到应用后自动注入运行循环
+        </p>
       </div>
       <div class="head-actions">
-        <input ref="importInput" type="file" accept=".json,application/json" class="hidden-file" @change="onImportFile" />
-        <el-button :icon="UploadFilled" :loading="importing" @click="pickImportFile">导入</el-button>
-        <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新建技能</el-button>
+        <input
+          ref="importInput"
+          type="file"
+          accept=".json,application/json"
+          class="hidden-file"
+          @change="onImportFile"
+        />
+        <el-button :icon="UploadFilled" :loading="importing" @click="pickImportFile"
+          >导入</el-button
+        >
+        <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+          >新建技能</el-button
+        >
       </div>
     </div>
 
     <div class="skill-toolbar hover-card">
       <div class="filter-chips">
-        <button class="chip" :class="{ active: categoryFilter === '' }" @click="categoryFilter = ''; search()">全部</button>
+        <button
+          class="chip"
+          :class="{ active: categoryFilter === '' }"
+          @click="setCategoryFilter('')"
+        >
+          全部
+        </button>
         <button
           v-for="c in categoryOptions"
           :key="c.value"
           class="chip"
           :class="{ active: categoryFilter === c.value }"
-          @click="categoryFilter = c.value; search()"
-        >{{ c.label }}</button>
+          @click="setCategoryFilter(c.value)"
+        >
+          {{ c.label }}
+        </button>
       </div>
       <div class="toolbar-right">
-        <el-select v-model="typeFilter" placeholder="类型" clearable style="width: 130px" @change="search">
+        <el-select
+          v-model="typeFilter"
+          placeholder="类型"
+          clearable
+          style="width: 130px"
+          @change="search"
+        >
           <el-option v-for="(m, key) in typeMeta" :key="key" :label="m.label" :value="key" />
         </el-select>
         <el-input
@@ -426,7 +476,9 @@ onMounted(() => {
           @keyup.enter="search"
           @clear="search"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-button @click="search">搜索</el-button>
       </div>
@@ -439,8 +491,12 @@ onMounted(() => {
             {{ row.icon || typeMeta[row.type]?.icon || '⚡' }}
           </div>
           <div class="card-tags">
-            <el-tag size="small" effect="dark" type="info">{{ categoryLabelOf(row.category) }}</el-tag>
-            <el-tag size="small" :type="typeMeta[row.type]?.type || 'info'">{{ typeLabelOf(row.type) }}</el-tag>
+            <el-tag size="small" effect="dark" type="info">{{
+              categoryLabelOf(row.category)
+            }}</el-tag>
+            <el-tag size="small" :type="typeMeta[row.type]?.type || 'info'">{{
+              typeLabelOf(row.type)
+            }}</el-tag>
             <el-switch
               :model-value="row.status === 1"
               inline-prompt
@@ -460,13 +516,24 @@ onMounted(() => {
         <div class="card-deps">
           <template v-if="row.type === 'tool' && parseIdList(row.toolIds).length">
             <span class="dep-label">工具</span>
-            <span v-for="id in parseIdList(row.toolIds).slice(0, 3)" :key="id" class="dep-chip">{{ toolNameOf(id) }}</span>
-            <span v-if="parseIdList(row.toolIds).length > 3" class="dep-more">+{{ parseIdList(row.toolIds).length - 3 }}</span>
+            <span v-for="id in parseIdList(row.toolIds).slice(0, 3)" :key="id" class="dep-chip">{{
+              toolNameOf(id)
+            }}</span>
+            <span v-if="parseIdList(row.toolIds).length > 3" class="dep-more"
+              >+{{ parseIdList(row.toolIds).length - 3 }}</span
+            >
           </template>
           <template v-else-if="row.type === 'knowledge' && parseIdList(row.datasetIds).length">
             <span class="dep-label">数据集</span>
-            <span v-for="id in parseIdList(row.datasetIds).slice(0, 3)" :key="id" class="dep-chip">{{ datasetNameOf(id) }}</span>
-            <span v-if="parseIdList(row.datasetIds).length > 3" class="dep-more">+{{ parseIdList(row.datasetIds).length - 3 }}</span>
+            <span
+              v-for="id in parseIdList(row.datasetIds).slice(0, 3)"
+              :key="id"
+              class="dep-chip"
+              >{{ datasetNameOf(id) }}</span
+            >
+            <span v-if="parseIdList(row.datasetIds).length > 3" class="dep-more"
+              >+{{ parseIdList(row.datasetIds).length - 3 }}</span
+            >
           </template>
           <template v-else>
             <span class="dep-empty">{{ row.variables ? '含变量注入' : '无外部依赖' }}</span>
@@ -475,7 +542,9 @@ onMounted(() => {
 
         <div class="card-foot">
           <div class="foot-meta">
-            <span><el-icon><Clock /></el-icon> v{{ row.version }}</span>
+            <span
+              ><el-icon><Clock /></el-icon> v{{ row.version }}</span
+            >
             <span>更新于 {{ formatTime(row.updateTime) }}</span>
           </div>
           <div class="foot-actions">
@@ -490,7 +559,9 @@ onMounted(() => {
 
     <div v-if="!loading && list.length === 0" class="empty-card hover-card">
       <el-empty description="暂无匹配的技能，点击右上角新建技能" :image-size="90">
-        <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新建技能</el-button>
+        <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+          >新建技能</el-button
+        >
       </el-empty>
     </div>
 
@@ -505,16 +576,31 @@ onMounted(() => {
     />
 
     <!-- 新建 / 编辑技能 -->
-    <el-dialog v-model="dialogVisible" :title="editId == null ? '新建技能' : '编辑技能'" width="820px" :close-on-click-modal="false" top="6vh">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editId == null ? '新建技能' : '编辑技能'"
+      width="820px"
+      :close-on-click-modal="false"
+      top="6vh"
+    >
       <div class="dialog-body">
         <div class="form-grid form-grid-2">
           <div class="field-group">
             <label>技能名称 *</label>
-            <el-input v-model="form.name" maxlength="64" placeholder="例如：内容安全审核" @blur="!form.code && guessCode()" />
+            <el-input
+              v-model="form.name"
+              maxlength="64"
+              placeholder="例如：内容安全审核"
+              @blur="!form.code && guessCode()"
+            />
           </div>
           <div class="field-group">
             <label>技能标识 code *</label>
-            <el-input v-model="form.code" maxlength="64" placeholder="小写 kebab-case，如 content-review">
+            <el-input
+              v-model="form.code"
+              maxlength="64"
+              placeholder="小写 kebab-case，如 content-review"
+            >
               <template #append>
                 <el-button :icon="MagicStick" @click="guessCode">生成</el-button>
               </template>
@@ -526,7 +612,12 @@ onMounted(() => {
           <div class="field-group">
             <label>分类</label>
             <el-select v-model="form.category" style="width: 100%">
-              <el-option v-for="c in categoryOptions" :key="c.value" :label="c.label" :value="c.value">
+              <el-option
+                v-for="c in categoryOptions"
+                :key="c.value"
+                :label="c.label"
+                :value="c.value"
+              >
                 <span>{{ c.label }}</span>
                 <span class="opt-desc">{{ c.desc }}</span>
               </el-option>
@@ -548,18 +639,40 @@ onMounted(() => {
 
         <div class="field-group">
           <label>技能描述</label>
-          <el-input v-model="form.description" type="textarea" :rows="2" maxlength="256" placeholder="说明何时使用该技能、解决什么问题（运行期用于按需匹配）" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            maxlength="256"
+            placeholder="说明何时使用该技能、解决什么问题（运行期用于按需匹配）"
+          />
         </div>
 
         <div v-if="form.type === 'tool'" class="field-group">
           <label>依赖工具 *</label>
-          <el-select v-model="form.toolIds" multiple filterable collapse-tags collapse-tags-tooltip style="width: 100%" placeholder="选择该技能可调用的工具">
+          <el-select
+            v-model="form.toolIds"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            style="width: 100%"
+            placeholder="选择该技能可调用的工具"
+          >
             <el-option v-for="t in toolOptions" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
         </div>
         <div v-if="form.type === 'knowledge'" class="field-group">
           <label>参考数据集 *</label>
-          <el-select v-model="form.datasetIds" multiple filterable collapse-tags collapse-tags-tooltip style="width: 100%" placeholder="选择该技能检索的知识库数据集">
+          <el-select
+            v-model="form.datasetIds"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            style="width: 100%"
+            placeholder="选择该技能检索的知识库数据集"
+          >
             <el-option v-for="d in datasetOptions" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </div>
@@ -567,38 +680,68 @@ onMounted(() => {
         <div class="field-group">
           <div class="label-row">
             <label>技能指令正文（Markdown，支持 {{ VAR_SAMPLE }} 占位）*</label>
-            <el-button link type="primary" size="small" :icon="RefreshLeft" @click="extractVars">从正文提取变量</el-button>
+            <el-button link type="primary" size="small" :icon="RefreshLeft" @click="extractVars"
+              >从正文提取变量</el-button
+            >
           </div>
-          <el-input v-model="form.content" type="textarea" :rows="7" maxlength="10000" show-word-limit :placeholder="`编写可复用的指令正文，使用 ${VAR_SAMPLE} 引用下方定义的变量，例如：请按 {{tone}} 的语气，审核以下内容并给出通过/拦截结论。`" />
+          <el-input
+            v-model="form.content"
+            type="textarea"
+            :rows="7"
+            maxlength="10000"
+            show-word-limit
+            :placeholder="`编写可复用的指令正文，使用 ${VAR_SAMPLE} 引用下方定义的变量，例如：请按 {{tone}} 的语气，审核以下内容并给出通过/拦截结论。`"
+          />
           <div v-if="varItems.length" class="var-chips">
             <span class="var-title">变量占位（点击插入正文）</span>
-            <span v-for="(v, i) in varItems" :key="i" class="var-chip" @click="appendVar(v)">{{ M_OPEN }}{{ v.name }}{{ M_CLOSE }}</span>
+            <span v-for="(v, i) in varItems" :key="i" class="var-chip" @click="appendVar(v)"
+              >{{ M_OPEN }}{{ v.name }}{{ M_CLOSE }}</span
+            >
           </div>
         </div>
 
         <div class="field-group">
           <div class="label-row">
             <label>变量定义</label>
-            <el-button link type="primary" size="small" :icon="Plus" @click="varItems.push({ name: '', desc: '' })">添加变量</el-button>
+            <el-button
+              link
+              type="primary"
+              size="small"
+              :icon="Plus"
+              @click="varItems.push({ name: '', desc: '' })"
+              >添加变量</el-button
+            >
           </div>
           <div v-if="varItems.length" class="var-table">
             <div v-for="(v, i) in varItems" :key="i" class="var-row">
-              <el-input v-model="v.name" maxlength="32" :placeholder="`变量名（不带 ${M_OPEN}${M_CLOSE}）`" />
+              <el-input
+                v-model="v.name"
+                maxlength="32"
+                :placeholder="`变量名（不带 ${M_OPEN}${M_CLOSE}）`"
+              />
               <el-input v-model="v.desc" maxlength="64" placeholder="变量说明（选填）" />
               <el-button link type="danger" :icon="Delete" @click="varItems.splice(i, 1)" />
             </div>
           </div>
-          <p v-else class="hint-text">暂无变量。技能正文中的 {{ VAR_SAMPLE }} 占位会在保存后自动供应用编排时填写。</p>
+          <p v-else class="hint-text">
+            暂无变量。技能正文中的 {{ VAR_SAMPLE }} 占位会在保存后自动供应用编排时填写。
+          </p>
         </div>
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 版本历史 -->
-    <el-drawer v-model="versionVisible" :title="currentSkill ? `版本历史 · ${currentSkill.name}` : '版本历史'" size="560px">
+    <el-drawer
+      v-model="versionVisible"
+      :title="currentSkill ? `版本历史 · ${currentSkill.name}` : '版本历史'"
+      size="560px"
+    >
       <div v-loading="rolling" class="version-body">
         <el-timeline v-if="versions.length">
           <el-timeline-item
@@ -610,14 +753,32 @@ onMounted(() => {
           >
             <div class="version-item">
               <div class="version-title">
-                <el-tag size="small" :type="v.version === currentSkill?.version ? 'primary' : 'info'">v{{ v.version }}</el-tag>
+                <el-tag
+                  size="small"
+                  :type="v.version === currentSkill?.version ? 'primary' : 'info'"
+                  >v{{ v.version }}</el-tag
+                >
                 <span v-if="v.version === currentSkill?.version" class="current-tag">当前</span>
                 <span class="dim-text">{{ v.remark || '内容更新' }}</span>
               </div>
               <pre class="version-content">{{ v.content }}</pre>
               <div class="version-actions">
-                <el-button size="small" link :icon="CopyDocument" @click="copyText(v.content, `v${v.version} 正文已复制`)">复制</el-button>
-                <el-button v-if="v.version !== currentSkill?.version" size="small" link type="warning" :icon="RefreshLeft" @click="rollback(v)">回退到此版本</el-button>
+                <el-button
+                  size="small"
+                  link
+                  :icon="CopyDocument"
+                  @click="copyText(v.content, `v${v.version} 正文已复制`)"
+                  >复制</el-button
+                >
+                <el-button
+                  v-if="v.version !== currentSkill?.version"
+                  size="small"
+                  link
+                  type="warning"
+                  :icon="RefreshLeft"
+                  @click="rollback(v)"
+                  >回退到此版本</el-button
+                >
               </div>
             </div>
           </el-timeline-item>
@@ -681,7 +842,9 @@ onMounted(() => {
   color: var(--text-secondary);
   font-size: 12.5px;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 .chip:hover {
   background: var(--hover-bg);

@@ -1,18 +1,25 @@
 <script setup lang="ts">
-import {computed, onMounted, ref} from 'vue'
-import {ElMessage, ElMessageBox} from 'element-plus'
-import {Delete, Refresh, RefreshLeft, Lightning, Warning} from '@element-plus/icons-vue'
-import {trashApi, type TrashItem, type TrashType} from '@/api/system-trash'
+import { computed, onMounted, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Refresh, RefreshLeft, Lightning, Warning } from '@element-plus/icons-vue'
+import { trashApi, type TrashItem, type TrashType } from '@/api/system-trash'
 
-const typeMeta: Record<string, { label: string; tag: 'primary' | 'success' | 'warning' | 'info' }> = {
-  agent: {label: '智能体应用', tag: 'primary'},
-  dataset: {label: '知识库', tag: 'success'},
-  template: {label: '应用模板', tag: 'warning'},
-  announcement: {label: '系统公告', tag: 'info'}
-}
+const typeMeta: Record<string, { label: string; tag: 'primary' | 'success' | 'warning' | 'info' }> =
+  {
+    agent: { label: '智能体应用', tag: 'primary' },
+    dataset: { label: '知识库', tag: 'success' },
+    template: { label: '应用模板', tag: 'warning' },
+    announcement: { label: '系统公告', tag: 'info' },
+    team: { label: '智能体团队', tag: 'primary' },
+    tool: { label: '工具', tag: 'success' },
+    skill: { label: '技能', tag: 'warning' },
+    prompt_template: { label: '提示词模板', tag: 'info' },
+    conversation: { label: '会话', tag: 'primary' },
+    data_table: { label: '数据表', tag: 'success' }
+  }
 const typeOptions = [
-  {value: '', label: '全部'},
-  ...Object.entries(typeMeta).map(([value, m]) => ({value, label: m.label}))
+  { value: '', label: '全部' },
+  ...Object.entries(typeMeta).map(([value, m]) => ({ value, label: m.label }))
 ]
 
 const items = ref<TrashItem[]>([])
@@ -23,9 +30,12 @@ const keyword = ref('')
 const filtered = computed(() => {
   const kw = keyword.value.trim()
   if (!kw) return items.value
-  return items.value.filter((i) => (i.name || '').includes(kw) || (typeMeta[i.type]?.label || '').includes(kw))
+  return items.value.filter(
+    (i) => (i.name || '').includes(kw) || (typeMeta[i.type]?.label || '').includes(kw)
+  )
 })
-const countByType = (type: string) => (type ? items.value.filter((i) => i.type === type).length : items.value.length)
+const countByType = (type: string) =>
+  type ? items.value.filter((i) => i.type === type).length : items.value.length
 
 async function load() {
   loading.value = true
@@ -48,9 +58,18 @@ async function restore(row: TrashItem) {
 }
 
 async function purge(row: TrashItem) {
-  const cascadeNote = row.type === 'agent' || row.type === 'dataset'
-      ? '\n\n彻底删除后会连同其关联数据（版本/会话/消息 或 文档/分段）一并清理，不可恢复。'
-      : '\n\n彻底删除后不可恢复。'
+  const cascadeTypes = [
+    'agent',
+    'dataset',
+    'team',
+    'skill',
+    'prompt_template',
+    'conversation',
+    'data_table'
+  ]
+  const cascadeNote = cascadeTypes.includes(row.type)
+    ? '\n\n彻底删除后会连同其关联数据（版本/成员/会话/消息/分段等）一并清理，不可恢复。'
+    : '\n\n彻底删除后不可恢复。'
   await ElMessageBox.confirm(`确定彻底删除「${row.name}」吗？${cascadeNote}`, '彻底删除', {
     type: 'warning',
     confirmButtonText: '彻底删除',
@@ -63,9 +82,9 @@ async function purge(row: TrashItem) {
 
 async function cleanup() {
   await ElMessageBox.confirm(
-      '将清理回收站中删除超过 30 天的所有数据（含关联数据），且不可恢复。是否继续？',
-      '清理过期数据',
-      {type: 'warning', confirmButtonText: '清理', cancelButtonText: '取消'}
+    '将清理回收站中删除超过 30 天的所有数据（含关联数据），且不可恢复。是否继续？',
+    '清理过期数据',
+    { type: 'warning', confirmButtonText: '清理', cancelButtonText: '取消' }
   )
   const res = await trashApi.cleanup(30)
   ElMessage.success(`已清理 ${res.removed} 条超过 ${res.days} 天的数据`)
@@ -101,11 +120,20 @@ onMounted(load)
           {{ opt.label }}<span class="count">{{ countByType(opt.value) }}</span>
         </el-radio-button>
       </el-radio-group>
-      <el-input v-model="keyword" placeholder="搜索资源名称" clearable style="width: 220px; margin-left: auto"/>
+      <el-input
+        v-model="keyword"
+        placeholder="搜索资源名称"
+        clearable
+        style="width: 220px; margin-left: auto"
+      />
     </div>
 
     <el-card shadow="never">
-      <el-table v-loading="loading" :data="filtered" empty-text="回收站空空如也，删除的上述资源会出现在这里">
+      <el-table
+        v-loading="loading"
+        :data="filtered"
+        empty-text="回收站空空如也，删除的上述资源会出现在这里"
+      >
         <el-table-column label="资源类型" width="140" align="center">
           <template #default="{ row }">
             <el-tag :type="typeMeta[row.type]?.tag" effect="light" round>
@@ -123,17 +151,19 @@ onMounted(load)
         </el-table-column>
         <el-table-column label="操作" width="200" align="right">
           <template #default="{ row }">
-            <el-button link type="success" :icon="RefreshLeft" @click="restore(row)">恢复</el-button>
+            <el-button link type="success" :icon="RefreshLeft" @click="restore(row)"
+              >恢复</el-button
+            >
             <el-button link type="danger" :icon="Delete" @click="purge(row)">彻底删除</el-button>
           </template>
         </el-table-column>
         <template #empty>
-          <el-empty :image-size="90" description="暂无回收站数据"/>
+          <el-empty :image-size="90" description="暂无回收站数据" />
         </template>
       </el-table>
       <p v-if="filtered.length" class="trash-foot">
         <el-icon>
-          <Warning/>
+          <Warning />
         </el-icon>
         回收站数据将在每次执行「清理 30 天前」时被批量彻底删除，请谨慎操作。
       </p>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { useThemeStore } from '@/stores/theme'
 
 const themeStore = useThemeStore()
@@ -16,11 +17,14 @@ onBeforeUnmount(() => stopWatchSystem?.())
 </script>
 
 <template>
-  <router-view v-slot="{ Component }">
-    <transition name="fade" mode="out-in">
-      <component :is="Component" />
-    </transition>
-  </router-view>
+  <!-- Element Plus 按需引入后，通过 el-config-provider 提供中文语言包 -->
+  <el-config-provider :locale="zhCn">
+    <router-view v-slot="{ Component }">
+      <transition name="fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+  </el-config-provider>
 </template>
 
 <style>

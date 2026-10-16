@@ -41,7 +41,11 @@ async function loadOverview() {
   }
 }
 
-const typeLabels: Record<string, string> = { chatflow: '对话流', workflow: '工作流', agent: '智能体' }
+const typeLabels: Record<string, string> = {
+  chatflow: '对话流',
+  workflow: '工作流',
+  agent: '智能体'
+}
 
 /* ---------- 链路追踪 ---------- */
 const loadingConvs = ref(false)
@@ -52,7 +56,11 @@ const detailMsgs = ref<
   { role: 'user' | 'assistant'; content: string; trace?: TraceItem[]; steps?: AgentStep[] }[]
 >([])
 
-const modeLabels: Record<string, string> = { direct: '直连模型', workflow: '工作流', agent: '智能体' }
+const modeLabels: Record<string, string> = {
+  direct: '直连模型',
+  workflow: '工作流',
+  agent: '智能体'
+}
 
 async function loadConversations() {
   loadingConvs.value = true
@@ -71,7 +79,12 @@ async function openDetail(row: ChatConversation) {
   try {
     const msgs: ChatMessageRecord[] = await conversationApi.messages(row.id)
     detailMsgs.value = msgs.map((m) => {
-      const base: { role: 'user' | 'assistant'; content: string; trace?: TraceItem[]; steps?: AgentStep[] } = {
+      const base: {
+        role: 'user' | 'assistant'
+        content: string
+        trace?: TraceItem[]
+        steps?: AgentStep[]
+      } = {
         role: m.role,
         content: m.content || ''
       }
@@ -155,7 +168,9 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
-              <el-tag v-if="row.status === 1" size="small" type="success" effect="light">已发布</el-tag>
+              <el-tag v-if="row.status === 1" size="small" type="success" effect="light"
+                >已发布</el-tag
+              >
               <el-tag v-else size="small" type="info" effect="plain">草稿</el-tag>
             </template>
           </el-table-column>
@@ -171,7 +186,12 @@ onMounted(() => {
 
       <!-- 链路追踪 -->
       <el-tab-pane label="链路追踪" name="traces">
-        <el-table v-loading="loadingConvs" :data="conversations" class="ops-table" @row-click="openDetail">
+        <el-table
+          v-loading="loadingConvs"
+          :data="conversations"
+          class="ops-table"
+          @row-click="openDetail"
+        >
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column prop="title" label="会话标题" min-width="220">
             <template #default="{ row }">{{ row.title || `会话 #${row.id}` }}</template>
@@ -198,13 +218,19 @@ onMounted(() => {
           <div class="msg-content">{{ m.content || '（无输出）' }}</div>
           <el-collapse v-if="m.trace?.length || m.steps?.length" class="trace-collapse">
             <el-collapse-item
-              :title="m.steps?.length ? `工具调用轨迹 (${m.steps.length})` : `节点执行轨迹 (${m.trace?.length})`"
+              :title="
+                m.steps?.length
+                  ? `工具调用轨迹 (${m.steps.length})`
+                  : `节点执行轨迹 (${m.trace?.length})`
+              "
             >
               <div v-for="(t, j) in m.trace" :key="j" class="trace-item">
                 <div class="trace-head">
                   <el-tag
                     size="small"
-                    :type="t.status === 'success' ? 'success' : t.status === 'error' ? 'danger' : 'info'"
+                    :type="
+                      t.status === 'success' ? 'success' : t.status === 'error' ? 'danger' : 'info'
+                    "
                   >
                     {{ t.status }}
                   </el-tag>
@@ -213,8 +239,12 @@ onMounted(() => {
                   <span class="trace-cost">{{ t.costMs }}ms</span>
                 </div>
                 <div v-if="t.error" class="trace-error">{{ t.error }}</div>
-                <div v-if="t.input" class="trace-text"><span class="trace-key">输入</span>{{ t.input }}</div>
-                <div v-if="t.output" class="trace-text"><span class="trace-key">输出</span>{{ t.output }}</div>
+                <div v-if="t.input" class="trace-text">
+                  <span class="trace-key">输入</span>{{ t.input }}
+                </div>
+                <div v-if="t.output" class="trace-text">
+                  <span class="trace-key">输出</span>{{ t.output }}
+                </div>
               </div>
               <div v-for="(s, j) in m.steps" :key="j" class="trace-item">
                 <div class="trace-head">
@@ -222,8 +252,12 @@ onMounted(() => {
                   <span class="trace-label">{{ s.toolName }}</span>
                   <span class="trace-cost">{{ s.costMs }}ms</span>
                 </div>
-                <div v-if="s.arguments" class="trace-text"><span class="trace-key">参数</span>{{ s.arguments }}</div>
-                <div v-if="s.result" class="trace-text"><span class="trace-key">结果</span>{{ s.result }}</div>
+                <div v-if="s.arguments" class="trace-text">
+                  <span class="trace-key">参数</span>{{ s.arguments }}
+                </div>
+                <div v-if="s.result" class="trace-text">
+                  <span class="trace-key">结果</span>{{ s.result }}
+                </div>
               </div>
             </el-collapse-item>
           </el-collapse>

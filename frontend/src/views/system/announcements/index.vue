@@ -83,11 +83,10 @@ async function save() {
 
 /* ---------- 发布 / 下线 / 删除 ---------- */
 function publish(row: SysAnnouncement) {
-  ElMessageBox.confirm(
-    '发布后将向平台全体用户推送一条站内通知，确认发布？',
-    '发布公告',
-    { type: 'warning', confirmButtonText: '确认发布' }
-  )
+  ElMessageBox.confirm('发布后将向平台全体用户推送一条站内通知，确认发布？', '发布公告', {
+    type: 'warning',
+    confirmButtonText: '确认发布'
+  })
     .then(async () => {
       await announcementApi.publish(row.id)
       ElMessage.success('已发布')
@@ -105,7 +104,9 @@ function offline(row: SysAnnouncement) {
     .catch(() => {})
 }
 function remove(row: SysAnnouncement) {
-  ElMessageBox.confirm(`确认删除公告「${row.title}」？删除后不可恢复。`, '删除确认', { type: 'error' })
+  ElMessageBox.confirm(`确认删除公告「${row.title}」？删除后不可恢复。`, '删除确认', {
+    type: 'error'
+  })
     .then(async () => {
       await announcementApi.remove(row.id)
       ElMessage.success('删除成功')
@@ -151,7 +152,9 @@ onMounted(load)
             @keyup.enter="search"
             @clear="search"
           >
-            <template #prefix><el-icon><Search /></el-icon></template>
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
           <el-button @click="search">搜索</el-button>
         </div>
@@ -169,7 +172,14 @@ onMounted(load)
         <el-table-column label="公告" min-width="260">
           <template #default="{ row }">
             <div class="ann-title-cell">
-              <el-tag v-if="row.pinned === 1" type="danger" size="small" effect="dark" class="pin-tag">置顶</el-tag>
+              <el-tag
+                v-if="row.pinned === 1"
+                type="danger"
+                size="small"
+                effect="dark"
+                class="pin-tag"
+                >置顶</el-tag
+              >
               <span class="ann-title">{{ row.title }}</span>
             </div>
           </template>
@@ -191,8 +201,10 @@ onMounted(load)
           <template #default="{ row }">{{ fmt(row.createTime) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="210" fixed="right">
-          <template #default="{ row }">
-            <el-button v-if="row.status !== 1" link type="primary" @click="publish(row)">发布</el-button>
+          <template #default="{ row }: { row: SysAnnouncement }">
+            <el-button v-if="row.status !== 1" link type="primary" @click="publish(row)"
+              >发布</el-button
+            >
             <el-button v-else link type="warning" @click="offline(row)">下线</el-button>
             <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button link type="danger" @click="remove(row)">删除</el-button>
@@ -220,7 +232,12 @@ onMounted(load)
       <div class="dialog-body">
         <div class="field-group">
           <label>公告标题</label>
-          <el-input v-model="form.title" maxlength="128" show-word-limit placeholder="例如：平台维护通知" />
+          <el-input
+            v-model="form.title"
+            maxlength="128"
+            show-word-limit
+            placeholder="例如：平台维护通知"
+          />
         </div>
         <div class="field-group">
           <label>公告内容</label>

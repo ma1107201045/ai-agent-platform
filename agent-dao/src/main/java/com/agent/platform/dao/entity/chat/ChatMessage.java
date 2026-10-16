@@ -1,6 +1,7 @@
 package com.agent.platform.dao.entity.chat;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -20,7 +21,8 @@ public class ChatMessage {
     /** 会话ID */
     private Long conversationId;
 
-    /** 角色：user / assistant */
+    /** 角色：user / assistant（role 为 PostgreSQL 保留字，需加引号） */
+    @TableField("\"role\"")
     private String role;
 
     /** 消息内容 */

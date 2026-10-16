@@ -93,7 +93,12 @@ onMounted(load)
         <div class="pub-body">
           <div class="pub-title-row">
             <span class="pub-name">{{ row.name }}</span>
-            <el-tag v-if="versions[row.id]?.isPublished === 1" size="small" type="success" effect="light">
+            <el-tag
+              v-if="versions[row.id]?.isPublished === 1"
+              size="small"
+              type="success"
+              effect="light"
+            >
               v{{ versions[row.id].version }}
             </el-tag>
           </div>
@@ -128,7 +133,9 @@ onMounted(load)
           <el-icon :size="40"><Promotion /></el-icon>
         </div>
         <p>还没有已发布的应用，先去发布一个吧</p>
-        <el-button type="primary" class="btn-gradient" @click="router.push('/app/agents')">去发布</el-button>
+        <el-button type="primary" class="btn-gradient" @click="router.push('/app/agents')"
+          >去发布</el-button
+        >
       </div>
     </div>
   </div>

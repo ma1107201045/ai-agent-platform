@@ -3,10 +3,22 @@ import type { AppApiKey, PageResult } from './types'
 
 /** 应用 API 密钥 API，与后端 AppApiKeyController（/api/app/api-keys）一一对应 */
 export const appApiKeyApi = {
-  page(params: { page?: number; size?: number; keyword?: string; appId?: number; status?: number }) {
+  page(params: {
+    page?: number
+    size?: number
+    keyword?: string
+    appId?: number
+    status?: number
+  }) {
     return request.get<never, PageResult<AppApiKey>>('/app/api-keys', { params })
   },
-  create(data: { appId: number; name: string; expiresAt?: string; rateLimit?: number; remark?: string }) {
+  create(data: {
+    appId: number
+    name: string
+    expiresAt?: string
+    rateLimit?: number
+    remark?: string
+  }) {
     return request.post<never, AppApiKey>('/app/api-keys', data)
   },
   update(

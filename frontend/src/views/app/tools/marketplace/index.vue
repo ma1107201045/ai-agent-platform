@@ -89,6 +89,12 @@ function openDetail(tpl: ToolTemplate) {
 
 const installing = ref<string | null>(null)
 
+/** 关闭详情弹窗并安装当前模板 */
+function closeAndInstall() {
+  detailVisible.value = false
+  if (detailTpl.value) install(detailTpl.value)
+}
+
 async function install(tpl: ToolTemplate) {
   try {
     await ElMessageBox.confirm(
@@ -118,8 +124,8 @@ onMounted(load)
       <div v-if="!props.embedded">
         <h2 class="head-title">插件市场</h2>
         <p class="head-desc">
-          内置常用工具模板，零配置安装即用 ·
-          当前展示 {{ list.length }} 个模板，已安装 {{ installedCount }} 个
+          内置常用工具模板，零配置安装即用 · 当前展示 {{ list.length }} 个模板，已安装
+          {{ installedCount }} 个
         </p>
       </div>
       <el-button :icon="Refresh" @click="load">刷新</el-button>
@@ -139,7 +145,9 @@ onMounted(load)
     <div class="mp-toolbar">
       <div class="category-tabs">
         <el-radio-group v-model="query.category" @change="search">
-          <el-radio-button v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</el-radio-button>
+          <el-radio-button v-for="c in categories" :key="c.value" :value="c.value">{{
+            c.label
+          }}</el-radio-button>
         </el-radio-group>
       </div>
       <el-input
@@ -150,7 +158,9 @@ onMounted(load)
         @keyup.enter="search"
         @clear="search"
       >
-        <template #prefix><el-icon><Search /></el-icon></template>
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
     </div>
 
@@ -178,14 +188,18 @@ onMounted(load)
             <span class="meta-label">参数</span>
             <span class="meta-params">
               <template v-if="parseParams(tpl).length">
-                <code v-for="p in parseParams(tpl)" :key="p.name" class="param-chip">{{ p.name }}</code>
+                <code v-for="p in parseParams(tpl)" :key="p.name" class="param-chip">{{
+                  p.name
+                }}</code>
               </template>
               <span v-else class="dim-text">无参数</span>
             </span>
           </div>
 
           <div class="tpl-foot">
-            <el-button link type="primary" :icon="View" size="small" @click="openDetail(tpl)">查看配置</el-button>
+            <el-button link type="primary" :icon="View" size="small" @click="openDetail(tpl)"
+              >查看配置</el-button
+            >
             <el-button
               v-if="tpl.installed"
               type="success"
@@ -223,9 +237,15 @@ onMounted(load)
         <div class="detail-block">
           <div class="detail-label">基础信息</div>
           <div class="info-grid">
-            <div class="info-item"><span class="info-key">类型</span>{{ typeLabels[detailTpl.type] }}</div>
-            <div class="info-item"><span class="info-key">分类</span>{{ categoryLabels[detailTpl.category] }}</div>
-            <div class="info-item" v-if="detailTpl.type === 'http'"><span class="info-key">方式</span>{{ detailTpl.method }}</div>
+            <div class="info-item">
+              <span class="info-key">类型</span>{{ typeLabels[detailTpl.type] }}
+            </div>
+            <div class="info-item">
+              <span class="info-key">分类</span>{{ categoryLabels[detailTpl.category] }}
+            </div>
+            <div class="info-item" v-if="detailTpl.type === 'http'">
+              <span class="info-key">方式</span>{{ detailTpl.method }}
+            </div>
           </div>
         </div>
 
@@ -237,9 +257,16 @@ onMounted(load)
           </div>
           <div class="detail-block">
             <div class="detail-label">参数说明</div>
-            <el-table v-if="parseParams(detailTpl).length" :data="parseParams(detailTpl)" size="small" border>
+            <el-table
+              v-if="parseParams(detailTpl).length"
+              :data="parseParams(detailTpl)"
+              size="small"
+              border
+            >
               <el-table-column prop="name" label="参数" width="140">
-                <template #default="{ row }"><code>{{ row.name }}</code></template>
+                <template #default="{ row }"
+                  ><code>{{ row.name }}</code></template
+                >
               </el-table-column>
               <el-table-column prop="type" label="类型" width="90" />
               <el-table-column prop="desc" label="说明" min-width="160" />
@@ -260,7 +287,13 @@ onMounted(load)
           <pre class="code-pre">{{ detailTpl.code }}</pre>
         </div>
 
-        <el-alert v-if="!detailTpl.installed" type="info" :closable="false" show-icon class="detail-tip">
+        <el-alert
+          v-if="!detailTpl.installed"
+          type="info"
+          :closable="false"
+          show-icon
+          class="detail-tip"
+        >
           该模板尚未安装，安装后可前往「工具管理」查看或修改配置。
         </el-alert>
       </template>
@@ -272,7 +305,7 @@ onMounted(load)
           class="btn-gradient"
           :icon="Download"
           :loading="installing === detailTpl.key"
-          @click="detailVisible = false; install(detailTpl)"
+          @click="closeAndInstall()"
         >
           一键安装
         </el-button>
@@ -337,7 +370,9 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
   background: var(--fill-lighter);
 }
 .tpl-card:hover {

@@ -9,7 +9,10 @@ import type { ChatMessage, ModelPlaygroundItem } from '@/api/types'
 
 const router = useRouter()
 
-const typeMeta: Record<string, { label: string; tag: 'primary' | 'success' | 'warning' | 'info' | 'danger' }> = {
+const typeMeta: Record<
+  string,
+  { label: string; tag: 'primary' | 'success' | 'warning' | 'info' | 'danger' }
+> = {
   llm: { label: '对话', tag: 'primary' },
   embedding: { label: '向量', tag: 'success' },
   rerank: { label: '重排', tag: 'warning' },
@@ -51,7 +54,11 @@ const filtered = computed(() => {
   return models.value.filter((m) => {
     if (typeFilter.value && m.modelType !== typeFilter.value) return false
     if (onlyUsable.value && !usable(m)) return false
-    if (kw && !(m.modelName.toLowerCase().includes(kw) || m.providerName.toLowerCase().includes(kw))) return false
+    if (
+      kw &&
+      !(m.modelName.toLowerCase().includes(kw) || m.providerName.toLowerCase().includes(kw))
+    )
+      return false
     return true
   })
 })
@@ -71,7 +78,7 @@ async function load() {
   loading.value = true
   try {
     models.value = await modelApi.playgroundModels()
-  } catch (e) {
+  } catch {
     ElMessage.error('模型目录加载失败')
   } finally {
     loading.value = false
@@ -100,7 +107,12 @@ let abortCtl: AbortController | null = null
 let sessionMsgs: ChatMessage[] = []
 let streamEndedByStop = false
 
-const quickAsks = ['用一句话介绍你自己的能力', '帮我总结一下什么是大语言模型', '写一个冒泡排序的 Python 示例', '将这段话翻译成英文：你好，很高兴认识你']
+const quickAsks = [
+  '用一句话介绍你自己的能力',
+  '帮我总结一下什么是大语言模型',
+  '写一个冒泡排序的 Python 示例',
+  '将这段话翻译成英文：你好，很高兴认识你'
+]
 
 function openChat(model: ModelPlaygroundItem) {
   activeModel.value = model
@@ -139,7 +151,10 @@ async function send() {
   streamEndedByStop = false
   turns.value.push({ role: 'assistant', content: '', streaming: true })
   abortCtl = new AbortController()
-  const payloadMsgs: ChatMessage[] = [{ role: 'system', content: systemPrompt.value }, ...sessionMsgs]
+  const payloadMsgs: ChatMessage[] = [
+    { role: 'system', content: systemPrompt.value },
+    ...sessionMsgs
+  ]
   scrollToBottom()
   try {
     const full = await modelApi.chatStream(
@@ -201,7 +216,9 @@ onMounted(load)
     <div class="pg-head">
       <div>
         <h2 class="head-title">模型广场</h2>
-        <p class="head-desc">浏览已接入供应商的模型能力，选中对话模型即可在线流式试玩，验证效果后再接入业务</p>
+        <p class="head-desc">
+          浏览已接入供应商的模型能力，选中对话模型即可在线流式试玩，验证效果后再接入业务
+        </p>
       </div>
       <div class="head-actions">
         <el-button :icon="Plus" @click="router.push('/models')">配置供应商 / 模型</el-button>
@@ -240,7 +257,13 @@ onMounted(load)
       </el-radio-group>
       <div class="pg-toolbar-right">
         <el-switch v-model="onlyUsable" active-text="仅看可用" />
-        <el-input v-model="keyword" placeholder="搜索模型 / 供应商" :prefix-icon="Search" clearable style="width: 210px" />
+        <el-input
+          v-model="keyword"
+          placeholder="搜索模型 / 供应商"
+          :prefix-icon="Search"
+          clearable
+          style="width: 210px"
+        />
       </div>
     </div>
 
@@ -259,14 +282,24 @@ onMounted(load)
           <div class="mc-info">
             <div class="mc-name-row">
               <span class="mc-model">{{ m.modelName }}</span>
-              <el-tag :type="typeMeta[m.modelType]?.tag || 'info'" size="small" effect="plain" round>
+              <el-tag
+                :type="typeMeta[m.modelType]?.tag || 'info'"
+                size="small"
+                effect="plain"
+                round
+              >
                 {{ typeMeta[m.modelType]?.label || m.modelType }}
               </el-tag>
             </div>
-            <div class="mc-provider">{{ m.providerName }}<span v-if="m.providerType" class="muted"> · {{ m.providerType }}</span></div>
+            <div class="mc-provider">
+              {{ m.providerName
+              }}<span v-if="m.providerType" class="muted"> · {{ m.providerType }}</span>
+            </div>
           </div>
           <span v-if="m.modelType === 'llm' && usable(m)" class="mc-live">可用</span>
-          <el-tag v-else-if="m.modelType === 'llm'" type="danger" size="small" effect="dark">未启用</el-tag>
+          <el-tag v-else-if="m.modelType === 'llm'" type="danger" size="small" effect="dark"
+            >未启用</el-tag
+          >
           <el-tag v-else-if="!usable(m)" size="small" type="info" effect="dark">供应商停用</el-tag>
         </div>
 
@@ -285,7 +318,8 @@ onMounted(load)
               :disabled="!usable(m)"
               :icon="ChatDotRound"
               @click="openChat(m)"
-            >在线试玩</el-button>
+              >在线试玩</el-button
+            >
             <span v-if="!usable(m)" class="muted small">启用模型与其供应商后即可试玩</span>
           </template>
           <span v-else class="muted small">
@@ -317,7 +351,8 @@ onMounted(load)
               </el-tag>
             </div>
             <div class="pg-console-sub muted">
-              流式在线试玩 · 上下文 {{ toK(activeModel.contextWindow) }} · 支持多轮对话，发送内容会保存在当前会话
+              流式在线试玩 · 上下文 {{ toK(activeModel.contextWindow) }} ·
+              支持多轮对话，发送内容会保存在当前会话
             </div>
           </div>
           <div>
@@ -337,7 +372,8 @@ onMounted(load)
                 round
                 plain
                 @click="useQuick(q)"
-              >{{ q }}</el-button>
+                >{{ q }}</el-button
+              >
             </div>
           </div>
           <div v-for="(t, i) in turns" :key="i" class="pg-turn" :class="t.role">
@@ -374,10 +410,23 @@ onMounted(load)
               :disabled="sending"
               @keydown="onKeydown"
             />
-            <el-button v-if="sending" class="pg-send" size="large" type="warning" @click="stopStream">
+            <el-button
+              v-if="sending"
+              class="pg-send"
+              size="large"
+              type="warning"
+              @click="stopStream"
+            >
               停止
             </el-button>
-            <el-button v-else class="pg-send" size="large" type="primary" :disabled="!inputText.trim()" @click="send">
+            <el-button
+              v-else
+              class="pg-send"
+              size="large"
+              type="primary"
+              :disabled="!inputText.trim()"
+              @click="send"
+            >
               发送
             </el-button>
           </div>
@@ -416,9 +465,15 @@ onMounted(load)
   font-weight: 700;
   color: var(--color-primary);
 }
-.stat-num.usable { color: #18a058; }
-.stat-num.chat { color: #2080f0; }
-.stat-num.muted { color: var(--text-tertiary); }
+.stat-num.usable {
+  color: #18a058;
+}
+.stat-num.chat {
+  color: #2080f0;
+}
+.stat-num.muted {
+  color: var(--text-tertiary);
+}
 .stat-label {
   margin-top: 2px;
   font-size: 12px;
@@ -469,11 +524,21 @@ onMounted(load)
   font-weight: 700;
   color: #fff;
 }
-.mc-avatar-primary { background: linear-gradient(135deg, #2080f0, #66b1ff); }
-.mc-avatar-success { background: linear-gradient(135deg, #18a058, #63e2b7); }
-.mc-avatar-warning { background: linear-gradient(135deg, #d03050, #e88080); }
-.mc-avatar-info { background: linear-gradient(135deg, #909399, #c0c4cc); }
-.mc-avatar-danger { background: linear-gradient(135deg, #d03050, #e88080); }
+.mc-avatar-primary {
+  background: linear-gradient(135deg, #2080f0, #66b1ff);
+}
+.mc-avatar-success {
+  background: linear-gradient(135deg, #18a058, #63e2b7);
+}
+.mc-avatar-warning {
+  background: linear-gradient(135deg, #d03050, #e88080);
+}
+.mc-avatar-info {
+  background: linear-gradient(135deg, #909399, #c0c4cc);
+}
+.mc-avatar-danger {
+  background: linear-gradient(135deg, #d03050, #e88080);
+}
 .mc-info {
   flex: 1;
   min-width: 0;
@@ -536,8 +601,12 @@ onMounted(load)
   border-top: 1px dashed var(--border-color);
   padding-top: 10px;
 }
-.small { font-size: 12px; }
-.muted { color: var(--text-tertiary); }
+.small {
+  font-size: 12px;
+}
+.muted {
+  color: var(--text-tertiary);
+}
 
 /* console */
 .pg-console-head {
@@ -625,10 +694,17 @@ onMounted(load)
   background: var(--color-primary);
   animation: pg-blink 1s infinite;
 }
-.typing-tail { margin-left: 4px; }
+.typing-tail {
+  margin-left: 4px;
+}
 @keyframes pg-blink {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .pg-console-input {
   border-top: 1px solid var(--border-color);

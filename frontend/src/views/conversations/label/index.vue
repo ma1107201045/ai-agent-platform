@@ -9,7 +9,11 @@ import type { AppAgent } from '@/api/types'
 
 // ---------------- 常量与映射 ----------------
 
-const LABEL_TYPES: { value: string; label: string; tag: 'danger' | 'warning' | 'info' | 'success' }[] = [
+const LABEL_TYPES: {
+  value: string
+  label: string
+  tag: 'danger' | 'warning' | 'info' | 'success'
+}[] = [
   { value: 'correct', label: '回答准确', tag: 'success' },
   { value: 'incorrect', label: '回答错误', tag: 'danger' },
   { value: 'hallucination', label: '存在幻觉', tag: 'warning' },
@@ -157,7 +161,9 @@ function labelState(row: LabelMessage) {
   if (!row.labeled) {
     return { label: '未标注', type: 'info' as const }
   }
-  return row.rating === 'bad' ? { label: '差评', type: 'danger' as const } : { label: '好评', type: 'success' as const }
+  return row.rating === 'bad'
+    ? { label: '差评', type: 'danger' as const }
+    : { label: '好评', type: 'success' as const }
 }
 </script>
 
@@ -180,7 +186,13 @@ function labelState(row: LabelMessage) {
         >
           <el-option v-for="a in appOptions" :key="a.id" :label="a.name" :value="a.id" />
         </el-select>
-        <el-select v-model="labeledFilter" placeholder="按标注状态过滤" clearable style="width: 150px" @change="onSearch">
+        <el-select
+          v-model="labeledFilter"
+          placeholder="按标注状态过滤"
+          clearable
+          style="width: 150px"
+          @change="onSearch"
+        >
           <el-option label="未标注" :value="0" />
           <el-option label="已标注" :value="1" />
         </el-select>
@@ -192,10 +204,14 @@ function labelState(row: LabelMessage) {
           @keyup.enter="onSearch"
           @clear="onSearch"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-tooltip content="刷新">
-          <el-button circle @click="load"><el-icon><Refresh /></el-icon></el-button>
+          <el-button circle @click="load"
+            ><el-icon><Refresh /></el-icon
+          ></el-button>
         </el-tooltip>
       </div>
     </div>
@@ -248,8 +264,15 @@ function labelState(row: LabelMessage) {
         <el-table-column label="标注状态" width="130" align="center">
           <template #default="{ row }">
             <div class="status-cell">
-              <el-tag :type="labelState(row).type" size="small" effect="dark">{{ labelState(row).label }}</el-tag>
-              <el-tag v-if="row.labeled && row.labelType" size="small" effect="plain" class="type-tag">
+              <el-tag :type="labelState(row).type" size="small" effect="dark">{{
+                labelState(row).label
+              }}</el-tag>
+              <el-tag
+                v-if="row.labeled && row.labelType"
+                size="small"
+                effect="plain"
+                class="type-tag"
+              >
                 {{ LABEL_TYPE_MAP[row.labelType]?.label ?? row.labelType }}
               </el-tag>
             </div>
@@ -322,9 +345,16 @@ function labelState(row: LabelMessage) {
             </el-radio-group>
           </el-form-item>
           <el-form-item label="问题类型">
-            <el-select v-model="form.labelType" clearable placeholder="选择问题归类（可选）" style="width: 100%">
+            <el-select
+              v-model="form.labelType"
+              clearable
+              placeholder="选择问题归类（可选）"
+              style="width: 100%"
+            >
               <el-option v-for="t in LABEL_TYPES" :key="t.value" :label="t.label" :value="t.value">
-                <el-tag size="small" :type="t.tag" effect="plain" style="border: none">{{ t.label }}</el-tag>
+                <el-tag size="small" :type="t.tag" effect="plain" style="border: none">{{
+                  t.label
+                }}</el-tag>
               </el-option>
             </el-select>
           </el-form-item>
@@ -337,13 +367,20 @@ function labelState(row: LabelMessage) {
             />
           </el-form-item>
           <el-form-item label="备注说明">
-            <el-input v-model="form.note" maxlength="200" show-word-limit placeholder="记录标注依据 / 期望改进点（可选）" />
+            <el-input
+              v-model="form.note"
+              maxlength="200"
+              show-word-limit
+              placeholder="记录标注依据 / 期望改进点（可选）"
+            />
           </el-form-item>
         </el-form>
       </template>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存标注</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存标注</el-button
+        >
       </template>
     </el-dialog>
   </div>

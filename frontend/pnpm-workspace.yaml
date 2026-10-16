@@ -1,3 +1,5 @@
 allowBuilds:
-  esbuild: set this to true or false
-  vue-demi: set this to true or false
+  esbuild: true
+  simple-git-hooks: true
+  vue-demi: true
+# 单包项目，此文件仅用于 pnpm 配置（pnpm 10+ 的配置入口）

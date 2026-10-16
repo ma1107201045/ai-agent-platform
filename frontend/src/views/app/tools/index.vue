@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import {ref, watch} from 'vue'
+import { ref, watch } from 'vue'
 import AppToolInfo from './info/index.vue'
 import AppToolMarketplace from './marketplace/index.vue'
 import AppToolIntegrations from './integrations/index.vue'
 
 const tabs = [
-  {name: 'infos', label: '工具管理', component: AppToolInfo},
-  {name: 'marketplace', label: '插件市场', component: AppToolMarketplace},
-  {name: 'integrations', label: '数据集成', component: AppToolIntegrations}
+  { name: 'infos', label: '工具管理', component: AppToolInfo },
+  { name: 'marketplace', label: '插件市场', component: AppToolMarketplace },
+  { name: 'integrations', label: '数据集成', component: AppToolIntegrations }
 ]
 
 /** 当前激活 tab，纯本地状态切换，不经过路由 */
-const activeName = ref<any>('infos')
+const activeName = ref('infos')
 
 /**
  * 已挂载过的 tab（懒挂载 + 状态保留，替代 keep-alive 动态组件缓存）。
@@ -20,19 +20,20 @@ const activeName = ref<any>('infos')
 const mountedTabs = ref<string[]>(['infos'])
 
 watch(
-    activeName,
-    (name) => {
-      if (!mountedTabs.value.includes(name)) {
-        mountedTabs.value = [...mountedTabs.value, name]
-      }
-    },
-    {immediate: true}
+  activeName,
+  (name) => {
+    if (!mountedTabs.value.includes(name)) {
+      mountedTabs.value = [...mountedTabs.value, name]
+    }
+  },
+  { immediate: true }
 )
 
 /** 子组件内部引导（如「去插件市场 / 去数据集成 / 去工具管理」）→ 页内切换 tab */
-function onSwitchTab(name: string | number) {
-  if (tabs.some((t) => t.name === name)) {
-    activeName.value = name
+function onSwitchTab(name: unknown) {
+  const key = String(name)
+  if (tabs.some((t) => t.name === key)) {
+    activeName.value = key
   }
 }
 </script>
@@ -42,22 +43,24 @@ function onSwitchTab(name: string | number) {
     <div class="workspace-head">
       <div>
         <h2 class="head-title">工具中心</h2>
-        <p class="head-desc">管理自定义工具、安装插件模板、配置数据连接器，构建智能体可调用的能力</p>
+        <p class="head-desc">
+          管理自定义工具、安装插件模板、配置数据连接器，构建智能体可调用的能力
+        </p>
       </div>
     </div>
 
     <el-tabs v-model="activeName" type="border-card" class="workspace-tabs">
-      <el-tab-pane v-for="t in tabs" :key="t.name" :label="t.label" :name="t.name"/>
+      <el-tab-pane v-for="t in tabs" :key="t.name" :label="t.label" :name="t.name" />
     </el-tabs>
 
     <div class="tab-content">
       <template v-for="t in tabs" :key="t.name">
         <component
-            v-if="mountedTabs.includes(t.name)"
-            v-show="activeName === t.name"
-            :is="t.component"
-            :embedded="true"
-            @switch-tab="onSwitchTab"
+          v-if="mountedTabs.includes(t.name)"
+          v-show="activeName === t.name"
+          :is="t.component"
+          :embedded="true"
+          @switch-tab="onSwitchTab"
         />
       </template>
     </div>

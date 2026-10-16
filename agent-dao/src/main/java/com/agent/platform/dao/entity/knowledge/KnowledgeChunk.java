@@ -26,8 +26,8 @@ public class KnowledgeChunk {
 
     private String content;
 
-    /** 向量（JSON float 数组） */
-    private String vector;
+    /** 向量（pgvector 列，Java 侧以 '[f1,f2,...]' 字面量字符串读写） */
+    private String embedding;
 
     private Integer charCount;
 

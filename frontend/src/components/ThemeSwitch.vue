@@ -67,7 +67,9 @@ function select(value: ThemeMode) {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 .theme-btn:hover {
   background: var(--hover-bg);

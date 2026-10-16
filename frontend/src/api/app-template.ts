@@ -37,7 +37,13 @@ export interface TemplatePayload {
 
 /** 应用模板 API（/api/app/templates） */
 export const appTemplateApi = {
-  page(params: { page?: number; size?: number; keyword?: string; category?: string; appType?: string }) {
+  page(params: {
+    page?: number
+    size?: number
+    keyword?: string
+    category?: string
+    appType?: string
+  }) {
     return request.get<never, PageResult<AppTemplate>>('/app/templates', { params })
   },
   create(data: TemplatePayload) {

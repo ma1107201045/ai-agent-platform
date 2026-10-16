@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { BellFilled, Plus, Refresh, Search, VideoPlay, WarningFilled } from '@element-plus/icons-vue'
+import {
+  BellFilled,
+  Plus,
+  Refresh,
+  Search,
+  VideoPlay,
+  WarningFilled
+} from '@element-plus/icons-vue'
 import { alertApi, type AlertEvent, type AlertEventStats, type AlertRule } from '@/api/ops-alert'
 
 /* ---------------- 常量 ---------------- */
@@ -17,7 +24,11 @@ const windowOptions = [
   { value: 60, label: '近 1 小时' },
   { value: 1440, label: '近 24 小时' }
 ]
-const channelMap: Record<string, string> = { notification: '站内通知', email: '邮件', webhook: 'Webhook' }
+const channelMap: Record<string, string> = {
+  notification: '站内通知',
+  email: '邮件',
+  webhook: 'Webhook'
+}
 
 const activeTab = ref('rules')
 const rulesLoading = ref(false)
@@ -29,6 +40,12 @@ const ruleTotal = ref(0)
 const rulePage = ref(1)
 const ruleSize = ref(10)
 const ruleKeyword = ref('')
+
+/** 重置页码并重新加载规则 */
+function searchRules() {
+  rulePage.value = 1
+  loadRules()
+}
 
 async function loadRules() {
   rulesLoading.value = true
@@ -99,8 +116,8 @@ async function saveRule() {
     windowMinutes: form.windowMinutes,
     level: form.level,
     channels: form.channels.join(','),
-    webhookUrl: form.webhookUrl.trim() || null,
-    remark: form.remark.trim() || null
+    webhookUrl: form.webhookUrl.trim() || undefined,
+    remark: form.remark.trim() || undefined
   }
   saving.value = true
   try {
@@ -125,11 +142,15 @@ async function toggleRule(row: AlertRule, enabled: boolean) {
   ElMessage.success(enabled ? '已启用' : '已停用')
 }
 async function removeRule(row: AlertRule) {
-  await ElMessageBox.confirm(`确定删除规则「${row.name}」吗？其关联事件也会一并删除。`, '删除告警规则', {
-    type: 'warning',
-    confirmButtonText: '删除',
-    cancelButtonText: '取消'
-  })
+  await ElMessageBox.confirm(
+    `确定删除规则「${row.name}」吗？其关联事件也会一并删除。`,
+    '删除告警规则',
+    {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    }
+  )
   await alertApi.removeRule(row.id)
   ElMessage.success('规则已删除')
   loadRules()
@@ -175,7 +196,9 @@ function searchEvents() {
 }
 async function setEventStatus(row: AlertEvent, status: string) {
   await alertApi.setEventStatus(row.id, status)
-  ElMessage.success(status === 'handled' ? '已标记处理' : status === 'ignored' ? '已忽略' : '已重新打开')
+  ElMessage.success(
+    status === 'handled' ? '已标记处理' : status === 'ignored' ? '已忽略' : '已重新打开'
+  )
   loadEvents()
   loadRuleStats()
 }
@@ -193,7 +216,7 @@ async function removeEvent(row: AlertEvent) {
 
 /* ---------------- 工具 ---------------- */
 function metricText(m?: string) {
-  return (metricMap[m || '']?.label) || m || '-'
+  return metricMap[m || '']?.label || m || '-'
 }
 function fmt(s?: string) {
   if (!s) return '-'
@@ -219,20 +242,37 @@ onMounted(() => {
         <p class="head-desc">配置错误率、失败数等阈值规则，触发后通过通知渠道推送</p>
       </div>
       <div class="stat-pills">
-        <div class="pill danger"><el-icon><WarningFilled /></el-icon><b>{{ stats.open }}</b> 未处理</div>
-        <div class="pill"><el-icon><BellFilled /></el-icon>今日触发 {{ stats.today }} 次</div>
+        <div class="pill danger">
+          <el-icon><WarningFilled /></el-icon><b>{{ stats.open }}</b> 未处理
+        </div>
+        <div class="pill">
+          <el-icon><BellFilled /></el-icon>今日触发 {{ stats.today }} 次
+        </div>
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" @tab-change="activeTab === 'events' ? (loadEvents(), loadRuleStats()) : loadRules()">
+    <el-tabs
+      v-model="activeTab"
+      @tab-change="activeTab === 'events' ? (loadEvents(), loadRuleStats()) : loadRules()"
+    >
       <!-- ============ 规则 ============ -->
       <el-tab-pane label="告警规则" name="rules">
         <div class="filter-bar hover-card">
-          <el-input v-model="ruleKeyword" placeholder="搜索规则名称 / 指标" clearable style="width: 240px"
-            @keyup.enter="() => { rulePage = 1; loadRules() }" @clear="() => { rulePage = 1; loadRules() }">
-            <template #prefix><el-icon><Search /></el-icon></template>
+          <el-input
+            v-model="ruleKeyword"
+            placeholder="搜索规则名称 / 指标"
+            clearable
+            style="width: 240px"
+            @keyup.enter="searchRules"
+            @clear="searchRules"
+          >
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
-          <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新增规则</el-button>
+          <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+            >新增规则</el-button
+          >
           <el-button :icon="Refresh" @click="loadRules">刷新</el-button>
         </div>
 
@@ -249,12 +289,19 @@ onMounted(() => {
             </el-table-column>
             <el-table-column label="统计窗口" width="110">
               <template #default="{ row }">
-                {{ windowOptions.find((w) => w.value === row.windowMinutes)?.label || `${row.windowMinutes} 分钟` }}
+                {{
+                  windowOptions.find((w) => w.value === row.windowMinutes)?.label ||
+                  `${row.windowMinutes} 分钟`
+                }}
               </template>
             </el-table-column>
             <el-table-column label="级别" width="90" align="center">
               <template #default="{ row }">
-                <el-tag size="small" :type="row.level === 'critical' ? 'danger' : 'warning'" effect="light">
+                <el-tag
+                  size="small"
+                  :type="row.level === 'critical' ? 'danger' : 'warning'"
+                  effect="light"
+                >
                   {{ row.level === 'critical' ? '严重' : '警告' }}
                 </el-tag>
               </template>
@@ -262,8 +309,14 @@ onMounted(() => {
             <el-table-column label="通知渠道" width="150">
               <template #default="{ row }">
                 <div class="channels">
-                  <el-tag v-for="c in (row.channels || 'notification').split(',').filter(Boolean)" :key="c" size="small"
-                    effect="plain" type="info">{{ channelMap[c] || c }}</el-tag>
+                  <el-tag
+                    v-for="c in (row.channels || 'notification').split(',').filter(Boolean)"
+                    :key="c"
+                    size="small"
+                    effect="plain"
+                    type="info"
+                    >{{ channelMap[c] || c }}</el-tag
+                  >
                 </div>
               </template>
             </el-table-column>
@@ -272,20 +325,32 @@ onMounted(() => {
             </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
-                <el-switch :model-value="row.enabled === 1" size="small" @change="(v) => toggleRule(row, v as boolean)" />
+                <el-switch
+                  :model-value="row.enabled === 1"
+                  size="small"
+                  @change="(v: string | number | boolean) => toggleRule(row, Boolean(v))"
+                />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="210" align="right">
               <template #default="{ row }">
-                <el-button link type="primary" :icon="VideoPlay" @click="fireTest(row)">测试触发</el-button>
+                <el-button link type="primary" :icon="VideoPlay" @click="fireTest(row)"
+                  >测试触发</el-button
+                >
                 <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
                 <el-button link type="danger" @click="removeRule(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
-          <el-pagination v-if="ruleTotal > ruleSize" style="margin-top: 14px; justify-content: flex-end"
-            layout="total, prev, pager, next" :total="ruleTotal" :page-size="ruleSize"
-            v-model:current-page="rulePage" @current-change="loadRules" />
+          <el-pagination
+            v-if="ruleTotal > ruleSize"
+            style="margin-top: 14px; justify-content: flex-end"
+            layout="total, prev, pager, next"
+            :total="ruleTotal"
+            :page-size="ruleSize"
+            v-model:current-page="rulePage"
+            @current-change="loadRules"
+          />
         </el-card>
       </el-tab-pane>
 
@@ -298,12 +363,22 @@ onMounted(() => {
             <el-radio-button value="handled">已处理</el-radio-button>
             <el-radio-button value="ignored">已忽略</el-radio-button>
           </el-radio-group>
-          <el-input v-model="evKeyword" placeholder="搜索事件内容 / 规则名" clearable style="width: 240px"
-            @keyup.enter="searchEvents" @clear="searchEvents">
-            <template #prefix><el-icon><Search /></el-icon></template>
+          <el-input
+            v-model="evKeyword"
+            placeholder="搜索事件内容 / 规则名"
+            clearable
+            style="width: 240px"
+            @keyup.enter="searchEvents"
+            @clear="searchEvents"
+          >
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
           <el-button :icon="Refresh" @click="searchEvents">刷新</el-button>
-          <span class="events-tip">自动触发将在接入运行监控流后开启，当前可用「测试触发」验证链路</span>
+          <span class="events-tip"
+            >自动触发将在接入运行监控流后开启，当前可用「测试触发」验证链路</span
+          >
         </div>
 
         <el-card shadow="never">
@@ -314,8 +389,13 @@ onMounted(() => {
             <el-table-column label="事件内容" min-width="280">
               <template #default="{ row }">
                 <div class="ev-content">
-                  <el-tag size="small" :type="row.level === 'critical' ? 'danger' : 'warning'" effect="light"
-                    class="lv-tag">{{ row.level === 'critical' ? '严重' : '警告' }}</el-tag>
+                  <el-tag
+                    size="small"
+                    :type="row.level === 'critical' ? 'danger' : 'warning'"
+                    effect="light"
+                    class="lv-tag"
+                    >{{ row.level === 'critical' ? '严重' : '警告' }}</el-tag
+                  >
                   <span>{{ row.content || row.ruleName }}</span>
                 </div>
               </template>
@@ -334,10 +414,20 @@ onMounted(() => {
             </el-table-column>
             <el-table-column label="状态" width="90" align="center">
               <template #default="{ row }">
-                <el-tag size="small"
-                  :type="row.status === 'open' ? 'danger' : row.status === 'handled' ? 'success' : 'info'"
-                  effect="light">
-                  {{ row.status === 'open' ? '未处理' : row.status === 'handled' ? '已处理' : '已忽略' }}
+                <el-tag
+                  size="small"
+                  :type="
+                    row.status === 'open' ? 'danger' : row.status === 'handled' ? 'success' : 'info'
+                  "
+                  effect="light"
+                >
+                  {{
+                    row.status === 'open'
+                      ? '未处理'
+                      : row.status === 'handled'
+                        ? '已处理'
+                        : '已忽略'
+                  }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -347,24 +437,40 @@ onMounted(() => {
             <el-table-column label="操作" width="200" align="right">
               <template #default="{ row }">
                 <template v-if="row.status === 'open'">
-                  <el-button link type="success" @click="setEventStatus(row, 'handled')">处理</el-button>
-                  <el-button link type="info" @click="setEventStatus(row, 'ignored')">忽略</el-button>
+                  <el-button link type="success" @click="setEventStatus(row, 'handled')"
+                    >处理</el-button
+                  >
+                  <el-button link type="info" @click="setEventStatus(row, 'ignored')"
+                    >忽略</el-button
+                  >
                 </template>
-                <el-button v-else link type="primary" @click="setEventStatus(row, 'open')">重新打开</el-button>
+                <el-button v-else link type="primary" @click="setEventStatus(row, 'open')"
+                  >重新打开</el-button
+                >
                 <el-button link type="danger" @click="removeEvent(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
-          <el-pagination v-if="evTotal > evSize" style="margin-top: 14px; justify-content: flex-end"
-            layout="total, prev, pager, next" :total="evTotal" :page-size="evSize"
-            v-model:current-page="evPage" @current-change="loadEvents" />
+          <el-pagination
+            v-if="evTotal > evSize"
+            style="margin-top: 14px; justify-content: flex-end"
+            layout="total, prev, pager, next"
+            :total="evTotal"
+            :page-size="evSize"
+            v-model:current-page="evPage"
+            @current-change="loadEvents"
+          />
         </el-card>
       </el-tab-pane>
     </el-tabs>
 
     <!-- 规则编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="editId ? '编辑告警规则' : '新增告警规则'" width="560px"
-      :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editId ? '编辑告警规则' : '新增告警规则'"
+      width="560px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>规则名称 <span class="req">*</span></label>
@@ -374,19 +480,32 @@ onMounted(() => {
           <div class="field-group grow">
             <label>监控指标 <span class="req">*</span></label>
             <el-select v-model="form.metric" style="width: 100%">
-              <el-option v-for="opt in metricOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+              <el-option
+                v-for="opt in metricOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
             </el-select>
           </div>
           <div class="field-group w-threshold">
             <label>阈值 <span class="req">*</span></label>
-            <el-input-number v-model="form.threshold" :min="0.01" :precision="2" :step="1" controls-position="right"
-              style="width: 100%" />
+            <el-input-number
+              v-model="form.threshold"
+              :min="0.01"
+              :precision="2"
+              :step="1"
+              controls-position="right"
+              style="width: 100%"
+            />
           </div>
         </div>
         <div class="field-group">
           <label>统计窗口</label>
           <el-radio-group v-model="form.windowMinutes">
-            <el-radio-button v-for="w in windowOptions" :key="w.value" :value="w.value">{{ w.label }}</el-radio-button>
+            <el-radio-button v-for="w in windowOptions" :key="w.value" :value="w.value">{{
+              w.label
+            }}</el-radio-button>
           </el-radio-group>
         </div>
         <div class="field-group">
@@ -410,12 +529,20 @@ onMounted(() => {
         </div>
         <div class="field-group">
           <label>备注</label>
-          <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="255" placeholder="可选" />
+          <el-input
+            v-model="form.remark"
+            type="textarea"
+            :rows="2"
+            maxlength="255"
+            placeholder="可选"
+          />
         </div>
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="saveRule">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="saveRule"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>

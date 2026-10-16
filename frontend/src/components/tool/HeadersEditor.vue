@@ -21,7 +21,10 @@ function parseJson(text: string | undefined): KV[] {
   try {
     const obj = JSON.parse(src)
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return []
-    return Object.keys(obj).map((k) => ({ key: k, value: String((obj as Record<string, unknown>)[k] ?? '') }))
+    return Object.keys(obj).map((k) => ({
+      key: k,
+      value: String((obj as Record<string, unknown>)[k] ?? '')
+    }))
   } catch {
     return []
   }
@@ -95,15 +98,27 @@ function applyJson() {
   <div class="hse">
     <template v-if="!jsonMode">
       <div v-for="(row, i) in rows" :key="i" class="hse-row">
-        <el-input v-model="row.key" class="hse-key" :placeholder="keyPlaceholder || '请求头名，如 X-Api-Key'" @update:model-value="sync" />
-        <el-input v-model="row.value" class="hse-value" placeholder="值" @update:model-value="sync" />
+        <el-input
+          v-model="row.key"
+          class="hse-key"
+          :placeholder="keyPlaceholder || '请求头名，如 X-Api-Key'"
+          @update:model-value="sync"
+        />
+        <el-input
+          v-model="row.value"
+          class="hse-value"
+          placeholder="值"
+          @update:model-value="sync"
+        />
         <el-button link type="danger" :icon="Delete" @click="removeRow(i)" />
       </div>
       <div class="hse-actions">
         <el-button type="primary" link :icon="Plus" @click="addRow">添加请求头</el-button>
         <el-button link :icon="View" @click="openJson">粘贴整段 JSON</el-button>
       </div>
-      <p v-if="!rows.length" class="hse-hint">一般无需配置；仅当目标接口要求固定请求头（如签名）时添加。</p>
+      <p v-if="!rows.length" class="hse-hint">
+        一般无需配置；仅当目标接口要求固定请求头（如签名）时添加。
+      </p>
     </template>
     <template v-else>
       <el-input

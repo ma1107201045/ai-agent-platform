@@ -52,7 +52,9 @@ function buildSchema(rows: ParamRow[]): string {
   for (const r of rows) {
     const key = r.key.trim()
     if (!key) continue
-    const prop: Record<string, unknown> = { type: TYPE_OPTIONS.some((t) => t.value === r.type) ? r.type : 'string' }
+    const prop: Record<string, unknown> = {
+      type: TYPE_OPTIONS.some((t) => t.value === r.type) ? r.type : 'string'
+    }
     if (r.desc.trim()) prop.description = r.desc.trim()
     propsMap[key] = prop
     if (r.required) required.push(key)
@@ -127,7 +129,9 @@ function applyJson() {
     <!-- 可视化编辑 -->
     <template v-if="!jsonMode">
       <div v-if="!rows.length" class="pse-empty">
-        <span>还没配置参数。如果智能体调用它时需要传值（比如查询城市名），请点击「添加参数」逐条补充；不需要传参则直接跳过。</span>
+        <span
+          >还没配置参数。如果智能体调用它时需要传值（比如查询城市名），请点击「添加参数」逐条补充；不需要传参则直接跳过。</span
+        >
       </div>
 
       <div v-for="(row, i) in rows" :key="i" class="pse-row">
@@ -158,7 +162,9 @@ function applyJson() {
         <el-button link :icon="View" @click="openJson">预览 / 编辑 JSON</el-button>
       </div>
 
-      <p v-if="badNameCount" class="pse-hint err">参数名须为英文标识符（字母/数字/下划线，不能以数字开头），否则模型无法正确识别</p>
+      <p v-if="badNameCount" class="pse-hint err">
+        参数名须为英文标识符（字母/数字/下划线，不能以数字开头），否则模型无法正确识别
+      </p>
     </template>
 
     <!-- 高级 JSON 模式 -->

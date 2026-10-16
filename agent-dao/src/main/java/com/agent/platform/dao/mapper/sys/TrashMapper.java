@@ -33,6 +33,30 @@ public interface TrashMapper {
             "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
     List<Map<String, Object>> listDeletedAnnouncement();
 
+    @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM agent_team " +
+            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedTeam();
+
+    @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_tool " +
+            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedTool();
+
+    @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_skill " +
+            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedSkill();
+
+    @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_prompt_template " +
+            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedPromptTemplate();
+
+    @Select("SELECT id, title AS name, deleted_time AS deleted_time FROM chat_conversation " +
+            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedConversation();
+
+    @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM data_table " +
+            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedDataTable();
+
     /* ---------------- 恢复 ---------------- */
 
     @Update("UPDATE app_agent SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
@@ -47,6 +71,25 @@ public interface TrashMapper {
     @Update("UPDATE sys_announcement SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
     int restoreAnnouncement(@Param("id") Long id);
 
+    @Update("UPDATE agent_team SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
+    int restoreTeam(@Param("id") Long id);
+
+    @Update("UPDATE app_tool SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
+    int restoreTool(@Param("id") Long id);
+
+    @Update("UPDATE app_skill SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
+    int restoreSkill(@Param("id") Long id);
+
+    @Update("UPDATE app_prompt_template SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
+    int restorePromptTemplate(@Param("id") Long id);
+
+    /** 会话恢复时需同时把 status 复位为正常（删除时会置 0） */
+    @Update("UPDATE chat_conversation SET deleted = 0, deleted_time = NULL, status = 1 WHERE id = #{id}")
+    int restoreConversation(@Param("id") Long id);
+
+    @Update("UPDATE data_table SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
+    int restoreDataTable(@Param("id") Long id);
+
     /* ---------------- 彻底删除（级联） ---------------- */
 
     @Delete("DELETE FROM app_agent WHERE id = #{id}")
@@ -58,8 +101,8 @@ public interface TrashMapper {
     @Delete("DELETE FROM chat_usage WHERE app_id = #{id}")
     int purgeAgentUsage(@Param("id") Long id);
 
-    @Delete("DELETE cm FROM chat_message cm INNER JOIN chat_conversation cc " +
-            "ON cm.conversation_id = cc.id WHERE cc.app_id = #{id}")
+    @Delete("DELETE FROM chat_message cm USING chat_conversation cc " +
+            "WHERE cm.conversation_id = cc.id AND cc.app_id = #{id}")
     int purgeAgentMessages(@Param("id") Long id);
 
     @Delete("DELETE FROM chat_conversation WHERE app_id = #{id}")
@@ -79,4 +122,43 @@ public interface TrashMapper {
 
     @Delete("DELETE FROM sys_announcement WHERE id = #{id}")
     int purgeAnnouncement(@Param("id") Long id);
+
+    @Delete("DELETE FROM agent_team WHERE id = #{id}")
+    int purgeTeam(@Param("id") Long id);
+
+    @Delete("DELETE FROM agent_team_member WHERE team_id = #{id}")
+    int purgeTeamMembers(@Param("id") Long id);
+
+    @Delete("DELETE FROM agent_team_run WHERE team_id = #{id}")
+    int purgeTeamRuns(@Param("id") Long id);
+
+    @Delete("DELETE FROM app_tool WHERE id = #{id}")
+    int purgeTool(@Param("id") Long id);
+
+    @Delete("DELETE FROM app_skill WHERE id = #{id}")
+    int purgeSkill(@Param("id") Long id);
+
+    @Delete("DELETE FROM app_skill_version WHERE skill_id = #{id}")
+    int purgeSkillVersions(@Param("id") Long id);
+
+    @Delete("DELETE FROM app_prompt_template WHERE id = #{id}")
+    int purgePromptTemplate(@Param("id") Long id);
+
+    @Delete("DELETE FROM app_prompt_version WHERE template_id = #{id}")
+    int purgePromptVersions(@Param("id") Long id);
+
+    @Delete("DELETE FROM chat_conversation WHERE id = #{id}")
+    int purgeConversation(@Param("id") Long id);
+
+    @Delete("DELETE FROM chat_message WHERE conversation_id = #{id}")
+    int purgeConversationMessages(@Param("id") Long id);
+
+    @Delete("DELETE FROM chat_usage WHERE conversation_id = #{id}")
+    int purgeConversationUsage(@Param("id") Long id);
+
+    @Delete("DELETE FROM data_table WHERE id = #{id}")
+    int purgeDataTable(@Param("id") Long id);
+
+    @Delete("DELETE FROM data_record WHERE table_id = #{id}")
+    int purgeDataRecords(@Param("id") Long id);
 }

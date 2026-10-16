@@ -69,7 +69,7 @@ public class MybatisPlusConfig {
         });
         interceptor.addInnerInterceptor(tenant);
 
-        PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.MYSQL);
+        PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
         pagination.setMaxLimit(500L);
         interceptor.addInnerInterceptor(pagination);
         return interceptor;

@@ -38,8 +38,8 @@ public class SysNotification {
     /** 业务ID */
     private Long bizId;
 
-    /** 是否已读：0未读 1已读（read 为 MySQL 保留字，需转义） */
-    @TableField("`read`")
+    /** 是否已读：0未读 1已读（统一按保留字处理，加双引号） */
+    @TableField("\"read\"")
     private Integer read;
 
     /** 阅读时间 */

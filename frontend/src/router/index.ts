@@ -1,7 +1,7 @@
-import {createRouter, createWebHistory} from 'vue-router'
-import type {RouteRecordRaw} from 'vue-router'
-import {useUserStore} from '@/stores/user'
-import {DEFAULT_HOME} from '@/config/menu'
+import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { DEFAULT_HOME } from '@/config/menu'
 
 /**
  * 路由规范：
@@ -23,332 +23,338 @@ import {DEFAULT_HOME} from '@/config/menu'
 // }
 
 const routes: RouteRecordRaw[] = [
-    {
-        path: '/login',
-        name: 'Login',
-        component: () => import('@/views/login/index.vue'),
-        meta: {title: '登录'}
-    },
-    {
-        path: '/public/:id',
-        name: 'PublicChat',
-        component: () => import('@/views/public/chat.vue'),
-        meta: {title: '智能体'}
-    },
-    {
-        path: '/',
-        component: () => import('@/layouts/DefaultLayout.vue'),
-        redirect: DEFAULT_HOME,
-        children: [
-            /* ---------------- 工作台 /workbench ---------------- */
-            {
-                path: 'workbench/dashboard',
-                name: 'WorkbenchDashboard',
-                component: () => import('@/views/dashboard/index.vue'),
-                meta: {title: '工作台概览'}
-            },
-            {
-                path: 'workbench/notifications',
-                name: 'WorkbenchNotifications',
-                component: () => import('@/views/workbench/notifications/index.vue'),
-                meta: {title: '通知中心'}
-            },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/login/index.vue'),
+    meta: { title: '登录' }
+  },
+  {
+    path: '/public/:id',
+    name: 'PublicChat',
+    component: () => import('@/views/public/chat.vue'),
+    meta: { title: '智能体' }
+  },
+  {
+    path: '/',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    redirect: DEFAULT_HOME,
+    children: [
+      /* ---------------- 工作台 /workbench ---------------- */
+      {
+        path: 'workbench/dashboard',
+        name: 'WorkbenchDashboard',
+        component: () => import('@/views/dashboard/index.vue'),
+        meta: { title: '工作台概览' }
+      },
+      {
+        path: 'workbench/notifications',
+        name: 'WorkbenchNotifications',
+        component: () => import('@/views/workbench/notifications/index.vue'),
+        meta: { title: '通知中心' }
+      },
 
-            /* ---------------- 应用 /app-agents ---------------- */
-            {
-                path: 'app/agents',
-                name: 'Apps',
-                component: () => import('@/views/app/agents/index.vue'),
-                meta: {title: '智能体'}
-            },
-            {
-                path: 'app/prompts',
-                name: 'AppPrompts',
-                component: () => import('@/views/app/prompts/index.vue'),
-                meta: {title: '提示词库'}
-            },
-            {
-                path: 'app/skills',
-                name: 'AppSkills',
-                component: () => import('@/views/app/skills/index.vue'),
-                meta: {title: '技能'}
-            },
-            /* ---------------- 工具 /tools ---------------- */
-            {
-                path: 'app/tools',
-                name: 'AppTools',
-                component: () => import('@/views/app/tools/index.vue'),
-                meta: {title: '工具'}
-            },
-            {
-                path: 'app/tool-templates',
-                name: 'AppToolTemplates',
-                component: () => import('@/views/app/templates/index.vue'),
-                meta: {title: '应用模板'}
-            },
-            {
-                path: 'app/tool-marketplace',
-                name: 'AppToolMarketplace',
-                component: () => import('@/views/app/marketplace/index.vue'),
-                meta: {title: '应用市场'}
-            },
-            {
-                path: 'app/multi-agent',
-                name: 'AppMultiAgent',
-                component: () => import('@/views/app/multi-agent/index.vue'),
-                meta: {title: '多智能体编排'}
-            },
-            {
-                path: 'app/schedules',
-                name: 'AppSchedules',
-                component: () => import('@/views/app/schedules/index.vue'),
-                meta: {title: '定时任务'}
-            },
-            {
-                path: 'app/guardrails',
-                name: 'AppGuardrails',
-                component: () => import('@/views/app/guardrails/index.vue'),
-                meta: {title: '内容安全'}
-            },
-            {
-                path: 'app/agents/:id/edit',
-                name: 'AppEdit',
-                component: () => import('@/views/app/agents/edit.vue'),
-                meta: {title: '智能体编排', hidden: true}
-            },
-            {
-                path: 'app/agents/:id/chat',
-                name: 'AppChat',
-                component: () => import('@/views/app/agents/chat.vue'),
-                meta: {title: '对话调试', hidden: true}
-            },
+      /* ---------------- 应用 /app-agents ---------------- */
+      {
+        path: 'app/agents',
+        name: 'Apps',
+        component: () => import('@/views/app/agents/index.vue'),
+        meta: { title: '智能体' }
+      },
+      {
+        path: 'app/prompts',
+        name: 'AppPrompts',
+        component: () => import('@/views/app/prompts/index.vue'),
+        meta: { title: '提示词库' }
+      },
+      {
+        path: 'app/skills',
+        name: 'AppSkills',
+        component: () => import('@/views/app/skills/index.vue'),
+        meta: { title: '技能' }
+      },
+      /* ---------------- 工具 /tools ---------------- */
+      {
+        path: 'app/tools',
+        name: 'AppTools',
+        component: () => import('@/views/app/tools/index.vue'),
+        meta: { title: '工具' }
+      },
+      {
+        path: 'app/tool-templates',
+        name: 'AppToolTemplates',
+        component: () => import('@/views/app/templates/index.vue'),
+        meta: { title: '应用模板' }
+      },
+      {
+        path: 'app/tool-marketplace',
+        name: 'AppToolMarketplace',
+        component: () => import('@/views/app/marketplace/index.vue'),
+        meta: { title: '应用市场' }
+      },
+      {
+        path: 'app/multi-agent',
+        name: 'AppMultiAgent',
+        component: () => import('@/views/app/multi-agent/index.vue'),
+        meta: { title: '多智能体编排' }
+      },
+      {
+        path: 'app/schedules',
+        name: 'AppSchedules',
+        component: () => import('@/views/app/schedules/index.vue'),
+        meta: { title: '定时任务' }
+      },
+      {
+        path: 'app/guardrails',
+        name: 'AppGuardrails',
+        component: () => import('@/views/app/guardrails/index.vue'),
+        meta: { title: '内容安全' }
+      },
+      {
+        path: 'app/agents/:id/edit',
+        name: 'AppEdit',
+        component: () => import('@/views/app/agents/edit.vue'),
+        meta: { title: '智能体编排', hidden: true }
+      },
+      {
+        path: 'app/agents/:id/chat',
+        name: 'AppChat',
+        component: () => import('@/views/app/agents/chat.vue'),
+        meta: { title: '对话调试', hidden: true }
+      },
 
-            /* ---------------- 数据 /data ---------------- */
-            {
-                path: 'data/knowledge',
-                name: 'DataKnowledge',
-                component: () => import('@/views/knowledge/index.vue'),
-                meta: {title: '知识库'}
-            },
-            {
-                path: 'data/memory',
-                name: 'DataMemory',
-                component: () => import('@/views/memory/index.vue'),
-                meta: {title: '记忆管理'}
-            },
-            {
-                path: 'data/storage',
-                name: 'DataStorage',
-                component: () => import('@/views/storage/index.vue'),
-                meta: {title: '数据存储'}
-            },
-            {
-                path: 'data/assets',
-                name: 'DataAssets',
-                component: () => import('@/views/assets/index.vue'),
-                meta: {title: '素材管理'}
-            },
+      /* ---------------- 数据 /data ---------------- */
+      {
+        path: 'data/knowledge',
+        name: 'DataKnowledge',
+        component: () => import('@/views/knowledge/index.vue'),
+        meta: { title: '知识库' }
+      },
+      {
+        path: 'data/memory',
+        name: 'DataMemory',
+        component: () => import('@/views/memory/index.vue'),
+        meta: { title: '记忆管理' }
+      },
+      {
+        path: 'data/storage',
+        name: 'DataStorage',
+        component: () => import('@/views/storage/index.vue'),
+        meta: { title: '数据存储' }
+      },
+      {
+        path: 'data/assets',
+        name: 'DataAssets',
+        component: () => import('@/views/assets/index.vue'),
+        meta: { title: '素材管理' }
+      },
 
+      /* ---------------- 发布 /publish ---------------- */
+      {
+        path: 'publish',
+        name: 'Publish',
+        component: () => import('@/views/publish/index.vue'),
+        meta: { title: '发布管理' }
+      },
+      {
+        path: 'publish/api-keys',
+        name: 'PublishApiKeys',
+        component: () => import('@/views/publish/api-keys/index.vue'),
+        meta: { title: 'API 密钥' }
+      },
+      {
+        path: 'publish/versions',
+        name: 'PublishVersions',
+        component: () => import('@/views/publish/versions/index.vue'),
+        meta: { title: '版本历史' }
+      },
+      {
+        path: 'publish/channels',
+        name: 'PublishChannels',
+        component: () => import('@/views/publish/channels/index.vue'),
+        meta: { title: '渠道管理' }
+      },
+      {
+        path: 'publish/docs',
+        name: 'PublishDocs',
+        component: () => import('@/views/publish/docs/index.vue'),
+        meta: { title: 'API 文档' }
+      },
 
-            /* ---------------- 发布 /publish ---------------- */
-            {
-                path: 'publish',
-                name: 'Publish',
-                component: () => import('@/views/publish/index.vue'),
-                meta: {title: '发布管理'}
-            },
-            {
-                path: 'publish/api-keys',
-                name: 'PublishApiKeys',
-                component: () => import('@/views/publish/api-keys/index.vue'),
-                meta: {title: 'API 密钥'}
-            },
-            {
-                path: 'publish/versions',
-                name: 'PublishVersions',
-                component: () => import('@/views/publish/versions/index.vue'),
-                meta: {title: '版本历史'}
-            },
-            {
-                path: 'publish/channels',
-                name: 'PublishChannels',
-                component: () => import('@/views/publish/channels/index.vue'),
-                meta: {title: '渠道管理'}
-            },
-            {
-                path: 'publish/docs',
-                name: 'PublishDocs',
-                component: () => import('@/views/publish/docs/index.vue'),
-                meta: {title: 'API 文档'}
-            },
+      /* ---------------- 观测 /ops ---------------- */
+      {
+        path: 'ops',
+        name: 'Ops',
+        component: () => import('@/views/ops/index.vue'),
+        meta: { title: '运行监控' }
+      },
+      {
+        path: 'ops/conversations',
+        name: 'OpsConversations',
+        component: () => import('@/views/chat/index.vue'),
+        meta: { title: '对话记录' }
+      },
+      {
+        path: 'ops/runs',
+        name: 'OpsRuns',
+        component: () => import('@/views/ops/runs/index.vue'),
+        meta: { title: '运行记录' }
+      },
+      {
+        path: 'ops/usage',
+        name: 'OpsUsage',
+        component: () => import('@/views/ops/usage/index.vue'),
+        meta: { title: '用量统计' }
+      },
+      {
+        path: 'ops/conversations/label',
+        name: 'OpsConversationLabel',
+        component: () => import('@/views/conversations/label/index.vue'),
+        meta: { title: '对话标注' }
+      },
+      {
+        path: 'ops/billing',
+        name: 'OpsBilling',
+        component: () => import('@/views/ops/billing/index.vue'),
+        meta: { title: '费用账单' }
+      },
+      {
+        path: 'ops/alerts',
+        name: 'OpsAlerts',
+        component: () => import('@/views/ops/alerts/index.vue'),
+        meta: { title: '告警管理' }
+      },
 
-            /* ---------------- 观测 /ops ---------------- */
-            {
-                path: 'ops',
-                name: 'Ops',
-                component: () => import('@/views/ops/index.vue'),
-                meta: {title: '运行监控'}
-            },
-            {
-                path: 'ops/conversations',
-                name: 'OpsConversations',
-                component: () => import('@/views/chat/index.vue'),
-                meta: {title: '对话记录'}
-            },
-            {
-                path: 'ops/runs',
-                name: 'OpsRuns',
-                component: () => import('@/views/ops/runs/index.vue'),
-                meta: {title: '运行记录'}
-            },
-            {
-                path: 'ops/usage',
-                name: 'OpsUsage',
-                component: () => import('@/views/ops/usage/index.vue'),
-                meta: {title: '用量统计'}
-            },
-            {
-                path: 'ops/conversations/label',
-                name: 'OpsConversationLabel',
-                component: () => import('@/views/conversations/label/index.vue'),
-                meta: {title: '对话标注'}
-            },
-            {
-                path: 'ops/billing',
-                name: 'OpsBilling',
-                component: () => import('@/views/ops/billing/index.vue'),
-                meta: {title: '费用账单'}
-            },
-            {
-                path: 'ops/alerts',
-                name: 'OpsAlerts',
-                component: () => import('@/views/ops/alerts/index.vue'),
-                meta: {title: '告警管理'}
-            },
+      /* ---------------- 评测 /eval ---------------- */
+      {
+        path: 'eval',
+        name: 'Eval',
+        component: () => import('@/views/eval/index.vue'),
+        meta: { title: '评测中心' }
+      },
+      {
+        path: 'eval/datasets',
+        name: 'EvalDatasets',
+        component: () => import('@/views/eval/datasets/index.vue'),
+        meta: { title: '评测数据集' }
+      },
+      {
+        path: 'eval/experiments',
+        name: 'EvalExperiments',
+        component: () => import('@/views/eval/experiments/index.vue'),
+        meta: { title: '对比实验' }
+      },
 
-            /* ---------------- 评测 /eval ---------------- */
-            {
-                path: 'eval',
-                name: 'Eval',
-                component: () => import('@/views/eval/index.vue'),
-                meta: {title: '评测中心'}
-            },
-            {
-                path: 'eval/datasets',
-                name: 'EvalDatasets',
-                component: () => import('@/views/eval/datasets/index.vue'),
-                meta: {title: '评测数据集'}
-            },
-            {
-                path: 'eval/experiments',
-                name: 'EvalExperiments',
-                component: () => import('@/views/eval/experiments/index.vue'),
-                meta: {title: '对比实验'}
-            },
+      /* ---------------- 模型 /models ---------------- */
+      {
+        path: 'models',
+        name: 'Models',
+        component: () => import('@/views/models/index.vue'),
+        meta: { title: '供应商管理' }
+      },
+      {
+        path: 'models/playground',
+        name: 'ModelPlayground',
+        component: () => import('@/views/models/playground/index.vue'),
+        meta: { title: '模型广场' }
+      },
+      {
+        path: 'models/finetune',
+        name: 'ModelFinetune',
+        component: () => import('@/views/models/finetune/index.vue'),
+        meta: { title: '模型微调' }
+      },
+      {
+        path: 'models/gateway',
+        name: 'ModelGateway',
+        component: () => import('@/views/models/gateway/index.vue'),
+        meta: { title: '模型网关' }
+      },
 
-            /* ---------------- 模型 /models ---------------- */
-            {
-                path: 'models',
-                name: 'Models',
-                component: () => import('@/views/models/index.vue'),
-                meta: {title: '供应商管理'}
-            },
-            {
-                path: 'models/playground',
-                name: 'ModelPlayground',
-                component: () => import('@/views/models/playground/index.vue'),
-                meta: {title: '模型广场'}
-            },
-            {
-                path: 'models/finetune',
-                name: 'ModelFinetune',
-                component: () => import('@/views/models/finetune/index.vue'),
-                meta: {title: '模型微调'}
-            },
-            {
-                path: 'models/gateway',
-                name: 'ModelGateway',
-                component: () => import('@/views/models/gateway/index.vue'),
-                meta: {title: '模型网关'}
-            },
+      /* ---------------- 系统管理 /system ---------------- */
+      {
+        path: 'system/users',
+        name: 'SystemUsers',
+        component: () => import('@/views/users/index.vue'),
+        meta: { title: '团队与权限' }
+      },
+      {
+        path: 'system/users/audit',
+        name: 'SystemUserAudit',
+        component: () => import('@/views/users/audit/index.vue'),
+        meta: { title: '操作日志' }
+      },
+      {
+        path: 'system/workspace',
+        name: 'SystemWorkspace',
+        component: () => import('@/views/system/workspace/index.vue'),
+        meta: { title: '工作空间' }
+      },
+      {
+        path: 'system/trash',
+        name: 'SystemTrash',
+        component: () => import('@/views/system/trash/index.vue'),
+        meta: { title: '回收站' }
+      },
+      {
+        path: 'system/announcements',
+        name: 'SystemAnnouncements',
+        component: () => import('@/views/system/announcements/index.vue'),
+        meta: { title: '公告管理' }
+      },
+      {
+        path: 'system/security',
+        name: 'SystemSecurity',
+        component: () => import('@/views/system/security/index.vue'),
+        meta: { title: '账号与安全', hidden: true }
+      },
 
-            /* ---------------- 系统管理 /system ---------------- */
-            {
-                path: 'system/users',
-                name: 'SystemUsers',
-                component: () => import('@/views/users/index.vue'),
-                meta: {title: '团队与权限'}
-            },
-            {
-                path: 'system/users/audit',
-                name: 'SystemUserAudit',
-                component: () => import('@/views/users/audit/index.vue'),
-                meta: {title: '操作日志'}
-            },
-            {
-                path: 'system/workspace',
-                name: 'SystemWorkspace',
-                component: () => import('@/views/system/workspace/index.vue'),
-                meta: {title: '工作空间'}
-            },
-            {
-                path: 'system/trash',
-                name: 'SystemTrash',
-                component: () => import('@/views/system/trash/index.vue'),
-                meta: {title: '回收站'}
-            },
-            {
-                path: 'system/announcements',
-                name: 'SystemAnnouncements',
-                component: () => import('@/views/system/announcements/index.vue'),
-                meta: {title: '公告管理'}
-            },
-            {
-                path: 'system/security',
-                name: 'SystemSecurity',
-                component: () => import('@/views/system/security/index.vue'),
-                meta: {title: '账号与安全', hidden: true}
-            },
-
-            /* ---------------- 帮助与文档 /support ---------------- */
-            {
-                path: 'support/help',
-                name: 'SupportHelp',
-                component: () => import('@/views/support/help/index.vue'),
-                meta: {title: '使用指南'}
-            },
-            {
-                path: 'support/changelog',
-                name: 'SupportChangelog',
-                component: () => import('@/views/support/changelog/index.vue'),
-                meta: {title: '更新日志'}
-            }
-        ]
-    }
+      /* ---------------- 帮助与文档 /support ---------------- */
+      {
+        path: 'support/help',
+        name: 'SupportHelp',
+        component: () => import('@/views/support/help/index.vue'),
+        meta: { title: '使用指南' }
+      },
+      {
+        path: 'support/changelog',
+        name: 'SupportChangelog',
+        component: () => import('@/views/support/changelog/index.vue'),
+        meta: { title: '更新日志' }
+      }
+    ]
+  },
+  {
+    // 404 兜底：必须放在最后
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/error/NotFound.vue'),
+    meta: { title: '页面不存在' }
+  }
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
-    routes
+  history: createWebHistory(),
+  routes
 })
 
 const WHITE_LIST = ['/login']
 
 router.beforeEach((to) => {
-    document.title = `${to.meta.title ? to.meta.title + ' - ' : ''}智能体平台`
+  document.title = `${to.meta.title ? to.meta.title + ' - ' : ''}智能体平台`
 
-    const userStore = useUserStore()
-    // 已发布应用对外访问无需登录
-    const isPublic = to.path.startsWith('/public')
-    // 未登录且非白名单 → 登录页
-    if (!userStore.token && !WHITE_LIST.includes(to.path) && !isPublic) {
-        return {path: '/login', query: {redirect: to.fullPath}}
-    }
-    // 已登录访问登录页 → 首页
-    if (userStore.token && to.path === '/login') {
-        return DEFAULT_HOME
-    }
-    return true
+  const userStore = useUserStore()
+  // 已发布应用对外访问无需登录
+  const isPublic = to.path.startsWith('/public')
+  // 未登录且非白名单 → 登录页
+  if (!userStore.token && !WHITE_LIST.includes(to.path) && !isPublic) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  // 已登录访问登录页 → 首页
+  if (userStore.token && to.path === '/login') {
+    return DEFAULT_HOME
+  }
+  return true
 })
 
 export default router

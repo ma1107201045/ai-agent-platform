@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { evalApi, parseReport, type EvalDataset, type EvalRun, type EvalRunCase, type EvalStats } from '@/api/eval'
+import {
+  evalApi,
+  parseReport,
+  type EvalDataset,
+  type EvalRun,
+  type EvalRunCase,
+  type EvalStats
+} from '@/api/eval'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent, ChatModelInfo } from '@/api/types'
 import { modelApi } from '@/api/model'
@@ -21,7 +28,10 @@ const appOptions = ref<AppAgent[]>([])
 const modelOptions = ref<ChatModelInfo[]>([])
 let timer: ReturnType<typeof setInterval> | null = null
 
-const STATUS_META: Record<string, { label: string; type: 'success' | 'danger' | 'warning' | 'info' | 'primary' }> = {
+const STATUS_META: Record<
+  string,
+  { label: string; type: 'success' | 'danger' | 'warning' | 'info' | 'primary' }
+> = {
   pending: { label: '排队中', type: 'info' },
   running: { label: '运行中', type: 'primary' },
   success: { label: '已完成', type: 'success' },
@@ -92,7 +102,9 @@ onBeforeUnmount(() => {
 async function refreshOptions() {
   try {
     datasetOptions.value = await evalApi.datasetOptions()
-    appOptions.value = (await appAgentApi.page({ page: 1, size: 500 })).records.filter((a) => a.status === 1)
+    appOptions.value = (await appAgentApi.page({ page: 1, size: 500 })).records.filter(
+      (a) => a.status === 1
+    )
     modelOptions.value = await modelApi.chatModels()
   } catch {
     /* ignore */
@@ -111,7 +123,11 @@ function datasetName(id?: number) {
 
 async function stopRun(row: EvalRun) {
   try {
-    await ElMessageBox.confirm(`确认停止任务「${row.name || row.id}」？未完成的样本将被跳过。`, '停止确认', { type: 'warning' })
+    await ElMessageBox.confirm(
+      `确认停止任务「${row.name || row.id}」？未完成的样本将被跳过。`,
+      '停止确认',
+      { type: 'warning' }
+    )
     await evalApi.stop(row.id)
     ElMessage.success('已发送停止指令')
     load()
@@ -121,7 +137,10 @@ async function stopRun(row: EvalRun) {
 }
 async function rerun(row: EvalRun) {
   try {
-    await ElMessageBox.confirm(`基于同一数据集与被测对象重新运行「${row.name || row.id}」？`, '重跑确认')
+    await ElMessageBox.confirm(
+      `基于同一数据集与被测对象重新运行「${row.name || row.id}」？`,
+      '重跑确认'
+    )
     await evalApi.rerun(row.id)
     ElMessage.success('任务已重新启动')
     load()
@@ -131,7 +150,11 @@ async function rerun(row: EvalRun) {
 }
 async function removeRun(row: EvalRun) {
   try {
-    await ElMessageBox.confirm(`确认删除任务「${row.name || row.id}」？用例明细将一并删除。`, '删除确认', { type: 'error' })
+    await ElMessageBox.confirm(
+      `确认删除任务「${row.name || row.id}」？用例明细将一并删除。`,
+      '删除确认',
+      { type: 'error' }
+    )
     await evalApi.removeRun(row.id)
     ElMessage.success('已删除')
     load()
@@ -199,11 +222,21 @@ async function openDetail(row: EvalRun) {
   caseFilter.value = undefined
   await loadCases()
 }
+/** 重置页码并重新加载用例 */
+function searchCases() {
+  casePage.value = 1
+  loadCases()
+}
+
 async function loadCases() {
   if (!activeRun.value) return
   caseLoading.value = true
   try {
-    const data = await evalApi.cases(activeRun.value.id, { page: casePage.value, size: 10, passed: caseFilter.value })
+    const data = await evalApi.cases(activeRun.value.id, {
+      page: casePage.value,
+      size: 10,
+      passed: caseFilter.value
+    })
     cases.value = data.records
     caseTotal.value = data.total
   } finally {
@@ -242,13 +275,35 @@ async function loadCases() {
     <el-card shadow="never" class="run-card">
       <div class="table-toolbar">
         <div class="toolbar-left">
-          <el-input v-model="keyword" placeholder="搜索任务名称" clearable style="width: 220px" @keyup.enter="search" @clear="search">
-            <template #prefix><el-icon><Search /></el-icon></template>
+          <el-input
+            v-model="keyword"
+            placeholder="搜索任务名称"
+            clearable
+            style="width: 220px"
+            @keyup.enter="search"
+            @clear="search"
+          >
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
-          <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 130px" @change="search">
+          <el-select
+            v-model="filterStatus"
+            placeholder="状态"
+            clearable
+            style="width: 130px"
+            @change="search"
+          >
             <el-option v-for="(m, k) in STATUS_META" :key="k" :label="m.label" :value="k" />
           </el-select>
-          <el-select v-model="filterDataset" placeholder="数据集" clearable filterable style="width: 200px" @change="search">
+          <el-select
+            v-model="filterDataset"
+            placeholder="数据集"
+            clearable
+            filterable
+            style="width: 200px"
+            @change="search"
+          >
             <el-option v-for="d in datasetOptions" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </div>
@@ -260,7 +315,13 @@ async function loadCases() {
             <div class="cell-main">
               <span class="cell-name">
                 {{ row.name || `评测 #${row.id}` }}
-                <el-tag v-if="isActive(row)" type="primary" effect="light" size="small" class="live-tag">
+                <el-tag
+                  v-if="isActive(row)"
+                  type="primary"
+                  effect="light"
+                  size="small"
+                  class="live-tag"
+                >
                   <span class="pulse-dot"></span>执行中
                 </el-tag>
               </span>
@@ -281,28 +342,44 @@ async function loadCases() {
           <template #default="{ row }">
             <span
               class="rate-text"
-              :class="row.passRate != null ? (row.passRate >= 0.6 ? 'good' : row.passRate >= 0.3 ? 'mid' : 'bad') : ''"
+              :class="
+                row.passRate != null
+                  ? row.passRate >= 0.6
+                    ? 'good'
+                    : row.passRate >= 0.3
+                      ? 'mid'
+                      : 'bad'
+                  : ''
+              "
             >
               {{ pct(row.passRate) }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="平均得分" width="90">
-          <template #default="{ row }"><span>{{ pct(row.avgScore) }}</span></template>
+          <template #default="{ row }"
+            ><span>{{ pct(row.avgScore) }}</span></template
+          >
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag size="small" :type="STATUS_META[row.status]?.type" effect="light">{{ STATUS_META[row.status]?.label }}</el-tag>
+            <el-tag size="small" :type="STATUS_META[row.status]?.type" effect="light">{{
+              STATUS_META[row.status]?.label
+            }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="完成时间" width="150">
-          <template #default="{ row }"><span class="dim-text">{{ fmt(row.finishedAt || row.createTime) }}</span></template>
+          <template #default="{ row }"
+            ><span class="dim-text">{{ fmt(row.finishedAt || row.createTime) }}</span></template
+          >
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right" align="center">
           <template #default="{ row }">
             <div class="row-links">
               <el-button link type="primary" size="small" @click="openDetail(row)">详情</el-button>
-              <el-button v-if="isActive(row)" link type="warning" size="small" @click="stopRun(row)">停止</el-button>
+              <el-button v-if="isActive(row)" link type="warning" size="small" @click="stopRun(row)"
+                >停止</el-button
+              >
               <el-button v-else link size="small" @click="rerun(row)">重跑</el-button>
               <el-button link type="danger" size="small" @click="removeRun(row)">删除</el-button>
             </div>
@@ -320,7 +397,12 @@ async function loadCases() {
     </el-card>
 
     <!-- 发起评测 -->
-    <el-dialog v-model="createVisible" title="发起评测任务" width="600px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="createVisible"
+      title="发起评测任务"
+      width="600px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>任务名称 <span class="req">*</span></label>
@@ -328,8 +410,17 @@ async function loadCases() {
         </div>
         <div class="field-group">
           <label>评测数据集 <span class="req">*</span></label>
-          <el-select v-model="form.datasetId" placeholder="选择数据集（需已启用且有样本）" style="width: 100%">
-            <el-option v-for="d in datasetOptions" :key="d.id" :label="`${d.name}（${d.sampleCount} 样本）`" :value="d.id" />
+          <el-select
+            v-model="form.datasetId"
+            placeholder="选择数据集（需已启用且有样本）"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="d in datasetOptions"
+              :key="d.id"
+              :label="`${d.name}（${d.sampleCount} 样本）`"
+              :value="d.id"
+            />
           </el-select>
         </div>
         <div class="field-group">
@@ -341,16 +432,28 @@ async function loadCases() {
         </div>
         <div v-if="form.mode === 'app'" class="field-group">
           <label>被测应用 <span class="req">*</span></label>
-          <el-select v-model="form.appId" placeholder="选择已发布的应用" filterable style="width: 100%">
+          <el-select
+            v-model="form.appId"
+            placeholder="选择已发布的应用"
+            filterable
+            style="width: 100%"
+          >
             <el-option v-for="a in appOptions" :key="a.id" :label="a.name" :value="a.id">
               <span>{{ a.name }}</span>
-              <span style="float: right; font-size: 12px; color: var(--text-tertiary)">{{ a.type }}</span>
+              <span style="float: right; font-size: 12px; color: var(--text-tertiary)">{{
+                a.type
+              }}</span>
             </el-option>
           </el-select>
         </div>
         <div v-else class="field-group">
           <label>被测模型 <span class="req">*</span></label>
-          <el-select v-model="form.modelId" placeholder="选择启用的对话模型" filterable style="width: 100%">
+          <el-select
+            v-model="form.modelId"
+            placeholder="选择启用的对话模型"
+            filterable
+            style="width: 100%"
+          >
             <el-option
               v-for="m in modelOptions"
               :key="m.id"
@@ -368,12 +471,18 @@ async function loadCases() {
       </div>
       <template #footer>
         <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="creating" @click="createRun">开始评测</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="creating" @click="createRun"
+          >开始评测</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 任务详情 -->
-    <el-drawer v-model="detailVisible" :title="activeRun ? `评测详情 · ${activeRun.name || '#' + activeRun.id}` : '评测详情'" size="780px">
+    <el-drawer
+      v-model="detailVisible"
+      :title="activeRun ? `评测详情 · ${activeRun.name || '#' + activeRun.id}` : '评测详情'"
+      size="780px"
+    >
       <template v-if="activeRun">
         <div class="detail-grid">
           <div class="detail-item">
@@ -392,7 +501,10 @@ async function loadCases() {
           </div>
           <div class="detail-item">
             <span class="detail-label">结果</span>
-            <span>{{ activeRun.successCount }} 通过 / {{ activeRun.failedCount }} 未通过 · 共 {{ activeRun.totalCount }}</span>
+            <span
+              >{{ activeRun.successCount }} 通过 / {{ activeRun.failedCount }} 未通过 · 共
+              {{ activeRun.totalCount }}</span
+            >
           </div>
           <div class="detail-item">
             <span class="detail-label">通过率</span>
@@ -408,23 +520,38 @@ async function loadCases() {
           </div>
           <div class="detail-item">
             <span class="detail-label">执行区间</span>
-            <span class="dim-text">{{ fmt(activeRun.startedAt) }} ~ {{ fmt(activeRun.finishedAt) }}</span>
+            <span class="dim-text"
+              >{{ fmt(activeRun.startedAt) }} ~ {{ fmt(activeRun.finishedAt) }}</span
+            >
           </div>
         </div>
-        <el-alert v-if="activeRun.error" type="error" :closable="false" :title="activeRun.error" style="margin-bottom: 12px" />
+        <el-alert
+          v-if="activeRun.error"
+          type="error"
+          :closable="false"
+          :title="activeRun.error"
+          style="margin-bottom: 12px"
+        />
         <div v-if="activeRun.status === 'success' && parseReport(activeRun)?.categories">
           <div class="sub-title">分类表现</div>
           <div class="cat-row">
             <div v-for="(v, k) in parseReport(activeRun)?.categories" :key="k" class="cat-card">
               <span class="cat-name">{{ k }}</span>
-              <span class="cat-rate" :class="(v.passRate ?? 0) >= 0.6 ? 'good' : 'bad'">{{ pct(v.passRate) }}</span>
+              <span class="cat-rate" :class="(v.passRate ?? 0) >= 0.6 ? 'good' : 'bad'">{{
+                pct(v.passRate)
+              }}</span>
               <span class="dim-text">{{ v.passed }} / {{ v.total }}</span>
             </div>
           </div>
         </div>
 
         <div class="sub-title">用例明细</div>
-        <el-radio-group v-model="caseFilter" size="small" style="margin-bottom: 10px" @change="casePage = 1; loadCases()">
+        <el-radio-group
+          v-model="caseFilter"
+          size="small"
+          style="margin-bottom: 10px"
+          @change="searchCases()"
+        >
           <el-radio-button :value="undefined">全部</el-radio-button>
           <el-radio-button :value="1">通过</el-radio-button>
           <el-radio-button :value="0">未通过</el-radio-button>
@@ -432,10 +559,14 @@ async function loadCases() {
         <el-table v-loading="caseLoading" :data="cases" size="small">
           <el-table-column label="提问" prop="question" min-width="170" show-overflow-tooltip />
           <el-table-column label="参考答案" min-width="140" show-overflow-tooltip>
-            <template #default="{ row }"><span class="dim-text">{{ row.reference || '-' }}</span></template>
+            <template #default="{ row }"
+              ><span class="dim-text">{{ row.reference || '-' }}</span></template
+            >
           </el-table-column>
           <el-table-column label="模型回答" min-width="140" show-overflow-tooltip>
-            <template #default="{ row }"><span class="dim-text">{{ row.answer || '-' }}</span></template>
+            <template #default="{ row }"
+              ><span class="dim-text">{{ row.answer || '-' }}</span></template
+            >
           </el-table-column>
           <el-table-column label="结果" width="76">
             <template #default="{ row }">
@@ -450,7 +581,9 @@ async function loadCases() {
             </template>
           </el-table-column>
           <el-table-column label="耗时" width="70">
-            <template #default="{ row }"><span class="dim-text">{{ row.latencyMs }}ms</span></template>
+            <template #default="{ row }"
+              ><span class="dim-text">{{ row.latencyMs }}ms</span></template
+            >
           </el-table-column>
         </el-table>
         <el-pagination

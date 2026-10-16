@@ -1,5 +1,5 @@
 import request from './request'
-import { getToken } from '@/utils/token'
+import { authFetch, saveBlob } from '@/utils/stream'
 import type { DataColumn, DataRecordRow, DataTable, PageResult } from './types'
 
 /** 自定义数据表请求体（不含 rowCount/status 等服务端字段） */
@@ -60,21 +60,11 @@ export const dataStoreApi = {
 
 /** 导出数据表为 CSV（携带登录态直接下载） */
 export async function downloadTableCsv(tableId: number, filename: string): Promise<void> {
-  const token = getToken()
-  const resp = await fetch(`/api/data-store/tables/${tableId}/export-csv`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined
-  })
+  const resp = await authFetch(`/api/data-store/tables/${tableId}/export-csv`)
   if (!resp.ok) {
     const err = await resp.text().catch(() => '')
     throw new Error(err || `导出失败(${resp.status})`)
   }
   const blob = await resp.blob()
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename.endsWith('.csv') ? filename : `${filename}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  saveBlob(blob, filename.endsWith('.csv') ? filename : `${filename}.csv`)
 }

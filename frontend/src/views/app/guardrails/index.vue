@@ -15,7 +15,12 @@ const MATCH_TYPES: { value: string; label: string; tag: 'warning' | 'danger' | '
   { value: 'regex', label: '正则表达式', tag: 'danger' },
   { value: 'prompt_injection', label: '注入检测', tag: 'info' }
 ]
-const ACTIONS: { value: string; label: string; desc: string; tag: 'danger' | 'warning' | 'info' }[] = [
+const ACTIONS: {
+  value: string
+  label: string
+  desc: string
+  tag: 'danger' | 'warning' | 'info'
+}[] = [
   { value: 'block', label: '拦截', desc: '命中后直接拒绝本次请求', tag: 'danger' },
   { value: 'mask', label: '打码', desc: '将命中的内容替换为占位符', tag: 'warning' },
   { value: 'replace', label: '替换', desc: '替换为自定义文本继续处理', tag: 'info' }
@@ -39,22 +44,22 @@ function fmtTime(t?: string) {
   return t ? t.replace('T', ' ').slice(0, 16) : '-'
 }
 function dirLabel(v?: string) {
-  return v ? META.dir[v]?.label ?? v : '-'
+  return v ? (META.dir[v]?.label ?? v) : '-'
 }
 function dirTag(v?: string) {
   return (v ? META.dir[v]?.tag : undefined) || 'info'
 }
 function matchLabel(v?: string) {
-  return v ? META.match[v]?.label ?? v : '-'
+  return v ? (META.match[v]?.label ?? v) : '-'
 }
 function actionLabel(v?: string) {
-  return v ? META.action[v]?.label ?? v : '-'
+  return v ? (META.action[v]?.label ?? v) : '-'
 }
 function actionTag(v?: string) {
   return (v ? META.action[v]?.tag : undefined) || 'info'
 }
 function actionDesc(v?: string) {
-  return v ? META.action[v]?.desc ?? '' : ''
+  return v ? (META.action[v]?.desc ?? '') : ''
 }
 
 // ---------------- 规则列表 ----------------
@@ -100,7 +105,10 @@ async function onEnableChange(row: GuardRule) {
 }
 
 function removeRule(row: GuardRule) {
-  ElMessageBox.confirm(`删除规则「${row.name}」？`, '删除确认', { type: 'error', confirmButtonText: '删除' })
+  ElMessageBox.confirm(`删除规则「${row.name}」？`, '删除确认', {
+    type: 'error',
+    confirmButtonText: '删除'
+  })
     .then(async () => {
       await guardApi.removeRule(row.id)
       ElMessage.success('删除成功')
@@ -287,7 +295,9 @@ async function saveBind() {
 
 function unbind(row: GuardAppBindVO) {
   if (row.bindId == null) return
-  ElMessageBox.confirm(`解除应用「${row.appName}」的内容安全绑定？`, '解绑确认', { type: 'warning' })
+  ElMessageBox.confirm(`解除应用「${row.appName}」的内容安全绑定？`, '解绑确认', {
+    type: 'warning'
+  })
     .then(async () => {
       await guardApi.removeBind(row.appId)
       ElMessage.success('已解绑')
@@ -338,16 +348,32 @@ onMounted(() => {
               @keyup.enter="onSearch"
               @clear="onSearch"
             >
-              <template #prefix><el-icon><Search /></el-icon></template>
+              <template #prefix
+                ><el-icon><Search /></el-icon
+              ></template>
             </el-input>
-            <el-select v-model="dirFilter" placeholder="作用方向" clearable style="width: 130px" @change="onSearch">
+            <el-select
+              v-model="dirFilter"
+              placeholder="作用方向"
+              clearable
+              style="width: 130px"
+              @change="onSearch"
+            >
               <el-option v-for="d in DIRS" :key="d.value" :label="d.label" :value="d.value" />
             </el-select>
-            <el-select v-model="actionFilter" placeholder="处置动作" clearable style="width: 130px" @change="onSearch">
+            <el-select
+              v-model="actionFilter"
+              placeholder="处置动作"
+              clearable
+              style="width: 130px"
+              @change="onSearch"
+            >
               <el-option v-for="a in ACTIONS" :key="a.value" :label="a.label" :value="a.value" />
             </el-select>
             <el-tooltip content="刷新">
-              <el-button circle @click="load"><el-icon><Refresh /></el-icon></el-button>
+              <el-button circle @click="load"
+                ><el-icon><Refresh /></el-icon
+              ></el-button>
             </el-tooltip>
           </div>
 
@@ -356,27 +382,40 @@ onMounted(() => {
               <template #default="{ row }">
                 <div class="rule-name">
                   {{ row.name }}
-                  <span class="risk-dot" :style="{ background: riskInfo(row.riskLevel).color }"
-                    :title="`${riskInfo(row.riskLevel).label}(${row.riskLevel})`"></span>
+                  <span
+                    class="risk-dot"
+                    :style="{ background: riskInfo(row.riskLevel).color }"
+                    :title="`${riskInfo(row.riskLevel).label}(${row.riskLevel})`"
+                  ></span>
                 </div>
-                <div v-if="row.description" class="rule-desc" :title="row.description">{{ row.description }}</div>
+                <div v-if="row.description" class="rule-desc" :title="row.description">
+                  {{ row.description }}
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="作用方向" width="100" align="center">
               <template #default="{ row }">
-                <el-tag :type="dirTag(row.direction)" size="small" effect="light">{{ dirLabel(row.direction) }}</el-tag>
+                <el-tag :type="dirTag(row.direction)" size="small" effect="light">{{
+                  dirLabel(row.direction)
+                }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="匹配方式" width="110" align="center">
               <template #default="{ row }">
-                <el-tag :type="META.match[row.matchType]?.tag || 'info'" size="small" effect="plain">
+                <el-tag
+                  :type="META.match[row.matchType]?.tag || 'info'"
+                  size="small"
+                  effect="plain"
+                >
                   {{ matchLabel(row.matchType) }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="处置动作" width="130">
               <template #default="{ row }">
-                <el-tag :type="actionTag(row.action)" size="small" effect="light">{{ actionLabel(row.action) }}</el-tag>
+                <el-tag :type="actionTag(row.action)" size="small" effect="light">{{
+                  actionLabel(row.action)
+                }}</el-tag>
                 <div class="muted">{{ actionDesc(row.action) }}</div>
               </template>
             </el-table-column>
@@ -397,7 +436,12 @@ onMounted(() => {
             </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
-                <el-switch v-model="row.enabled" :active-value="1" :inactive-value="0" @change="onEnableChange(row)" />
+                <el-switch
+                  v-model="row.enabled"
+                  :active-value="1"
+                  :inactive-value="0"
+                  @change="onEnableChange(row)"
+                />
               </template>
             </el-table-column>
             <el-table-column label="更新时间" width="140">
@@ -434,7 +478,12 @@ onMounted(() => {
             </el-table-column>
             <el-table-column label="绑定状态" width="140" align="center">
               <template #default="{ row }">
-                <el-tag v-if="row.bindId != null" :type="row.bindEnabled === 1 ? 'success' : 'info'" size="small" effect="light">
+                <el-tag
+                  v-if="row.bindId != null"
+                  :type="row.bindEnabled === 1 ? 'success' : 'info'"
+                  size="small"
+                  effect="light"
+                >
                   {{ row.bindEnabled === 1 ? '已启用' : '已停用' }}
                 </el-tag>
                 <el-tag v-else type="info" size="small" effect="plain">未绑定</el-tag>
@@ -459,32 +508,54 @@ onMounted(() => {
             <el-table-column label="操作" width="160" align="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openBind(row)">配置</el-button>
-                <el-button v-if="row.bindId != null" link type="danger" @click="unbind(row)">解绑</el-button>
+                <el-button v-if="row.bindId != null" link type="danger" @click="unbind(row)"
+                  >解绑</el-button
+                >
               </template>
             </el-table-column>
           </el-table>
           <div class="bind-tip">
             <el-icon><InfoFilled /></el-icon>
-            <span>绑定规则后，命中「拦截」规则的请求将被拒绝；命中「打码/替换」规则的内容将按规则处理。正式接入需在模型调用链路上启用护栏（当前为配置层）。</span>
+            <span
+              >绑定规则后，命中「拦截」规则的请求将被拒绝；命中「打码/替换」规则的内容将按规则处理。正式接入需在模型调用链路上启用护栏（当前为配置层）。</span
+            >
           </div>
         </el-tab-pane>
       </el-tabs>
     </el-card>
 
     <!-- 规则编辑 -->
-    <el-dialog v-model="dialogVisible" :title="editId ? '编辑规则' : '新建规则'" width="640px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editId ? '编辑规则' : '新建规则'"
+      width="640px"
+      :close-on-click-modal="false"
+    >
       <el-form label-width="92px">
         <el-form-item label="规则名称" required>
-          <el-input v-model="form.name" placeholder="如 输入-色情低俗词拦截 / 输出-注入提示词" maxlength="50" show-word-limit />
+          <el-input
+            v-model="form.name"
+            placeholder="如 输入-色情低俗词拦截 / 输出-注入提示词"
+            maxlength="50"
+            show-word-limit
+          />
         </el-form-item>
         <el-form-item label="规则说明">
-          <el-input v-model="form.description" type="textarea" :rows="2" maxlength="200" placeholder="规则用途说明（可选）" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            maxlength="200"
+            placeholder="规则用途说明（可选）"
+          />
         </el-form-item>
         <el-row :gutter="12">
           <el-col :span="12">
             <el-form-item label="作用方向" required>
               <el-radio-group v-model="form.direction">
-                <el-radio-button v-for="d in DIRS" :key="d.value" :value="d.value">{{ d.label }}</el-radio-button>
+                <el-radio-button v-for="d in DIRS" :key="d.value" :value="d.value">{{
+                  d.label
+                }}</el-radio-button>
               </el-radio-group>
             </el-form-item>
           </el-col>
@@ -496,19 +567,32 @@ onMounted(() => {
         </el-row>
         <el-form-item label="匹配方式" required>
           <el-radio-group v-model="form.matchType">
-            <el-radio-button v-for="m in MATCH_TYPES" :key="m.value" :value="m.value">{{ m.label }}</el-radio-button>
+            <el-radio-button v-for="m in MATCH_TYPES" :key="m.value" :value="m.value">{{
+              m.label
+            }}</el-radio-button>
           </el-radio-group>
           <div class="form-tip">
-            关键词以英文/中文逗号分隔，如 <span class="mono">赌博, 色情, 毒品</span>；正则模式直接填写表达式，如 <span class="mono">1[3-9]\d{9}</span>。
+            关键词以英文/中文逗号分隔，如
+            <span class="mono">赌博, 色情, 毒品</span>；正则模式直接填写表达式，如
+            <span class="mono">1[3-9]\d{9}</span>。
           </div>
         </el-form-item>
         <el-form-item label="匹配内容" required>
-          <el-input v-model="form.ruleContent" type="textarea" :rows="2" class="mono"
-            :placeholder="form.matchType === 'regex' ? '输入正则表达式' : '输入敏感关键词（逗号分隔）'" />
+          <el-input
+            v-model="form.ruleContent"
+            type="textarea"
+            :rows="2"
+            class="mono"
+            :placeholder="
+              form.matchType === 'regex' ? '输入正则表达式' : '输入敏感关键词（逗号分隔）'
+            "
+          />
         </el-form-item>
         <el-form-item label="处置动作" required>
           <el-radio-group v-model="form.action">
-            <el-radio-button v-for="a in ACTIONS" :key="a.value" :value="a.value">{{ a.label }}</el-radio-button>
+            <el-radio-button v-for="a in ACTIONS" :key="a.value" :value="a.value">{{
+              a.label
+            }}</el-radio-button>
           </el-radio-group>
           <div class="form-tip">{{ actionDesc(String(form.action)) }}</div>
         </el-form-item>
@@ -524,19 +608,31 @@ onMounted(() => {
           </el-col>
           <el-col :span="12">
             <el-form-item label="启用">
-              <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+              <el-switch
+                v-model="form.enabled"
+                :active-value="1"
+                :inactive-value="0"
+                active-text="启用"
+                inactive-text="停用"
+              />
             </el-form-item>
           </el-col>
         </el-row>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="saveRule">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="saveRule"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 命中测试 -->
-    <el-dialog v-model="testVisible" :title="testRuleId ? '规则命中测试' : '命中测试（全部启用规则）'" width="620px">
+    <el-dialog
+      v-model="testVisible"
+      :title="testRuleId ? '规则命中测试' : '命中测试（全部启用规则）'"
+      width="620px"
+    >
       <div class="test-field">
         <el-input
           v-model="testText"
@@ -544,7 +640,13 @@ onMounted(() => {
           :rows="4"
           placeholder="输入待检测的文本，例如：请联系我微信 138xxxx8888 并可提供赌博服务"
         />
-        <el-button type="primary" class="btn-gradient" style="margin-top: 10px" :loading="testLoading" @click="runTest">
+        <el-button
+          type="primary"
+          class="btn-gradient"
+          style="margin-top: 10px"
+          :loading="testLoading"
+          @click="runTest"
+        >
           {{ testLoading ? '检测中…' : '开始检测' }}
         </el-button>
       </div>
@@ -555,12 +657,14 @@ onMounted(() => {
       <template v-else-if="testResult">
         <div v-if="testResult.blocked" class="test-block blocked">
           <div class="test-block-title">
-            <el-icon><CircleCloseFilled /></el-icon> 已拦截 · 命中 {{ testResult.hitCount }} 条规则（含拦截动作）
+            <el-icon><CircleCloseFilled /></el-icon> 已拦截 · 命中
+            {{ testResult.hitCount }} 条规则（含拦截动作）
           </div>
         </div>
         <div v-else-if="testResult.hits.length" class="test-block">
           <div class="test-block-title">
-            <el-icon><WarningFilled /></el-icon> 检测通过 · 命中 {{ testResult.hitCount }} 条（无拦截动作）
+            <el-icon><WarningFilled /></el-icon> 检测通过 · 命中
+            {{ testResult.hitCount }} 条（无拦截动作）
           </div>
           <div v-if="testResult.changed" class="test-output">
             处理后文本：<span class="mono">{{ testResult.output }}</span>
@@ -574,13 +678,24 @@ onMounted(() => {
             <div class="hit-head">
               <span class="hit-index">{{ i + 1 }}</span>
               <b>{{ h.name }}</b>
-              <el-tag :type="dirTag(h.direction)" size="small" effect="plain">{{ dirLabel(h.direction) }}</el-tag>
-              <el-tag :type="actionTag(h.action)" size="small" effect="plain">{{ actionLabel(h.action) }}</el-tag>
+              <el-tag :type="dirTag(h.direction)" size="small" effect="plain">{{
+                dirLabel(h.direction)
+              }}</el-tag>
+              <el-tag :type="actionTag(h.action)" size="small" effect="plain">{{
+                actionLabel(h.action)
+              }}</el-tag>
               <span class="risk-dot" :style="{ background: riskInfo(h.riskLevel).color }"></span>
             </div>
             <div class="hit-matched">
               <span class="muted">命中内容：</span>
-              <el-tag v-for="(mm, j) in h.matched" :key="j" size="small" type="danger" effect="light">{{ mm }}</el-tag>
+              <el-tag
+                v-for="(mm, j) in h.matched"
+                :key="j"
+                size="small"
+                type="danger"
+                effect="light"
+                >{{ mm }}</el-tag
+              >
             </div>
           </div>
         </div>
@@ -588,7 +703,11 @@ onMounted(() => {
     </el-dialog>
 
     <!-- 应用绑定抽屉 -->
-    <el-drawer v-model="bindDrawer" :title="`内容安全绑定 · ${currentApp?.appName ?? ''}`" size="520px">
+    <el-drawer
+      v-model="bindDrawer"
+      :title="`内容安全绑定 · ${currentApp?.appName ?? ''}`"
+      size="520px"
+    >
       <template v-if="currentApp">
         <el-form label-width="80px">
           <el-form-item label="运行模式">
@@ -598,7 +717,13 @@ onMounted(() => {
             </el-radio-group>
           </el-form-item>
           <el-form-item label="启用绑定">
-            <el-switch v-model="bindForm.enabled" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+            <el-switch
+              v-model="bindForm.enabled"
+              :active-value="1"
+              :inactive-value="0"
+              active-text="启用"
+              inactive-text="停用"
+            />
           </el-form-item>
           <el-form-item label="选择规则">
             <div class="rule-picker">
@@ -615,7 +740,12 @@ onMounted(() => {
                     <span class="muted">（{{ actionLabel(r.action) }}）</span>
                   </el-checkbox>
                 </el-checkbox-group>
-                <div v-if="!allRules.filter((x) => x.direction === 'input').length" class="picker-empty">暂无输入侧规则</div>
+                <div
+                  v-if="!allRules.filter((x) => x.direction === 'input').length"
+                  class="picker-empty"
+                >
+                  暂无输入侧规则
+                </div>
               </div>
               <div class="picker-group">
                 <div class="picker-group-title">输出侧</div>
@@ -630,16 +760,25 @@ onMounted(() => {
                     <span class="muted">（{{ actionLabel(r.action) }}）</span>
                   </el-checkbox>
                 </el-checkbox-group>
-                <div v-if="!allRules.filter((x) => x.direction === 'output').length" class="picker-empty">暂无输出侧规则</div>
+                <div
+                  v-if="!allRules.filter((x) => x.direction === 'output').length"
+                  class="picker-empty"
+                >
+                  暂无输出侧规则
+                </div>
               </div>
             </div>
           </el-form-item>
         </el-form>
-        <div class="form-tip">已选择 {{ bindForm.checked.length }} 条规则。停用状态的规则不可选。</div>
+        <div class="form-tip">
+          已选择 {{ bindForm.checked.length }} 条规则。停用状态的规则不可选。
+        </div>
       </template>
       <template #footer>
         <el-button @click="bindDrawer = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="bindSaving" @click="saveBind">保存绑定</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="bindSaving" @click="saveBind"
+          >保存绑定</el-button
+        >
       </template>
     </el-drawer>
   </div>

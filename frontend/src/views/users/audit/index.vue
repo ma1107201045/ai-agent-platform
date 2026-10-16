@@ -4,9 +4,26 @@ import { Refresh, Search } from '@element-plus/icons-vue'
 import { operLogApi, type OperLog } from '@/api/sys-oper-log'
 
 const moduleOptions = [
-  '认证', '应用管理', '智能体', '提示词库', '应用模板', '定时任务', '应用市场',
-  '知识库', '工具', '模型', '发布管理', '评测', '素材管理', '记忆管理',
-  '数据存储', '内容安全', '系统管理', '对话记录', '观测', '其他'
+  '认证',
+  '应用管理',
+  '智能体',
+  '提示词库',
+  '应用模板',
+  '定时任务',
+  '应用市场',
+  '知识库',
+  '工具',
+  '模型',
+  '发布管理',
+  '评测',
+  '素材管理',
+  '记忆管理',
+  '数据存储',
+  '内容安全',
+  '系统管理',
+  '对话记录',
+  '观测',
+  '其他'
 ]
 
 const loading = ref(false)
@@ -73,16 +90,33 @@ onMounted(load)
         <p class="head-desc">自动记录登录与关键管理操作，支持按模块、操作人与时间追溯</p>
       </div>
       <div class="stat-pills">
-        <div class="pill"><span class="num">{{ total }}</span>条操作</div>
+        <div class="pill">
+          <span class="num">{{ total }}</span
+          >条操作
+        </div>
       </div>
     </div>
 
     <div class="filter-bar hover-card">
-      <el-input v-model="keyword" placeholder="搜索操作人 / 模块 / 请求路径" clearable style="width: 260px"
-        @keyup.enter="search" @clear="search">
-        <template #prefix><el-icon><Search /></el-icon></template>
+      <el-input
+        v-model="keyword"
+        placeholder="搜索操作人 / 模块 / 请求路径"
+        clearable
+        style="width: 260px"
+        @keyup.enter="search"
+        @clear="search"
+      >
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
-      <el-select v-model="moduleFilter" placeholder="所属模块" clearable style="width: 150px" @change="search">
+      <el-select
+        v-model="moduleFilter"
+        placeholder="所属模块"
+        clearable
+        style="width: 150px"
+        @change="search"
+      >
         <el-option v-for="m in moduleOptions" :key="m" :label="m" :value="m" />
       </el-select>
       <el-radio-group v-model="resultFilter" size="default" @change="search">
@@ -90,8 +124,16 @@ onMounted(load)
         <el-radio-button :value="1">成功</el-radio-button>
         <el-radio-button :value="0">失败</el-radio-button>
       </el-radio-group>
-      <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至"
-        start-placeholder="开始日期" end-placeholder="结束日期" style="width: 260px" @change="search" />
+      <el-date-picker
+        v-model="dateRange"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        range-separator="至"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        style="width: 260px"
+        @change="search"
+      />
       <el-button type="primary" class="btn-gradient" :icon="Search" @click="search">查询</el-button>
       <el-button :icon="Refresh" @click="reset">重置</el-button>
     </div>
@@ -117,7 +159,13 @@ onMounted(load)
         <el-table-column label="请求" min-width="230">
           <template #default="{ row }">
             <div class="req-cell">
-              <el-tag size="small" :type="methodType(row.method)" effect="dark" class="method-tag">{{ row.method }}</el-tag>
+              <el-tag
+                size="small"
+                :type="methodType(row.method)"
+                effect="dark"
+                class="method-tag"
+                >{{ row.method }}</el-tag
+              >
               <span class="req-uri">{{ row.uri }}</span>
             </div>
           </template>
@@ -130,7 +178,11 @@ onMounted(load)
         </el-table-column>
         <el-table-column label="结果" width="90" align="center">
           <template #default="{ row }">
-            <el-tooltip v-if="row.success !== 1" :content="row.errorMsg || '操作失败'" placement="top">
+            <el-tooltip
+              v-if="row.success !== 1"
+              :content="row.errorMsg || '操作失败'"
+              placement="top"
+            >
               <el-tag size="small" type="danger" effect="light">失败</el-tag>
             </el-tooltip>
             <el-tag v-else size="small" type="success" effect="light">成功</el-tag>

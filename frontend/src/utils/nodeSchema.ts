@@ -90,7 +90,10 @@ export function buildInitialConfig(type: WorkflowNodeType): Record<string, unkno
 }
 
 /** Schema 必填校验（与后端 NodeExecutionPolicy 相同规则） */
-export function schemaIssues(config: Record<string, unknown> | undefined, type: WorkflowNodeType): string[] {
+export function schemaIssues(
+  config: Record<string, unknown> | undefined,
+  type: WorkflowNodeType
+): string[] {
   if (!config) return []
   const issues: string[] = []
   for (const f of fieldsOf(type)) {

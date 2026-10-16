@@ -12,7 +12,11 @@ const loading = ref(false)
 const ws = ref<Workspace | null>(null)
 
 const planText: Record<string, string> = { free: '免费版', pro: '专业版', enterprise: '企业版' }
-const planType: Record<string, 'info' | 'warning' | 'danger'> = { free: 'info', pro: 'warning', enterprise: 'danger' }
+const planType: Record<string, 'info' | 'warning' | 'danger'> = {
+  free: 'info',
+  pro: 'warning',
+  enterprise: 'danger'
+}
 
 async function load() {
   loading.value = true
@@ -74,24 +78,32 @@ onMounted(load)
         <h2 class="head-title">工作空间</h2>
         <p class="head-desc">当前空间「{{ ws?.name || '--' }}」的组织信息与资源概况</p>
       </div>
-      <el-button type="primary" class="btn-gradient" :icon="EditPen" @click="openEdit">空间设置</el-button>
+      <el-button type="primary" class="btn-gradient" :icon="EditPen" @click="openEdit"
+        >空间设置</el-button
+      >
     </div>
 
     <div v-loading="loading" class="ws-body">
       <!-- 空间信息 -->
       <div class="ws-card hover-card">
-        <div class="ws-card-title"><el-icon><OfficeBuilding /></el-icon> 空间信息</div>
+        <div class="ws-card-title">
+          <el-icon><OfficeBuilding /></el-icon> 空间信息
+        </div>
         <div class="ws-info">
           <div class="ws-row">
             <span class="k">空间名称</span><span class="v">{{ ws?.name || '-' }}</span>
           </div>
           <div class="ws-row">
             <span class="k">空间编码</span>
-            <span class="v"><code class="code">{{ ws?.code || '-' }}</code></span>
+            <span class="v"
+              ><code class="code">{{ ws?.code || '-' }}</code></span
+            >
           </div>
           <div class="ws-row">
             <span class="k">当前套餐</span>
-            <el-tag v-if="ws" :type="planType[ws.plan] || 'info'" effect="light">{{ planText[ws.plan] || ws.plan }}</el-tag>
+            <el-tag v-if="ws" :type="planType[ws.plan] || 'info'" effect="light">{{
+              planText[ws.plan] || ws.plan
+            }}</el-tag>
           </div>
           <div class="ws-row">
             <span class="k">空间状态</span>
@@ -108,14 +120,18 @@ onMounted(load)
       <!-- 概览统计 -->
       <div class="stats-grid">
         <div class="stat-card hover-card">
-          <div class="stat-icon" style="background: #eef0ff; color: #5b6cff"><el-icon><Promotion /></el-icon></div>
+          <div class="stat-icon" style="background: #eef0ff; color: #5b6cff">
+            <el-icon><Promotion /></el-icon>
+          </div>
           <div>
             <div class="stat-num">{{ ws?.memberCount ?? 0 }}</div>
             <div class="stat-label">空间成员</div>
           </div>
         </div>
         <div class="stat-card hover-card">
-          <div class="stat-icon" style="background: #e6f6fe; color: #0ea5e9"><el-icon><OfficeBuilding /></el-icon></div>
+          <div class="stat-icon" style="background: #e6f6fe; color: #0ea5e9">
+            <el-icon><OfficeBuilding /></el-icon>
+          </div>
           <div>
             <div class="stat-num">{{ ws?.appCount ?? 0 }}</div>
             <div class="stat-label">智能体应用</div>
@@ -135,7 +151,13 @@ onMounted(load)
             <div class="member-meta">
               <div class="member-name">
                 {{ m.nickname || m.username }}
-                <el-tag v-if="m.username === currentUsername" size="small" type="primary" effect="dark">我</el-tag>
+                <el-tag
+                  v-if="m.username === currentUsername"
+                  size="small"
+                  type="primary"
+                  effect="dark"
+                  >我</el-tag
+                >
                 <el-tag v-else size="small" effect="plain" type="info">{{ m.username }}</el-tag>
               </div>
               <div class="member-email">{{ m.email || '未绑定邮箱' }}</div>
@@ -150,7 +172,12 @@ onMounted(load)
     </div>
 
     <!-- 编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" title="工作空间设置" width="460px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      title="工作空间设置"
+      width="460px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>空间名称</label>
@@ -167,7 +194,9 @@ onMounted(load)
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>

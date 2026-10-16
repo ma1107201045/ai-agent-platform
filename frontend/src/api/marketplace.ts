@@ -28,7 +28,13 @@ export interface MarketStats {
 }
 
 export const marketApi = {
-  page(params: { page?: number; size?: number; category?: string; type?: string; keyword?: string }) {
+  page(params: {
+    page?: number
+    size?: number
+    category?: string
+    type?: string
+    keyword?: string
+  }) {
     return request.get<never, PageResult<MarketItem>>('/app-market', { params })
   },
   stats() {

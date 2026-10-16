@@ -46,6 +46,12 @@ async function load() {
     loading.value = false
   }
 }
+/** 切换分类筛选并重查 */
+function setCategoryFilter(v: string) {
+  categoryFilter.value = v
+  search()
+}
+
 function search() {
   page.value = 1
   load()
@@ -147,7 +153,9 @@ async function save() {
 }
 
 function remove(row: AppTemplate) {
-  ElMessageBox.confirm(`确认删除模板「${row.name}」？删除后不可恢复。`, '删除确认', { type: 'error' })
+  ElMessageBox.confirm(`确认删除模板「${row.name}」？删除后不可恢复。`, '删除确认', {
+    type: 'error'
+  })
     .then(async () => {
       await appTemplateApi.remove(row.id)
       ElMessage.success('删除成功')
@@ -166,22 +174,38 @@ onMounted(load)
         <h2 class="head-title">应用模板</h2>
         <p class="head-desc">覆盖常见业务场景的场景模板库，一键创建应用快速起步</p>
       </div>
-      <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">保存为模板</el-button>
+      <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+        >保存为模板</el-button
+      >
     </div>
 
     <div class="tpl-toolbar hover-card">
       <div class="filter-chips">
-        <button class="chip" :class="{ active: categoryFilter === '' }" @click="categoryFilter = ''; search()">全部</button>
+        <button
+          class="chip"
+          :class="{ active: categoryFilter === '' }"
+          @click="setCategoryFilter('')"
+        >
+          全部
+        </button>
         <button
           v-for="(meta, key) in categoryMeta"
           :key="key"
           class="chip"
           :class="{ active: categoryFilter === key }"
-          @click="categoryFilter = key; search()"
-        >{{ meta.label }}</button>
+          @click="setCategoryFilter(key)"
+        >
+          {{ meta.label }}
+        </button>
       </div>
       <div class="toolbar-right">
-        <el-select v-model="appTypeFilter" placeholder="应用类型" clearable style="width: 130px" @change="search">
+        <el-select
+          v-model="appTypeFilter"
+          placeholder="应用类型"
+          clearable
+          style="width: 130px"
+          @change="search"
+        >
           <el-option label="对话流" value="chatflow" />
           <el-option label="工作流" value="workflow" />
           <el-option label="智能体" value="agent" />
@@ -194,7 +218,9 @@ onMounted(load)
           @keyup.enter="search"
           @clear="search"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-button @click="search">搜索</el-button>
       </div>
@@ -203,7 +229,10 @@ onMounted(load)
     <div v-loading="loading" class="tpl-grid">
       <div v-for="row in list" :key="row.id" class="tpl-card hover-card">
         <div class="tpl-top">
-          <div class="tpl-icon" :style="{ background: categoryMeta[row.category || '']?.bg || '#f1f5f9' }">
+          <div
+            class="tpl-icon"
+            :style="{ background: categoryMeta[row.category || '']?.bg || '#f1f5f9' }"
+          >
             {{ row.icon || '📦' }}
           </div>
           <div class="tpl-tags">
@@ -217,15 +246,23 @@ onMounted(load)
         <div class="tpl-name">{{ row.name }}</div>
         <div class="tpl-desc">{{ row.description || '暂无简介' }}</div>
         <div v-if="row.useCase" class="tpl-usecase">
-          <span class="use-label" :style="{ color: categoryMeta[row.category || '']?.color }">适用</span>
+          <span class="use-label" :style="{ color: categoryMeta[row.category || '']?.color }"
+            >适用</span
+          >
           {{ row.useCase }}
         </div>
         <div class="tpl-foot">
           <span class="dim-text">{{ row.usageCount || 0 }} 次使用</span>
           <div class="foot-actions">
-            <el-button size="small" type="primary" plain @click="useTemplate(row)">使用模板</el-button>
-            <el-button v-if="row.builtin !== 1" size="small" link @click="openEdit(row)">编辑</el-button>
-            <el-button v-if="row.builtin !== 1" size="small" link type="danger" @click="remove(row)">删除</el-button>
+            <el-button size="small" type="primary" plain @click="useTemplate(row)"
+              >使用模板</el-button
+            >
+            <el-button v-if="row.builtin !== 1" size="small" link @click="openEdit(row)"
+              >编辑</el-button
+            >
+            <el-button v-if="row.builtin !== 1" size="small" link type="danger" @click="remove(row)"
+              >删除</el-button
+            >
           </div>
         </div>
       </div>
@@ -244,17 +281,32 @@ onMounted(load)
     />
 
     <!-- 新建 / 编辑模板 -->
-    <el-dialog v-model="dialogVisible" :title="editingId == null ? '保存为模板' : '编辑模板'" width="620px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editingId == null ? '保存为模板' : '编辑模板'"
+      width="620px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>模板名称</label>
-          <el-input v-model="form.name" maxlength="128" show-word-limit placeholder="例如：周报生成助手" />
+          <el-input
+            v-model="form.name"
+            maxlength="128"
+            show-word-limit
+            placeholder="例如：周报生成助手"
+          />
         </div>
         <div class="form-grid">
           <div class="field-group">
             <label>分类</label>
             <el-select v-model="form.category" style="width: 100%">
-              <el-option v-for="(meta, key) in categoryMeta" :key="key" :label="meta.label" :value="key" />
+              <el-option
+                v-for="(meta, key) in categoryMeta"
+                :key="key"
+                :label="meta.label"
+                :value="key"
+              />
             </el-select>
           </div>
           <div class="field-group">
@@ -278,16 +330,30 @@ onMounted(load)
         </div>
         <div class="field-group">
           <label>模板简介</label>
-          <el-input v-model="form.description" type="textarea" :rows="2" maxlength="512" placeholder="一句话描述该模板的用途" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            maxlength="512"
+            placeholder="一句话描述该模板的用途"
+          />
         </div>
         <div class="field-group">
           <label>默认开场白（可选）</label>
-          <el-input v-model="form.welcomeMessage" type="textarea" :rows="2" maxlength="500" placeholder="使用该模板创建应用后自动填写的开场白" />
+          <el-input
+            v-model="form.welcomeMessage"
+            type="textarea"
+            :rows="2"
+            maxlength="500"
+            placeholder="使用该模板创建应用后自动填写的开场白"
+          />
         </div>
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -335,7 +401,9 @@ onMounted(load)
   color: var(--text-secondary);
   font-size: 12.5px;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 .chip:hover {
   background: var(--hover-bg);

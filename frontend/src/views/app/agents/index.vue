@@ -2,9 +2,19 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, Delete, Edit, EditPen, Files, MagicStick, Plus, Promotion, Search } from '@element-plus/icons-vue'
+import {
+  ChatDotRound,
+  Delete,
+  Edit,
+  EditPen,
+  Files,
+  MagicStick,
+  Plus,
+  Promotion,
+  Search
+} from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent.ts'
-import type { AppAgent, AppAgentType } from '@/api/types.ts'
+import type { AppAgent, AppAgentType } from '@/api/types'
 
 const router = useRouter()
 const loading = ref(false)
@@ -26,8 +36,18 @@ const createForm = reactive({
 })
 
 const typeMeta: Record<string, { label: string; desc: string; icon: string; color: string }> = {
-  chatflow: { label: '对话流', desc: '多轮对话式智能体，适合客服、助手', icon: '💬', color: '#5b6cff' },
-  workflow: { label: '工作流', desc: '流程化编排，按节点依次执行任务', icon: '⚙️', color: '#0ea5e9' },
+  chatflow: {
+    label: '对话流',
+    desc: '多轮对话式智能体，适合客服、助手',
+    icon: '💬',
+    color: '#5b6cff'
+  },
+  workflow: {
+    label: '工作流',
+    desc: '流程化编排，按节点依次执行任务',
+    icon: '⚙️',
+    color: '#0ea5e9'
+  },
   agent: { label: '智能体', desc: '自主规划工具调用，处理复杂任务', icon: '🤖', color: '#8b5cf6' }
 }
 
@@ -111,7 +131,9 @@ const appTemplates: AppTemplate[] = [
   }
 ]
 
-const dialogWidth = computed(() => (step.value === 'template' ? '760px' : step.value === 'choose' ? '640px' : '520px'))
+const dialogWidth = computed(() =>
+  step.value === 'template' ? '760px' : step.value === 'choose' ? '640px' : '520px'
+)
 
 async function load() {
   loading.value = true
@@ -209,11 +231,15 @@ function chat(row: AppAgent) {
 function publish(row: AppAgent) {
   // chatflow / workflow 需要有已保存的草稿工作流才能发布；agent 直接发布空 DSL 由运行时按配置执行
   if (row.type !== 'agent' && !row.workflowJson) {
-    ElMessageBox.confirm('该应用还没有可发布的工作流，请先到编辑器编排并保存草稿。', '暂无可发布内容', {
-      confirmButtonText: '去编排',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    ElMessageBox.confirm(
+      '该应用还没有可发布的工作流，请先到编辑器编排并保存草稿。',
+      '暂无可发布内容',
+      {
+        confirmButtonText: '去编排',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
       .then(() => edit(row))
       .catch(() => {})
     return
@@ -278,9 +304,17 @@ onMounted(load)
         @keyup.enter="search"
         @clear="search"
       >
-        <template #prefix><el-icon><Search /></el-icon></template>
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
-      <el-select v-model="typeFilter" placeholder="全部类型" clearable class="toolbar-type" @change="search">
+      <el-select
+        v-model="typeFilter"
+        placeholder="全部类型"
+        clearable
+        class="toolbar-type"
+        @change="search"
+      >
         <el-option v-for="(meta, key) in typeMeta" :key="key" :label="meta.label" :value="key" />
       </el-select>
     </div>
@@ -297,7 +331,9 @@ onMounted(load)
         <div class="app-body">
           <div class="app-title-row">
             <span class="app-name">{{ row.name }}</span>
-            <el-tag v-if="row.status === 1" size="small" type="success" effect="light">已发布</el-tag>
+            <el-tag v-if="row.status === 1" size="small" type="success" effect="light"
+              >已发布</el-tag
+            >
             <el-tag v-else size="small" type="info" effect="plain">草稿</el-tag>
           </div>
           <p class="app-desc">{{ row.description || '暂无描述' }}</p>
@@ -335,7 +371,13 @@ onMounted(load)
         <div class="empty-icon">
           <el-icon :size="40"><MagicStick /></el-icon>
         </div>
-        <p>{{ keyword || typeFilter ? '没有匹配的应用，换个条件试试' : '还没有应用，创建你的第一个智能体吧' }}</p>
+        <p>
+          {{
+            keyword || typeFilter
+              ? '没有匹配的应用，换个条件试试'
+              : '还没有应用，创建你的第一个智能体吧'
+          }}
+        </p>
         <el-button type="primary" class="btn-gradient" @click="openCreate">立即创建</el-button>
       </div>
     </div>
@@ -360,7 +402,13 @@ onMounted(load)
       :close-on-click-modal="false"
       class="create-dialog"
     >
-      <el-steps v-if="step !== 'choose'" :active="1" align-center finish-status="success" class="create-steps">
+      <el-steps
+        v-if="step !== 'choose'"
+        :active="1"
+        align-center
+        finish-status="success"
+        class="create-steps"
+      >
         <el-step title="选择创建方式" />
         <el-step title="填写信息" />
       </el-steps>
@@ -390,10 +438,20 @@ onMounted(load)
 
       <!-- Step 2a：模板选择 -->
       <div v-else-if="step === 'template'" class="template-panel">
-        <div class="template-hint">选择场景模板将自动预填应用名称与描述，创建后仍可在编辑器中修改</div>
+        <div class="template-hint">
+          选择场景模板将自动预填应用名称与描述，创建后仍可在编辑器中修改
+        </div>
         <div class="template-grid">
-          <div v-for="tpl in appTemplates" :key="tpl.key" class="template-card" @click="selectTemplate(tpl)">
-            <div class="tpl-cover" :style="{ background: `linear-gradient(135deg, ${tpl.color[0]}, ${tpl.color[1]})` }">
+          <div
+            v-for="tpl in appTemplates"
+            :key="tpl.key"
+            class="template-card"
+            @click="selectTemplate(tpl)"
+          >
+            <div
+              class="tpl-cover"
+              :style="{ background: `linear-gradient(135deg, ${tpl.color[0]}, ${tpl.color[1]})` }"
+            >
               <span class="tpl-icon">{{ tpl.icon }}</span>
             </div>
             <div class="tpl-body">
@@ -414,7 +472,12 @@ onMounted(load)
       <!-- Step 2b：填写信息 -->
       <div v-else class="create-form">
         <div class="create-field-label">应用名称</div>
-        <el-input v-model="createForm.name" placeholder="例如：智能客服助手" maxlength="30" show-word-limit />
+        <el-input
+          v-model="createForm.name"
+          placeholder="例如：智能客服助手"
+          maxlength="30"
+          show-word-limit
+        />
         <div class="create-field-label">应用类型</div>
         <div class="type-grid">
           <div
@@ -432,7 +495,12 @@ onMounted(load)
           </div>
         </div>
         <div class="create-field-label">应用描述</div>
-        <el-input v-model="createForm.description" type="textarea" :rows="2" placeholder="简单描述这个应用的用途（可选）" />
+        <el-input
+          v-model="createForm.description"
+          type="textarea"
+          :rows="2"
+          placeholder="简单描述这个应用的用途（可选）"
+        />
       </div>
 
       <template #footer>
@@ -441,7 +509,9 @@ onMounted(load)
         </template>
         <template v-else-if="step === 'template'">
           <el-button @click="backToChoose">返回</el-button>
-          <el-button type="primary" class="btn-gradient" @click="goBlank">跳过模板，空白创建</el-button>
+          <el-button type="primary" class="btn-gradient" @click="goBlank"
+            >跳过模板，空白创建</el-button
+          >
         </template>
         <template v-else>
           <el-button @click="backToChoose">返回</el-button>
@@ -609,7 +679,9 @@ onMounted(load)
   background: linear-gradient(180deg, transparent, var(--bg-card) 30%);
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
 }
 .app-card:hover .app-actions {
   opacity: 1;

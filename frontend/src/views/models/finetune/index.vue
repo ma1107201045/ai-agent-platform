@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {ElMessage} from 'element-plus'
-import {CircleCheck, Document, Refresh, Upload, Warning} from '@element-plus/icons-vue'
+import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { CircleCheck, Document, Refresh, Upload, Warning } from '@element-plus/icons-vue'
 
 /* ---------------- 微调流程说明（静态，诚实标注） ---------------- */
 interface FlowStep {
@@ -12,9 +12,24 @@ interface FlowStep {
 }
 const steps: FlowStep[] = [
   { title: '准备训练数据', desc: '整理对话 / 指令样本为 JSONL 单行对象' },
-  { title: '格式校验', desc: '在下方工作台校验字段与结构并统计规模', flag: '进行中', flagClass: 'step-doing' },
-  { title: '发起训练', desc: '提交至目标供应商微调控制台执行', flag: '待接入', flagClass: 'step-wait' },
-  { title: '效果评估与发布', desc: '微调后效果对比与模型上线', flag: '规划中', flagClass: 'step-plan' }
+  {
+    title: '格式校验',
+    desc: '在下方工作台校验字段与结构并统计规模',
+    flag: '进行中',
+    flagClass: 'step-doing'
+  },
+  {
+    title: '发起训练',
+    desc: '提交至目标供应商微调控制台执行',
+    flag: '待接入',
+    flagClass: 'step-wait'
+  },
+  {
+    title: '效果评估与发布',
+    desc: '微调后效果对比与模型上线',
+    flag: '规划中',
+    flagClass: 'step-plan'
+  }
 ]
 
 /* ---------------- 供应商微调能力参考（人工维护，以官方为准） ---------------- */
@@ -85,11 +100,45 @@ interface ValidateStats {
 
 const DEFAULT_SYSTEM = '你是电商客服小蜜，回答简洁专业，语气友好。'
 const sampleJsonl = [
-  { messages: [{ role: 'system', content: DEFAULT_SYSTEM }, { role: 'user', content: '订单两天了还没发货，怎么回事？' }, { role: 'assistant', content: '很抱歉让您久等，麻烦提供一下订单号，我马上为您核实发货进度。' }] },
-  { messages: [{ role: 'system', content: DEFAULT_SYSTEM }, { role: 'user', content: '可以修改收货地址吗？' }, { role: 'assistant', content: '可以的。订单未发货前支持修改，请在订单详情页操作，或告诉我新地址，我来协助登记。' }] },
-  { messages: [{ role: 'system', content: DEFAULT_SYSTEM }, { role: 'user', content: '退款一般多久到账？' }, { role: 'assistant', content: '退款审核通过后，1-3 个工作日内原路退回，具体以支付渠道到账时间为准。' }] },
-  { messages: [{ role: 'user', content: '给个好评模板呗' }, { role: 'assistant', content: '可以这样写：卖家服务很贴心，物流速度也快，整体购物体验很好，推荐！' }] }
-].map((o) => JSON.stringify(o)).join('\n')
+  {
+    messages: [
+      { role: 'system', content: DEFAULT_SYSTEM },
+      { role: 'user', content: '订单两天了还没发货，怎么回事？' },
+      { role: 'assistant', content: '很抱歉让您久等，麻烦提供一下订单号，我马上为您核实发货进度。' }
+    ]
+  },
+  {
+    messages: [
+      { role: 'system', content: DEFAULT_SYSTEM },
+      { role: 'user', content: '可以修改收货地址吗？' },
+      {
+        role: 'assistant',
+        content: '可以的。订单未发货前支持修改，请在订单详情页操作，或告诉我新地址，我来协助登记。'
+      }
+    ]
+  },
+  {
+    messages: [
+      { role: 'system', content: DEFAULT_SYSTEM },
+      { role: 'user', content: '退款一般多久到账？' },
+      {
+        role: 'assistant',
+        content: '退款审核通过后，1-3 个工作日内原路退回，具体以支付渠道到账时间为准。'
+      }
+    ]
+  },
+  {
+    messages: [
+      { role: 'user', content: '给个好评模板呗' },
+      {
+        role: 'assistant',
+        content: '可以这样写：卖家服务很贴心，物流速度也快，整体购物体验很好，推荐！'
+      }
+    ]
+  }
+]
+  .map((o) => JSON.stringify(o))
+  .join('\n')
 
 const ALLOWED_ROLES = new Set(['system', 'user', 'assistant', 'tool'])
 const MAX_FILE_BYTES = 5 * 1024 * 1024
@@ -135,16 +184,32 @@ function validateLine(lineNo: number, raw: string): RowResult {
   try {
     parsed = JSON.parse(raw)
   } catch (e) {
-    return { lineNo, ok: false, raw, snippet: snippet(raw), issues: [{ level: 'error', message: `JSON 解析失败：${(e as Error).message}` }] }
+    return {
+      lineNo,
+      ok: false,
+      raw,
+      snippet: snippet(raw),
+      issues: [{ level: 'error', message: `JSON 解析失败：${(e as Error).message}` }]
+    }
   }
   if (!isPlainObject(parsed)) {
-    return { lineNo, ok: false, raw, snippet: snippet(raw), issues: [{ level: 'error', message: '每行须为一个 JSON 对象' }] }
+    return {
+      lineNo,
+      ok: false,
+      raw,
+      snippet: snippet(raw),
+      issues: [{ level: 'error', message: '每行须为一个 JSON 对象' }]
+    }
   }
   const messages = Array.isArray(parsed.messages) ? (parsed.messages as unknown[]) : undefined
   const prompt = typeof parsed.prompt === 'string' ? parsed.prompt : undefined
   const completion = typeof parsed.completion === 'string' ? parsed.completion : undefined
-  const isChat = formatChoice.value !== 'completion' && (!!messages || formatChoice.value === 'chat')
-  const isCompletion = formatChoice.value !== 'chat' && !messages && (!!prompt || !!completion || formatChoice.value === 'completion')
+  const isChat =
+    formatChoice.value !== 'completion' && (!!messages || formatChoice.value === 'chat')
+  const isCompletion =
+    formatChoice.value !== 'chat' &&
+    !messages &&
+    (!!prompt || !!completion || formatChoice.value === 'completion')
 
   if (isChat) {
     if (!messages) {
@@ -160,7 +225,10 @@ function validateLine(lineNo: number, raw: string): RowResult {
         }
         const role = m.role
         if (typeof role !== 'string' || !ALLOWED_ROLES.has(role)) {
-          issues.push({ level: 'error', message: `messages[${i}] role 非法（${String(role)}），应为 system/user/assistant/tool` })
+          issues.push({
+            level: 'error',
+            message: `messages[${i}] role 非法（${String(role)}），应为 system/user/assistant/tool`
+          })
         }
         const content = m.content
         const contentOk = Array.isArray(content)
@@ -172,7 +240,10 @@ function validateLine(lineNo: number, raw: string): RowResult {
           issues.push({ level: 'error', message: `messages[${i}] content 为空` })
         }
         if (role === 'tool' && m.tool_call_id === undefined) {
-          issues.push({ level: 'warn', message: `messages[${i}] 为 tool 角色，建议补充 tool_call_id 字段` })
+          issues.push({
+            level: 'warn',
+            message: `messages[${i}] 为 tool 角色，建议补充 tool_call_id 字段`
+          })
         }
       })
       // 顺序建议
@@ -194,7 +265,8 @@ function validateLine(lineNo: number, raw: string): RowResult {
   } else {
     issues.push({
       level: 'error',
-      message: '无法识别数据格式：应包含 messages 数组（Chat）或 prompt + completion 字段（补全），也可在下方手动指定格式'
+      message:
+        '无法识别数据格式：应包含 messages 数组（Chat）或 prompt + completion 字段（补全），也可在下方手动指定格式'
     })
   }
   return { lineNo, ok: issues.length === 0, raw, snippet: snippet(raw), issues }
@@ -355,7 +427,9 @@ function levelBadge(l: IssueLevel) {
         <div class="card-head">
           <div>
             <span class="card-title">训练数据校验工作台</span>
-            <span class="muted ftn-tip">支持 OpenAI Chat（messages）与补全（prompt/completion）两种 JSONL 格式</span>
+            <span class="muted ftn-tip"
+              >支持 OpenAI Chat（messages）与补全（prompt/completion）两种 JSONL 格式</span
+            >
           </div>
           <el-radio-group v-model="formatChoice" size="small">
             <el-radio-button value="auto">自动识别</el-radio-button>
@@ -376,12 +450,22 @@ function levelBadge(l: IssueLevel) {
         />
         <div class="ftn-side">
           <label class="ftn-upload">
-            <input ref="fileInput" type="file" accept=".jsonl,.json,.ndjson,.txt" class="hidden-input" @change="onPickFile" />
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".jsonl,.json,.ndjson,.txt"
+              class="hidden-input"
+              @change="onPickFile"
+            />
             <el-icon><Upload /></el-icon>
             <div class="ftn-upload-title">上传 JSONL 文件</div>
-            <div class="muted small">.jsonl / .json / .txt，≤ 5MB<br />超过 5MB 可拆分上传或粘贴文本</div>
+            <div class="muted small">
+              .jsonl / .json / .txt，≤ 5MB<br />超过 5MB 可拆分上传或粘贴文本
+            </div>
           </label>
-          <el-button type="primary" size="large" class="ftn-check-btn" @click="runValidate">开始校验</el-button>
+          <el-button type="primary" size="large" class="ftn-check-btn" @click="runValidate"
+            >开始校验</el-button
+          >
           <el-button v-if="inputText" text @click="fillSample">换成合规示例</el-button>
         </div>
       </div>
@@ -389,15 +473,30 @@ function levelBadge(l: IssueLevel) {
 
     <!-- 块4：统计卡（校验后显示） -->
     <div v-if="checked" class="ftn-stats">
-      <div class="stat-card hover-card"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">总行数</div></div>
-      <div class="stat-card hover-card"><div class="stat-num ok">{{ stats.ok }}</div><div class="stat-label">有效行</div></div>
+      <div class="stat-card hover-card">
+        <div class="stat-num">{{ stats.total }}</div>
+        <div class="stat-label">总行数</div>
+      </div>
+      <div class="stat-card hover-card">
+        <div class="stat-num ok">{{ stats.ok }}</div>
+        <div class="stat-label">有效行</div>
+      </div>
       <div class="stat-card hover-card">
         <div class="stat-num" :class="stats.error > 0 ? 'err' : 'ok'">{{ stats.error }}</div>
         <div class="stat-label">错误</div>
       </div>
-      <div class="stat-card hover-card"><div class="stat-num warn">{{ stats.warn }}</div><div class="stat-label">提示</div></div>
-      <div class="stat-card hover-card"><div class="stat-num">{{ stats.tokens.toLocaleString() }}</div><div class="stat-label">预估 token</div></div>
-      <div class="stat-card hover-card"><div class="stat-num">{{ stats.chatSamples }}</div><div class="stat-label">对话样本</div></div>
+      <div class="stat-card hover-card">
+        <div class="stat-num warn">{{ stats.warn }}</div>
+        <div class="stat-label">提示</div>
+      </div>
+      <div class="stat-card hover-card">
+        <div class="stat-num">{{ stats.tokens.toLocaleString() }}</div>
+        <div class="stat-label">预估 token</div>
+      </div>
+      <div class="stat-card hover-card">
+        <div class="stat-num">{{ stats.chatSamples }}</div>
+        <div class="stat-label">对话样本</div>
+      </div>
     </div>
 
     <!-- 块5：校验结果 -->
@@ -406,7 +505,11 @@ function levelBadge(l: IssueLevel) {
         <el-icon class="rs-icon"><CircleCheck /></el-icon>
         <div>
           <div class="rs-title">校验通过</div>
-          <div class="muted small">{{ formatStats() }}。可将该文件提交至目标供应商的微调控制台发起训练（当前平台未接入训练服务）。</div>
+          <div class="muted small">
+            {{
+              formatStats()
+            }}。可将该文件提交至目标供应商的微调控制台发起训练（当前平台未接入训练服务）。
+          </div>
         </div>
       </div>
       <el-card v-else shadow="never" class="hover-card">
@@ -419,22 +522,39 @@ function levelBadge(l: IssueLevel) {
             <span class="muted small">点击行可定位到文本对应位置</span>
           </div>
         </template>
-        <el-table :data="issueRows" size="small" max-height="360" @row-click="(r: RowResult) => goToLine(r.lineNo)">
+        <el-table
+          :data="issueRows"
+          size="small"
+          max-height="360"
+          @row-click="(r: RowResult) => goToLine(r.lineNo)"
+        >
           <el-table-column label="行号" width="80">
-            <template #default="{ row }"><span class="mono row-no">{{ row.lineNo }}</span></template>
+            <template #default="{ row }"
+              ><span class="mono row-no">{{ row.lineNo }}</span></template
+            >
           </el-table-column>
           <el-table-column label="类型" width="90">
             <template #default="{ row }">
-              <el-tag :type="row.issues.length ? levelBadge(row.issues[0].level) : 'info'" size="small" effect="light">
-                {{ row.issues.length ? row.issues[0].level === 'error' ? '错误' : '提示' : '—' }}
+              <el-tag
+                :type="row.issues.length ? levelBadge(row.issues[0].level) : 'info'"
+                size="small"
+                effect="light"
+              >
+                {{ row.issues.length ? (row.issues[0].level === 'error' ? '错误' : '提示') : '—' }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="snippet" label="行内容片段" min-width="260" show-overflow-tooltip />
+          <el-table-column
+            prop="snippet"
+            label="行内容片段"
+            min-width="260"
+            show-overflow-tooltip
+          />
           <el-table-column label="问题说明" min-width="260">
             <template #default="{ row }">
               <div v-for="(iss, i) in row.issues" :key="i" class="issue-line" :class="iss.level">
-                <span class="issue-badge">{{ iss.level === 'error' ? '错误' : '提示' }}</span>{{ formatText(iss) }}
+                <span class="issue-badge">{{ iss.level === 'error' ? '错误' : '提示' }}</span
+                >{{ formatText(iss) }}
               </div>
             </template>
           </el-table-column>
@@ -447,12 +567,17 @@ function levelBadge(l: IssueLevel) {
       <template #header>
         <div class="card-head">
           <span class="card-title">供应商微调能力参考</span>
-          <span class="muted small">以下为 OpenAI 兼容体系常见服务商微调能力汇总，数据可能随官方调整，请以官方文档为准</span>
+          <span class="muted small"
+            >以下为 OpenAI
+            兼容体系常见服务商微调能力汇总，数据可能随官方调整，请以官方文档为准</span
+          >
         </div>
       </template>
       <el-table :data="vendors" size="default">
         <el-table-column prop="vendor" label="供应商" width="130">
-          <template #default="{ row }"><span class="vendor-name">{{ row.vendor }}</span></template>
+          <template #default="{ row }"
+            ><span class="vendor-name">{{ row.vendor }}</span></template
+          >
         </el-table-column>
         <el-table-column prop="families" label="模型族" min-width="150" />
         <el-table-column prop="apiCompatible" label="API 兼容" width="130" />
@@ -460,7 +585,9 @@ function levelBadge(l: IssueLevel) {
         <el-table-column prop="note" label="说明" min-width="250" />
         <el-table-column label="官方入口" width="130">
           <template #default="{ row }">
-            <el-link type="primary" :href="row.doc" target="_blank" rel="noopener">查看官方文档</el-link>
+            <el-link type="primary" :href="row.doc" target="_blank" rel="noopener"
+              >查看官方文档</el-link
+            >
           </template>
         </el-table-column>
       </el-table>

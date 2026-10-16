@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import DOMPurify from 'dompurify'
 
 const props = defineProps<{ content: string }>()
 
@@ -74,7 +75,11 @@ function parseBlocks(md: string): Block[] {
     // 表格
     if (/^\s*\|.*\|\s*$/.test(line) && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1] ?? '')) {
       const splitRow = (r: string) =>
-        r.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim())
+        r
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .map((c) => c.trim())
       const head = splitRow(line)
       i += 2 // 跳过表头和分隔行
       const rows: string[][] = []
@@ -150,7 +155,8 @@ function inline(text: string): string {
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
   // 还原行内代码
   s = s.replace(/\u0000(\d+)\u0000/g, (_m, i: string) => `<code>${codes[+i]}</code>`)
-  return s
+  // 兜底消毒：防御正则替换引入的任何意外标签/属性
+  return DOMPurify.sanitize(s)
 }
 
 const blocks = computed<Block[]>(() => parseBlocks(props.content ?? ''))
@@ -236,11 +242,22 @@ async function copyCode(code: string, lang: string) {
   font-weight: 600;
   line-height: 1.4;
 }
-.md-h1 { font-size: 20px; }
-.md-h2 { font-size: 18px; }
-.md-h3 { font-size: 16px; }
-.md-h4 { font-size: 15px; }
-.md-h5, .md-h6 { font-size: 14px; }
+.md-h1 {
+  font-size: 20px;
+}
+.md-h2 {
+  font-size: 18px;
+}
+.md-h3 {
+  font-size: 16px;
+}
+.md-h4 {
+  font-size: 15px;
+}
+.md-h5,
+.md-h6 {
+  font-size: 14px;
+}
 .md-quote {
   margin: 8px 0;
   padding: 6px 12px;
@@ -249,11 +266,13 @@ async function copyCode(code: string, lang: string) {
   border-radius: 0 8px 8px 0;
   color: var(--el-text-color-secondary, #606266);
 }
-.md-ul, .md-ol {
+.md-ul,
+.md-ol {
   margin: 6px 0;
   padding-left: 22px;
 }
-.md-ul li, .md-ol li {
+.md-ul li,
+.md-ol li {
   margin: 3px 0;
 }
 .md-table-wrap {

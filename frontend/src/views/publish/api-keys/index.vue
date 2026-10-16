@@ -239,9 +239,13 @@ async function rotate(row: AppApiKey) {
 }
 
 function remove(row: AppApiKey) {
-  ElMessageBox.confirm(`确认删除「${row.name}」？删除后该密钥将无法再用于调用，不可恢复。`, '删除确认', {
-    type: 'error'
-  })
+  ElMessageBox.confirm(
+    `确认删除「${row.name}」？删除后该密钥将无法再用于调用，不可恢复。`,
+    '删除确认',
+    {
+      type: 'error'
+    }
+  )
     .then(async () => {
       await appApiKeyApi.remove(row.id)
       ElMessage.success('删除成功')
@@ -331,7 +335,9 @@ onMounted(() => {
             @keyup.enter="search"
             @clear="search"
           >
-            <template #prefix><el-icon><Search /></el-icon></template>
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
           <el-select
             v-model="filterAppId"
@@ -343,8 +349,19 @@ onMounted(() => {
           >
             <el-option v-for="app in appOptions" :key="app.id" :label="app.name" :value="app.id" />
           </el-select>
-          <el-select v-model="filterStatus" placeholder="全部状态" clearable class="toolbar-status" @change="search">
-            <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
+          <el-select
+            v-model="filterStatus"
+            placeholder="全部状态"
+            clearable
+            class="toolbar-status"
+            @change="search"
+          >
+            <el-option
+              v-for="s in statusOptions"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
         </div>
       </div>
@@ -372,14 +389,21 @@ onMounted(() => {
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag v-if="isExpired(row)" size="small" type="danger" effect="light">已过期</el-tag>
-            <el-tag v-else size="small" :type="row.status === 1 ? 'success' : 'info'" effect="light">
+            <el-tag
+              v-else
+              size="small"
+              :type="row.status === 1 ? 'success' : 'info'"
+              effect="light"
+            >
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="限流" width="110">
           <template #default="{ row }">
-            <span :class="row.rateLimit ? '' : 'dim-text'">{{ row.rateLimit ? `${row.rateLimit} 次/分` : '不限' }}</span>
+            <span :class="row.rateLimit ? '' : 'dim-text'">{{
+              row.rateLimit ? `${row.rateLimit} 次/分` : '不限'
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="过期时间" width="150">
@@ -393,7 +417,9 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="usage-cell">
               <span>{{ row.usageCount ?? 0 }} 次调用</span>
-              <span class="dim-text">最近 {{ row.lastUsedAt ? formatTime(row.lastUsedAt) : '从未使用' }}</span>
+              <span class="dim-text"
+                >最近 {{ row.lastUsedAt ? formatTime(row.lastUsedAt) : '从未使用' }}</span
+              >
             </div>
           </template>
         </el-table-column>
@@ -414,7 +440,9 @@ onMounted(() => {
                 @change="onStatusChange(row, $event)"
               />
               <div class="row-links">
-                <el-button link type="primary" size="small" @click="openExample(row)">示例</el-button>
+                <el-button link type="primary" size="small" @click="openExample(row)"
+                  >示例</el-button
+                >
                 <el-button link size="small" @click="openEdit(row)">编辑</el-button>
                 <el-button link type="warning" size="small" @click="rotate(row)">轮换</el-button>
                 <el-button link type="danger" size="small" @click="remove(row)">删除</el-button>
@@ -434,23 +462,42 @@ onMounted(() => {
     </el-card>
 
     <!-- 新建 / 编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editId ? '编辑密钥' : '新建密钥'" width="560px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editId ? '编辑密钥' : '新建密钥'"
+      width="560px"
+      :close-on-click-modal="false"
+    >
       <div class="form-body">
         <div class="field-group">
           <div class="field-label">密钥名称 <span class="req">*</span></div>
-          <el-input v-model="form.name" placeholder="例如：生产环境 / 测试环境 / 第三方系统 A" maxlength="64" show-word-limit />
+          <el-input
+            v-model="form.name"
+            placeholder="例如：生产环境 / 测试环境 / 第三方系统 A"
+            maxlength="64"
+            show-word-limit
+          />
         </div>
         <div class="field-group">
           <div class="field-label">关联应用 <span class="req">*</span></div>
-          <el-select v-if="!editId" v-model="form.appId" placeholder="选择要对外提供调用的应用" filterable style="width: 100%">
+          <el-select
+            v-if="!editId"
+            v-model="form.appId"
+            placeholder="选择要对外提供调用的应用"
+            filterable
+            style="width: 100%"
+          >
             <el-option
               v-for="app in appOptions"
               :key="app.id"
-              :label="`${app.name}（${appTypeLabel[app.type] || app.type}${app.status === 1 ? '' : ' · 未发布' }）`"
+              :label="`${app.name}（${appTypeLabel[app.type] || app.type}${app.status === 1 ? '' : ' · 未发布'}）`"
               :value="app.id"
             />
           </el-select>
-          <div v-else class="edit-app-name">{{ appName(form.appId) }}<span class="edit-app-tip">密钥创建后不可更换应用，如需请删除重建</span></div>
+          <div v-else class="edit-app-name">
+            {{ appName(form.appId)
+            }}<span class="edit-app-tip">密钥创建后不可更换应用，如需请删除重建</span>
+          </div>
         </div>
         <div class="field-row">
           <div class="field-group grow">
@@ -465,23 +512,45 @@ onMounted(() => {
           </div>
           <div class="field-group" style="width: 170px">
             <div class="field-label">限流（次/分）</div>
-            <el-input v-model="form.rateLimit" placeholder="留空 = 不限" type="number" min="1" @keydown.enter.prevent />
+            <el-input
+              v-model="form.rateLimit"
+              placeholder="留空 = 不限"
+              type="number"
+              min="1"
+              @keydown.enter.prevent
+            />
           </div>
         </div>
         <div class="field-group">
           <div class="field-label">备注</div>
-          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="用途说明（可选）" maxlength="255" />
+          <el-input
+            v-model="form.remark"
+            type="textarea"
+            :rows="2"
+            placeholder="用途说明（可选）"
+            maxlength="255"
+          />
         </div>
-        <p class="form-tip">完整密钥仅在创建 / 轮换时展示一次，此后仅保留哈希与前缀，请妥善保管。</p>
+        <p class="form-tip">
+          完整密钥仅在创建 / 轮换时展示一次，此后仅保留哈希与前缀，请妥善保管。
+        </p>
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 明文密钥一次性展示 -->
-    <el-dialog v-model="secretVisible" title="请保存您的密钥" width="620px" :close-on-click-modal="false" :show-close="false">
+    <el-dialog
+      v-model="secretVisible"
+      title="请保存您的密钥"
+      width="620px"
+      :close-on-click-modal="false"
+      :show-close="false"
+    >
       <el-alert type="warning" :closable="false" show-icon class="secret-alert">
         <template #title>完整密钥仅显示一次</template>
         <span>关闭后将无法再次查看；丢失时请创建新密钥或执行「轮换」作废旧值。</span>
@@ -510,13 +579,19 @@ onMounted(() => {
         </div>
         <el-alert type="info" :closable="false" show-icon class="example-tip">
           将下方示例中的 <code>&lt;你的 API Key&gt;</code> 替换为调用密钥；
-          请先发布该应用，且密钥须为启用状态。响应格式为统一 Result JSON，业务数据在 <code>data</code> 字段。
+          请先发布该应用，且密钥须为启用状态。响应格式为统一 Result JSON，业务数据在
+          <code>data</code> 字段。
         </el-alert>
 
         <div class="snippet-block">
           <div class="snippet-head">
             <span class="snippet-title">cURL</span>
-            <el-button link type="primary" size="small" @click="copyText(buildSnippets(exampleRow!).curl, 'cURL 已复制')">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="copyText(buildSnippets(exampleRow!).curl, 'cURL 已复制')"
+            >
               <el-icon :size="13"><CopyDocument /></el-icon>&nbsp;复制
             </el-button>
           </div>
@@ -526,7 +601,12 @@ onMounted(() => {
         <div class="snippet-block">
           <div class="snippet-head">
             <span class="snippet-title">JavaScript (fetch)</span>
-            <el-button link type="primary" size="small" @click="copyText(buildSnippets(exampleRow!).js, 'JS 代码已复制')">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="copyText(buildSnippets(exampleRow!).js, 'JS 代码已复制')"
+            >
               <el-icon :size="13"><CopyDocument /></el-icon>&nbsp;复制
             </el-button>
           </div>
@@ -536,7 +616,12 @@ onMounted(() => {
         <div class="snippet-block">
           <div class="snippet-head">
             <span class="snippet-title">Python (requests)</span>
-            <el-button link type="primary" size="small" @click="copyText(buildSnippets(exampleRow!).python, 'Python 代码已复制')">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="copyText(buildSnippets(exampleRow!).python, 'Python 代码已复制')"
+            >
               <el-icon :size="13"><CopyDocument /></el-icon>&nbsp;复制
             </el-button>
           </div>

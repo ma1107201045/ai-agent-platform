@@ -1,5 +1,5 @@
 import request from './request'
-import { getToken } from '@/utils/token'
+import { apiUrl, authFetch } from '@/utils/stream'
 import type { AssetCategory, AssetFile, PageResult } from './types'
 
 /** 素材管理 API（/api/assets），与后端 AssetController 一一对应 */
@@ -26,10 +26,7 @@ export const assetsApi = {
   },
   /** 携带登录态拉取素材二进制并转 objectURL（供预览 / 下载） */
   async fetchBlob(id: number): Promise<{ url: string; blob: Blob }> {
-    const token = getToken()
-    const resp = await fetch(`/api/assets/${id}/content`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined
-    })
+    const resp = await authFetch(`/api/assets/${id}/content`)
     if (!resp.ok) {
       const err = await resp.text().catch(() => '')
       throw new Error(err || `素材读取失败(${resp.status})`)
@@ -60,5 +57,5 @@ export const assetCategoryText: Record<AssetCategory, string> = {
 
 /** 素材可访问地址（已登录会话内可直接打开；用于「复制引用地址」） */
 export function assetContentUrl(id: number): string {
-  return `${location.origin}/api/assets/${id}/content`
+  return `${location.origin}${apiUrl(`/api/assets/${id}/content`)}`
 }

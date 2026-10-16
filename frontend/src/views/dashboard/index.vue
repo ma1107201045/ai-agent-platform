@@ -10,16 +10,62 @@ const router = useRouter()
 
 const loading = ref(true)
 const stats = ref([
-  { key: 'apps', label: '智能体应用', value: 0, icon: MagicStick, color: '#5b6cff', bg: 'rgba(91,108,255,0.12)' },
-  { key: 'datasets', label: '知识库数据集', value: 0, icon: Files, color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  { key: 'providers', label: '模型供应商', value: 0, icon: Cpu, color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)' },
-  { key: 'published', label: '已发布应用', value: 0, icon: Connection, color: '#10b981', bg: 'rgba(16,185,129,0.12)' }
+  {
+    key: 'apps',
+    label: '智能体应用',
+    value: 0,
+    icon: MagicStick,
+    color: '#5b6cff',
+    bg: 'rgba(91,108,255,0.12)'
+  },
+  {
+    key: 'datasets',
+    label: '知识库数据集',
+    value: 0,
+    icon: Files,
+    color: '#8b5cf6',
+    bg: 'rgba(139,92,246,0.12)'
+  },
+  {
+    key: 'providers',
+    label: '模型供应商',
+    value: 0,
+    icon: Cpu,
+    color: '#0ea5e9',
+    bg: 'rgba(14,165,233,0.12)'
+  },
+  {
+    key: 'published',
+    label: '已发布应用',
+    value: 0,
+    icon: Connection,
+    color: '#10b981',
+    bg: 'rgba(16,185,129,0.12)'
+  }
 ])
 
 const quickActions = [
-  { title: '创建智能体应用', desc: '对话流 / 工作流 / 智能体', icon: MagicStick, path: '/app-agents', color: '#5b6cff' },
-  { title: '导入知识库', desc: '文档切块、向量化、RAG 检索', icon: Files, path: '/data/knowledge', color: '#8b5cf6' },
-  { title: '接入模型', desc: '配置 DeepSeek 等供应商', icon: Cpu, path: '/models', color: '#0ea5e9' }
+  {
+    title: '创建智能体应用',
+    desc: '对话流 / 工作流 / 智能体',
+    icon: MagicStick,
+    path: '/app-agents',
+    color: '#5b6cff'
+  },
+  {
+    title: '导入知识库',
+    desc: '文档切块、向量化、RAG 检索',
+    icon: Files,
+    path: '/data/knowledge',
+    color: '#8b5cf6'
+  },
+  {
+    title: '接入模型',
+    desc: '配置 DeepSeek 等供应商',
+    icon: Cpu,
+    path: '/models',
+    color: '#0ea5e9'
+  }
 ]
 
 onMounted(async () => {
@@ -59,12 +105,7 @@ onMounted(async () => {
 
     <!-- 统计卡片 -->
     <div class="stat-grid">
-      <div
-        v-for="s in stats"
-        :key="s.key"
-        v-loading="loading"
-        class="stat-card hover-card"
-      >
+      <div v-for="s in stats" :key="s.key" v-loading="loading" class="stat-card hover-card">
         <div class="stat-icon" :style="{ background: s.bg, color: s.color }">
           <el-icon :size="22"><component :is="s.icon" /></el-icon>
         </div>

@@ -110,8 +110,14 @@ onMounted(() => {
         <p class="head-desc">发现、分享并一键安装智能体，像应用商店一样快速获取场景能力</p>
       </div>
       <div class="head-stats">
-        <div class="stat-chip"><b>{{ stats.total }}</b><span>在架应用</span></div>
-        <div class="stat-chip"><b>{{ stats.totalInstall }}</b><span>累计安装</span></div>
+        <div class="stat-chip">
+          <b>{{ stats.total }}</b
+          ><span>在架应用</span>
+        </div>
+        <div class="stat-chip">
+          <b>{{ stats.totalInstall }}</b
+          ><span>累计安装</span>
+        </div>
       </div>
     </div>
 
@@ -137,7 +143,9 @@ onMounted(() => {
         @keyup.enter="onSearch"
         @clear="onSearch"
       >
-        <template #prefix><el-icon><Search /></el-icon></template>
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
     </div>
 
@@ -145,10 +153,18 @@ onMounted(() => {
       <div v-if="rows.length" class="market-grid">
         <div v-for="item in rows" :key="item.id" class="m-card">
           <div class="m-cover">
-            <div class="m-icon" :style="{ background: `linear-gradient(135deg, ${catOf(item.category).color}33, ${catOf(item.category).color}66)` }">
+            <div
+              class="m-icon"
+              :style="{
+                background: `linear-gradient(135deg, ${catOf(item.category).color}33, ${catOf(item.category).color}66)`
+              }"
+            >
               {{ item.icon || catOf(item.category).icon }}
             </div>
-            <span class="m-type" :style="{ color: typeOf(item.type).color, borderColor: typeOf(item.type).color }">
+            <span
+              class="m-type"
+              :style="{ color: typeOf(item.type).color, borderColor: typeOf(item.type).color }"
+            >
               {{ typeOf(item.type).label }}
             </span>
           </div>
@@ -294,7 +310,9 @@ onMounted(() => {
   background: var(--card-bg);
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 .m-card:hover {
   box-shadow: var(--shadow-md);

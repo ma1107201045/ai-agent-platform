@@ -3,10 +3,26 @@ import { computed, ref } from 'vue'
 import { ArrowRight, Search } from '@element-plus/icons-vue'
 
 const steps = [
-  { no: '01', title: '注册并登录', desc: '进入登录页，使用管理员账号登录平台，进入团队与权限可管理成员。' },
-  { no: '02', title: '创建第一个智能体', desc: '在「智能体」新建应用，配置模型供应商与角色提示词，点击保存。' },
-  { no: '03', title: '接入知识并调试', desc: '在「知识库」上传资料并关联应用，使用对话调试进行效果验证。' },
-  { no: '04', title: '发布与上线', desc: '在「发布管理」一键发布，获取 API 或分享链接对外提供服务。' }
+  {
+    no: '01',
+    title: '注册并登录',
+    desc: '进入登录页，使用管理员账号登录平台，进入团队与权限可管理成员。'
+  },
+  {
+    no: '02',
+    title: '创建第一个智能体',
+    desc: '在「智能体」新建应用，配置模型供应商与角色提示词，点击保存。'
+  },
+  {
+    no: '03',
+    title: '接入知识并调试',
+    desc: '在「知识库」上传资料并关联应用，使用对话调试进行效果验证。'
+  },
+  {
+    no: '04',
+    title: '发布与上线',
+    desc: '在「发布管理」一键发布，获取 API 或分享链接对外提供服务。'
+  }
 ]
 
 const modules = [
@@ -18,7 +34,12 @@ const modules = [
   {
     title: '知识库',
     desc: '为应用接入私有知识，回答有据可依',
-    points: ['文档上传与分段解析', '关联智能体使用', '记忆管理沉淀长期上下文', '数据存储与素材统一管理']
+    points: [
+      '文档上传与分段解析',
+      '关联智能体使用',
+      '记忆管理沉淀长期上下文',
+      '数据存储与素材统一管理'
+    ]
   },
   {
     title: '提示词库',
@@ -38,7 +59,12 @@ const modules = [
   {
     title: '观测与评测',
     desc: '让运行状态与质量可量化',
-    points: ['对话与运行记录全量留存', '用量与费用统计、预算告警', '评测中心与对比实验', '告警规则与事件跟踪']
+    points: [
+      '对话与运行记录全量留存',
+      '用量与费用统计、预算告警',
+      '评测中心与对比实验',
+      '告警规则与事件跟踪'
+    ]
   },
   {
     title: '模型管理',
@@ -48,7 +74,12 @@ const modules = [
   {
     title: '系统管理',
     desc: '平台的组织与治理能力',
-    points: ['团队与权限（角色/成员）', '操作日志审计追溯', '工作空间信息管理', '公告发布与通知触达']
+    points: [
+      '团队与权限（角色/成员）',
+      '操作日志审计追溯',
+      '工作空间信息管理',
+      '公告发布与通知触达'
+    ]
   }
 ]
 
@@ -97,7 +128,9 @@ const faqs = [
       <div class="hero-info">
         <div class="hero-badge">帮助中心</div>
         <h2 class="hero-title">从 0 到 1 上手智能体平台</h2>
-        <p class="hero-desc">创建你的第一个智能体只需 4 步；遇到问题时可在下方常见问题中快速排查。</p>
+        <p class="hero-desc">
+          创建你的第一个智能体只需 4 步；遇到问题时可在下方常见问题中快速排查。
+        </p>
       </div>
     </div>
 
@@ -118,7 +151,9 @@ const faqs = [
     <div class="section-head">
       <div class="section-title">功能指引</div>
       <el-input v-model="keyword" placeholder="搜索模块 / 能力点" clearable style="width: 220px">
-        <template #prefix><el-icon><Search /></el-icon></template>
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
     </div>
     <div class="mod-grid">

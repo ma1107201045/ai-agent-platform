@@ -24,6 +24,8 @@ export const publicApi = {
     return request.get<never, PublicAppInfo>(`/portal/public/app-agents/${id}`)
   },
   chat(id: number, messages: { role: string; content: string }[]) {
-    return request.post<never, PublicChatResult>(`/portal/public/app-agents/${id}/chat`, { messages })
+    return request.post<never, PublicChatResult>(`/portal/public/app-agents/${id}/chat`, {
+      messages
+    })
   }
 }

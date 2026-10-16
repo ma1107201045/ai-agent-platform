@@ -2,7 +2,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, CopyDocument, Document, EditPen, Promotion, Refresh, View } from '@element-plus/icons-vue'
+import {
+  Clock,
+  CopyDocument,
+  Document,
+  EditPen,
+  Promotion,
+  Refresh,
+  View
+} from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent, AppAgentVersion } from '@/api/types'
 
@@ -12,7 +20,11 @@ const router = useRouter()
 /* ---------------- 应用选择 ---------------- */
 const apps = ref<AppAgent[]>([])
 const appId = ref<number | undefined>()
-const appTypeLabel: Record<string, string> = { chatflow: '对话', workflow: '工作流', agent: '智能体' }
+const appTypeLabel: Record<string, string> = {
+  chatflow: '对话',
+  workflow: '工作流',
+  agent: '智能体'
+}
 
 const currentApp = computed(() => apps.value.find((a) => a.id === appId.value))
 
@@ -26,9 +38,10 @@ async function loadApps(preferId?: number) {
   if (appId.value != null && apps.value.some((a) => a.id === appId.value)) {
     return
   }
-  const target = preferId && apps.value.some((a) => a.id === preferId)
-    ? preferId
-    : (apps.value.find((a) => a.publishedVersionId != null)?.id ?? apps.value[0]?.id)
+  const target =
+    preferId && apps.value.some((a) => a.id === preferId)
+      ? preferId
+      : (apps.value.find((a) => a.publishedVersionId != null)?.id ?? apps.value[0]?.id)
   appId.value = target
 }
 
@@ -100,7 +113,10 @@ interface DslInfo {
 }
 
 function dslInfo(row: AppAgentVersion): DslInfo | null {
-  const obj = parseJson(row.workflowJson) as { nodes?: { type?: string }[]; edges?: unknown[] } | null
+  const obj = parseJson(row.workflowJson) as {
+    nodes?: { type?: string }[]
+    edges?: unknown[]
+  } | null
   if (!obj || !Array.isArray(obj.nodes)) return null
   const counts: Record<string, number> = {}
   for (const n of obj.nodes) {
@@ -125,7 +141,9 @@ const isPublishedRow = (row: AppAgentVersion) =>
 const publishedVersionNo = computed(() => list.value.find((r) => isPublishedRow(r))?.version)
 
 /** 版本快照中的可展示内容段落（工作流 DSL / 提示词配置） */
-function snapshotParts(row: AppAgentVersion): { key: string; title: string; content: string; hint: string }[] {
+function snapshotParts(
+  row: AppAgentVersion
+): { key: string; title: string; content: string; hint: string }[] {
   const parts: { key: string; title: string; content: string; hint: string }[] = []
   const info = dslInfo(row)
   if (info && info.hasContent) {
@@ -152,7 +170,8 @@ const detailVisible = ref(false)
 const detailVersion = ref<AppAgentVersion | null>(null)
 const detailTab = ref('workflow')
 const detailTitle = computed(() =>
-  detailVersion.value ? `v${detailVersion.value.version} · 版本快照内容` : '版本快照内容')
+  detailVersion.value ? `v${detailVersion.value.version} · 版本快照内容` : '版本快照内容'
+)
 const detailParts = computed(() => (detailVersion.value ? snapshotParts(detailVersion.value) : []))
 
 function openDetail(row: AppAgentVersion) {
@@ -198,7 +217,6 @@ function goEdit() {
   if (!appId.value) return
   router.push(`/app/agents/${appId.value}/edit`)
 }
-
 </script>
 
 <template>
@@ -208,7 +226,9 @@ function goEdit() {
         <h2>版本历史</h2>
         <p class="page-sub">查看每次发布的配置快照，可将任意历史版本一键回滚为草稿</p>
       </div>
-      <el-button v-if="appId" type="primary" plain :icon="EditPen" @click="goEdit">前往编辑器</el-button>
+      <el-button v-if="appId" type="primary" plain :icon="EditPen" @click="goEdit"
+        >前往编辑器</el-button
+      >
     </div>
 
     <div class="filter-card">
@@ -225,7 +245,9 @@ function goEdit() {
           </el-select>
         </div>
         <div v-if="currentApp" class="filter-item app-meta">
-          <el-tag size="small" effect="plain">{{ appTypeLabel[currentApp.type] || currentApp.type }}</el-tag>
+          <el-tag size="small" effect="plain">{{
+            appTypeLabel[currentApp.type] || currentApp.type
+          }}</el-tag>
           <span v-if="publishedVersionNo" class="online-tag">
             <span class="online-dot"></span> 当前线上 v{{ publishedVersionNo }}
           </span>
@@ -237,7 +259,12 @@ function goEdit() {
     <div v-loading="loading" class="version-wrap">
       <!-- 已有版本：时间线 -->
       <div v-if="list.length" class="timeline">
-        <div v-for="row in list" :key="row.id" class="timeline-item" :class="{ published: isPublishedRow(row) }">
+        <div
+          v-for="row in list"
+          :key="row.id"
+          class="timeline-item"
+          :class="{ published: isPublishedRow(row) }"
+        >
           <div class="timeline-rail">
             <div class="rail-dot" :class="{ online: isPublishedRow(row) }">
               <el-icon v-if="isPublishedRow(row)" :size="12"><Promotion /></el-icon>
@@ -249,7 +276,9 @@ function goEdit() {
             <div class="version-head">
               <div class="version-id">
                 <span class="version-badge">v{{ row.version }}</span>
-                <el-tag v-if="isPublishedRow(row)" size="small" type="success" effect="light">当前线上</el-tag>
+                <el-tag v-if="isPublishedRow(row)" size="small" type="success" effect="light"
+                  >当前线上</el-tag
+                >
                 <el-tag v-else size="small" effect="plain">历史快照</el-tag>
               </div>
               <div class="version-time">
@@ -271,8 +300,14 @@ function goEdit() {
             <div v-else class="version-empty">该快照未包含可展示的编排/提示词配置</div>
 
             <div class="version-actions">
-              <el-button link type="primary" :icon="View" @click="openDetail(row)">查看内容</el-button>
-              <el-button link :icon="CopyDocument" @click="copyText(prettyJson(row.workflowJson || row.promptConfig))">
+              <el-button link type="primary" :icon="View" @click="openDetail(row)"
+                >查看内容</el-button
+              >
+              <el-button
+                link
+                :icon="CopyDocument"
+                @click="copyText(prettyJson(row.workflowJson || row.promptConfig))"
+              >
                 复制 JSON
               </el-button>
               <el-tooltip
@@ -316,16 +351,33 @@ function goEdit() {
     <el-dialog v-model="detailVisible" :title="detailTitle" width="640px" destroy-on-close>
       <div v-if="detailVersion" class="detail-body">
         <el-tabs v-model="detailTab">
-          <el-tab-pane v-for="part in detailParts" :key="part.key" :label="part.title" :name="part.key">
+          <el-tab-pane
+            v-for="part in detailParts"
+            :key="part.key"
+            :label="part.title"
+            :name="part.key"
+          >
             <pre class="code-view">{{ part.content }}</pre>
           </el-tab-pane>
           <el-tab-pane label="原始快照" name="raw">
-            <pre class="code-view">{{ prettyJson(JSON.stringify({ workflowJson: detailVersion.workflowJson, promptConfig: detailVersion.promptConfig })) }}</pre>
+            <pre class="code-view">{{
+              prettyJson(
+                JSON.stringify({
+                  workflowJson: detailVersion.workflowJson,
+                  promptConfig: detailVersion.promptConfig
+                })
+              )
+            }}</pre>
           </el-tab-pane>
         </el-tabs>
         <div class="detail-foot">
           <span class="head-extra">快照 JSON</span>
-          <el-button link :icon="CopyDocument" @click="copyText(prettyJson(detailVersion.workflowJson || detailVersion.promptConfig))">复制</el-button>
+          <el-button
+            link
+            :icon="CopyDocument"
+            @click="copyText(prettyJson(detailVersion.workflowJson || detailVersion.promptConfig))"
+            >复制</el-button
+          >
         </div>
       </div>
     </el-dialog>

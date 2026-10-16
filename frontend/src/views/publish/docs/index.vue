@@ -34,7 +34,11 @@ const snippets = computed(() => {
   const keyHeader = apiKey.value.trim()
     ? `  "Authorization": "Bearer ${apiKey.value.trim()}",\n`
     : ''
-  const body = JSON.stringify({ messages: [{ role: 'user', content: appInput.value || '你好' }] }, null, 2)
+  const body = JSON.stringify(
+    { messages: [{ role: 'user', content: appInput.value || '你好' }] },
+    null,
+    2
+  )
 
   const curl = `curl -X POST '${base}/portal/public/app-agents/${id}/chat' \\
 ${keyHeader ? `  -H 'Authorization: Bearer ${apiKey.value.trim()}' \\\n` : ''}  -H 'Content-Type: application/json' \\
@@ -151,12 +155,28 @@ onMounted(loadApps)
       <div class="doc-section">
         <div class="section-title">1 · 选择应用并生成调用凭证</div>
         <div v-loading="loadingApps" class="choose-row">
-          <el-select v-model="selectedApp" style="width: 320px" filterable placeholder="选择已发布应用" :loading="loadingApps">
-            <el-option v-for="a in apps" :key="a.id" :label="`${a.name}（${a.type}）`" :value="a.id" />
+          <el-select
+            v-model="selectedApp"
+            style="width: 320px"
+            filterable
+            placeholder="选择已发布应用"
+            :loading="loadingApps"
+          >
+            <el-option
+              v-for="a in apps"
+              :key="a.id"
+              :label="`${a.name}（${a.type}）`"
+              :value="a.id"
+            />
           </el-select>
           <div class="api-key-input">
             <span class="muted">API Key（可选）：</span>
-            <el-input v-model="apiKey" placeholder="留空则匿名调用；生产环境请使用应用 API 密钥" clearable style="flex: 1" />
+            <el-input
+              v-model="apiKey"
+              placeholder="留空则匿名调用；生产环境请使用应用 API 密钥"
+              clearable
+              style="flex: 1"
+            />
           </div>
         </div>
         <div v-if="currentApp" class="endpoint-box">
@@ -167,7 +187,9 @@ onMounted(loadApps)
           </div>
           <div class="ep-row">
             <el-tag type="danger" size="small" effect="dark">POST</el-tag>
-            <code class="mono ep-url">{{ base }}/portal/public/app-agents/{{ currentApp.id }}/chat</code>
+            <code class="mono ep-url"
+              >{{ base }}/portal/public/app-agents/{{ currentApp.id }}/chat</code
+            >
             <span class="muted"> · 发送对话</span>
           </div>
         </div>
@@ -179,22 +201,36 @@ onMounted(loadApps)
         <div class="rules">
           <div class="rule">
             <b>鉴权</b>
-            <p>接口默认<b>免鉴权</b>开放（适合官网嵌入/临时演示）。生产环境建议在「应用 API 密钥」创建密钥后，通过
-              <code>Authorization: Bearer &lt;api-key&gt;</code> 或 <code>X-API-Key: &lt;api-key&gt;</code> 请求头携带，支持启用 / 过期 / 限流控制。</p>
+            <p>
+              接口默认<b>免鉴权</b>开放（适合官网嵌入/临时演示）。生产环境建议在「应用 API
+              密钥」创建密钥后，通过 <code>Authorization: Bearer &lt;api-key&gt;</code> 或
+              <code>X-API-Key: &lt;api-key&gt;</code> 请求头携带，支持启用 / 过期 / 限流控制。
+            </p>
           </div>
           <div class="rule">
             <b>请求体</b>
-            <p><code>messages</code> 为完整对话历史数组，每条为 <code>{role, content}</code>（role 取值 user / assistant），
-              <b>最后一条必须是 user 消息</b>，作为本次输入；之前的消息作为上下文。</p>
+            <p>
+              <code>messages</code> 为完整对话历史数组，每条为 <code>{role, content}</code>（role
+              取值 user / assistant），
+              <b>最后一条必须是 user 消息</b>，作为本次输入；之前的消息作为上下文。
+            </p>
           </div>
           <div class="rule">
             <b>响应结构</b>
-            <p>平台统一包装：<code>{code: 0, message: "ok", data: {...}}</code>。<code>data.answer</code> 为最终回复；
-              <code>data.detail</code> 为执行细节（workflow 为节点轨迹 / agent 为工具调用步骤 / chatflow 为 null）。</p>
+            <p>
+              平台统一包装：<code>{code: 0, message: "ok", data: {...}}</code>。<code
+                >data.answer</code
+              >
+              为最终回复； <code>data.detail</code> 为执行细节（workflow 为节点轨迹 / agent
+              为工具调用步骤 / chatflow 为 null）。
+            </p>
           </div>
           <div class="rule">
             <b>行为</b>
-            <p>仅<b>已发布</b>应用可被外部调用。workflow 执行最新发布版本 DSL；agent 具备工具调用能力；chatflow 直连默认对话模型。</p>
+            <p>
+              仅<b>已发布</b>应用可被外部调用。workflow 执行最新发布版本 DSL；agent
+              具备工具调用能力；chatflow 直连默认对话模型。
+            </p>
           </div>
         </div>
       </div>
@@ -210,7 +246,8 @@ onMounted(loadApps)
             :class="{ active: activeSnippet === i }"
             @click="activeSnippet = i"
           >
-            <span class="snippet-icon">{{ s.langIcon }}</span>{{ s.lang }}
+            <span class="snippet-icon">{{ s.langIcon }}</span
+            >{{ s.lang }}
           </button>
         </div>
         <div class="code-block">
@@ -225,7 +262,13 @@ onMounted(loadApps)
       <div class="doc-section">
         <div class="section-title">4 · 在线调试</div>
         <el-input v-model="appInput" type="textarea" :rows="2" placeholder="输入一条测试消息" />
-        <el-button type="primary" class="btn-gradient" style="margin-top: 10px" :loading="testing" @click="run">
+        <el-button
+          type="primary"
+          class="btn-gradient"
+          style="margin-top: 10px"
+          :loading="testing"
+          @click="run"
+        >
           {{ testing ? '请求中…' : '发送请求' }}
         </el-button>
         <div v-if="testResp" class="resp-block">

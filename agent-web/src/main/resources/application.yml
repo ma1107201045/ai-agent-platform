@@ -5,9 +5,10 @@ spring:
   application:
     name: agent-platform
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/agent_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:root}
+    driver-class-name: org.postgresql.Driver
+    # stringtype=unspecified：让 String 字段可直接写入 vector/jsonb 等扩展类型
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/agent_platform?stringtype=unspecified}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:}
   servlet:
     multipart:

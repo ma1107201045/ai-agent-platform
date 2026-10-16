@@ -83,7 +83,9 @@ if (import.meta.env.DEV) {
       if (!registered.has(item.path)) {
         console.warn(`[menu] 菜单「${item.title}」的 path ${item.path} 未匹配到已注册的路由`)
       } else if (!item.path.startsWith(`/${group.key}`)) {
-        console.warn(`[menu] 菜单「${item.title}」的 path ${item.path} 与分组前缀 /${group.key} 不一致`)
+        console.warn(
+          `[menu] 菜单「${item.title}」的 path ${item.path} 与分组前缀 /${group.key} 不一致`
+        )
       }
     })
   })
@@ -110,16 +112,8 @@ if (import.meta.env.DEV) {
           class="sidebar-menu"
           @select="onMenuSelect"
         >
-          <el-menu-item-group
-            v-for="g in menuGroups"
-            :key="g.key"
-            :title="g.title"
-          >
-            <el-menu-item
-              v-for="item in g.items"
-              :key="item.path"
-              :index="item.path"
-            >
+          <el-menu-item-group v-for="g in menuGroups" :key="g.key" :title="g.title">
+            <el-menu-item v-for="item in g.items" :key="item.path" :index="item.path">
               <el-icon :size="18"><component :is="item.icon" /></el-icon>
               <template #title>
                 <span class="item-label">{{ item.title }}</span>
@@ -156,7 +150,11 @@ if (import.meta.env.DEV) {
             <kbd class="search-kbd">⌘K</kbd>
           </div>
           <el-tooltip
-            :content="notificationStore.unread > 0 ? `通知中心（未读 ${notificationStore.unread} 条）` : '通知中心'"
+            :content="
+              notificationStore.unread > 0
+                ? `通知中心（未读 ${notificationStore.unread} 条）`
+                : '通知中心'
+            "
             placement="bottom"
           >
             <el-badge
@@ -183,7 +181,9 @@ if (import.meta.env.DEV) {
               <el-dropdown-menu>
                 <el-dropdown-item disabled class="dropdown-user">
                   <span class="dropdown-user-name">{{ displayName }}</span>
-                  <span class="dropdown-user-sub">{{ userStore.profile?.email || '未绑定邮箱' }}</span>
+                  <span class="dropdown-user-sub">{{
+                    userStore.profile?.email || '未绑定邮箱'
+                  }}</span>
                 </el-dropdown-item>
                 <el-dropdown-item divided command="account">
                   <el-icon><Lock /></el-icon>账号与安全
@@ -365,7 +365,9 @@ if (import.meta.env.DEV) {
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
-  transition: background-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 .sidebar.collapsed .fold-btn {
   justify-content: center;
@@ -459,7 +461,9 @@ if (import.meta.env.DEV) {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .header-icon-btn:hover {

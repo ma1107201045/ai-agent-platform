@@ -17,5 +17,5 @@ export const usageApi = {
    */
   summary(params: UsageQuery = {}) {
     return request.get<never, UsageSummary>('/chat/stats/usage', { params })
-  },
+  }
 }

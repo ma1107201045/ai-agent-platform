@@ -5,7 +5,8 @@
       <div class="page-head-info">
         <h2 class="head-title">数据存储</h2>
         <p class="head-desc">
-          面向智能体的结构化数据管理：自定义数据表与行记录，支持 JSON / CSV 导入导出，可与记忆、知识库能力配合使用。
+          面向智能体的结构化数据管理：自定义数据表与行记录，支持 JSON / CSV
+          导入导出，可与记忆、知识库能力配合使用。
         </p>
       </div>
       <div class="head-actions">
@@ -22,7 +23,9 @@
       <el-card shadow="never" class="table-list-card">
         <div class="table-list-head">
           <el-input v-model="listKeyword" placeholder="搜索数据表" clearable class="list-search">
-            <template #prefix><el-icon><Search /></el-icon></template>
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
         </div>
         <div v-if="!tables.length" class="list-empty">
@@ -37,7 +40,9 @@
             @click="selectTable(t)"
           >
             <div class="table-item-top">
-              <span class="table-icon"><el-icon><Collection /></el-icon></span>
+              <span class="table-icon"
+                ><el-icon><Collection /></el-icon
+              ></span>
               <div class="table-item-body">
                 <p class="table-name">{{ t.name }}</p>
                 <p class="table-meta">{{ t.rowCount }} 行 · {{ tableColumns(t).length }} 列</p>
@@ -77,8 +82,12 @@
                 </el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="import"><el-icon><Upload /></el-icon>导入数据</el-dropdown-item>
-                    <el-dropdown-item command="export"><el-icon><Download /></el-icon>导出 CSV</el-dropdown-item>
+                    <el-dropdown-item command="import"
+                      ><el-icon><Upload /></el-icon>导入数据</el-dropdown-item
+                    >
+                    <el-dropdown-item command="export"
+                      ><el-icon><Download /></el-icon>导出 CSV</el-dropdown-item
+                    >
                     <el-dropdown-item divided command="delete" class="danger-item">
                       <el-icon><Delete /></el-icon>删除数据表
                     </el-dropdown-item>
@@ -106,9 +115,13 @@
                 @keyup.enter="loadRecords"
                 @clear="loadRecords"
               >
-                <template #prefix><el-icon><Search /></el-icon></template>
+                <template #prefix
+                  ><el-icon><Search /></el-icon
+                ></template>
               </el-input>
-              <el-button @click="loadRecords"><el-icon><Refresh /></el-icon></el-button>
+              <el-button @click="loadRecords"
+                ><el-icon><Refresh /></el-icon
+              ></el-button>
             </div>
           </div>
 
@@ -129,7 +142,11 @@
             >
               <template #default="{ row }">
                 <span v-if="c.type === 'boolean'">
-                  <el-tag :type="row.data?.[c.key] ? 'success' : 'info'" size="small" effect="light">
+                  <el-tag
+                    :type="row.data?.[c.key] ? 'success' : 'info'"
+                    size="small"
+                    effect="light"
+                  >
                     {{ row.data?.[c.key] ? '是' : '否' }}
                   </el-tag>
                 </span>
@@ -141,7 +158,9 @@
             </el-table-column>
             <el-table-column label="操作" width="130" align="center" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="openRowDialog(row)">编辑</el-button>
+                <el-button link type="primary" size="small" @click="openRowDialog(row)"
+                  >编辑</el-button
+                >
                 <el-button link type="danger" size="small" @click="removeRow(row)">删除</el-button>
               </template>
             </el-table-column>
@@ -178,7 +197,12 @@
           <el-input v-model="tableForm.label" placeholder="可选，列表页展示的别名" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="tableForm.description" type="textarea" :rows="2" placeholder="可选，说明这张表存什么" />
+          <el-input
+            v-model="tableForm.description"
+            type="textarea"
+            :rows="2"
+            placeholder="可选，说明这张表存什么"
+          />
         </el-form-item>
         <el-form-item label="列定义">
           <div class="columns-editor">
@@ -210,7 +234,9 @@
               <el-button size="small" type="primary" plain @click="addColumn">
                 <el-icon><Plus /></el-icon>&nbsp;添加列
               </el-button>
-              <span class="editor-tip">列的 key 用于记录字段与模板引用；已有数据后再调整列名不会清空数据。</span>
+              <span class="editor-tip"
+                >列的 key 用于记录字段与模板引用；已有数据后再调整列名不会清空数据。</span
+              >
             </div>
           </div>
         </el-form-item>
@@ -285,7 +311,7 @@
           :closable="false"
           show-icon
           class="import-alert"
-          title="按行粘贴 JSON 数组，键与列 key 对应，例如：[{&quot;name&quot;: &quot;张三&quot;, &quot;age&quot;: 30}]"
+          title='按行粘贴 JSON 数组，键与列 key 对应，例如：[{"name": "张三", "age": 30}]'
         />
         <el-input
           v-model="importJsonText"
@@ -310,7 +336,9 @@
           <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
           <div class="el-upload__text">将 CSV 拖到此处，或<em>点击选择文件</em></div>
           <template #tip>
-            <div class="el-upload__tip">首行需为表头（列名或列 key）；UTF-8 编码；大小不超过 5MB。</div>
+            <div class="el-upload__tip">
+              首行需为表头（列名或列 key）；UTF-8 编码；大小不超过 5MB。
+            </div>
           </template>
         </el-upload>
       </template>
@@ -326,7 +354,17 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Delete, MoreFilled, Plus, Refresh, Search, Setting, Upload, Download, Collection } from '@element-plus/icons-vue'
+import {
+  Delete,
+  MoreFilled,
+  Plus,
+  Refresh,
+  Search,
+  Setting,
+  Upload,
+  Download,
+  Collection
+} from '@element-plus/icons-vue'
 import { dataStoreApi, downloadTableCsv } from '@/api/data-store'
 import type { DataColumn, DataRecordRow, DataTable } from '@/api/types'
 
@@ -348,7 +386,11 @@ const current = ref<DataTable | null>(null)
 async function loadTables() {
   loading.value = true
   try {
-    const res = await dataStoreApi.tablePage({ page: 1, size: 200, keyword: listKeyword.value || undefined })
+    const res = await dataStoreApi.tablePage({
+      page: 1,
+      size: 200,
+      keyword: listKeyword.value || undefined
+    })
     tables.value = res.records || []
     if (selectedId.value != null) {
       const keep = tables.value.find((t) => t.id === selectedId.value)
@@ -416,7 +458,13 @@ const formatTime = (t?: string) => (t ? t.replace('T', ' ').slice(0, 19) : '—'
 const tableDialogVisible = ref(false)
 const submittingTable = ref(false)
 const tableFormRef = ref<FormInstance>()
-const tableForm = ref<{ id?: number; name: string; label?: string; description?: string; columns: ColumnEditRow[] }>({
+const tableForm = ref<{
+  id?: number
+  name: string
+  label?: string
+  description?: string
+  columns: ColumnEditRow[]
+}>({
   name: '',
   label: '',
   description: '',

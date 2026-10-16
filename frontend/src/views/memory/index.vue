@@ -17,12 +17,7 @@
           class="app-select"
           :disabled="!apps.length"
         >
-          <el-option
-            v-for="app in apps"
-            :key="app.id"
-            :value="app.id"
-            :label="app.name"
-          />
+          <el-option v-for="app in apps" :key="app.id" :value="app.id" :label="app.name" />
         </el-select>
       </div>
     </div>
@@ -49,21 +44,27 @@
           </div>
         </div>
         <div class="hover-card stat-item" v-loading="loading">
-          <div class="stat-icon purple"><el-icon><Collection /></el-icon></div>
+          <div class="stat-icon purple">
+            <el-icon><Collection /></el-icon>
+          </div>
           <div class="stat-body">
             <p class="stat-label">记忆条目</p>
             <p class="stat-value">{{ itemTotal }}</p>
           </div>
         </div>
         <div class="hover-card stat-item" v-loading="loading">
-          <div class="stat-icon cyan"><el-icon><Connection /></el-icon></div>
+          <div class="stat-icon cyan">
+            <el-icon><Connection /></el-icon>
+          </div>
           <div class="stat-body">
             <p class="stat-label">会话变量</p>
             <p class="stat-value">{{ variableTotal }}</p>
           </div>
         </div>
         <div class="hover-card stat-item" v-loading="loading">
-          <div class="stat-icon orange"><el-icon><Files /></el-icon></div>
+          <div class="stat-icon orange">
+            <el-icon><Files /></el-icon>
+          </div>
           <div class="stat-body">
             <p class="stat-label">每次注入条数</p>
             <p class="stat-value">{{ strategy?.topN ?? '-' }} <span class="stat-unit">条</span></p>
@@ -84,10 +85,25 @@
               />
               <div class="toolbar-row">
                 <div class="toolbar-filters">
-                  <el-select v-model="itemFilters.category" placeholder="全部分类" clearable class="filter-select">
-                    <el-option v-for="c in itemCategories" :key="c.value" :value="c.value" :label="c.label" />
+                  <el-select
+                    v-model="itemFilters.category"
+                    placeholder="全部分类"
+                    clearable
+                    class="filter-select"
+                  >
+                    <el-option
+                      v-for="c in itemCategories"
+                      :key="c.value"
+                      :value="c.value"
+                      :label="c.label"
+                    />
                   </el-select>
-                  <el-select v-model="itemFilters.scope" placeholder="全部作用域" clearable class="filter-select">
+                  <el-select
+                    v-model="itemFilters.scope"
+                    placeholder="全部作用域"
+                    clearable
+                    class="filter-select"
+                  >
                     <el-option value="global" label="全局记忆" />
                     <el-option value="user" label="用户记忆" />
                   </el-select>
@@ -99,9 +115,13 @@
                     @keyup.enter="loadItems"
                     @clear="loadItems"
                   >
-                    <template #prefix><el-icon><Search /></el-icon></template>
+                    <template #prefix
+                      ><el-icon><Search /></el-icon
+                    ></template>
                   </el-input>
-                  <el-button @click="loadItems"><el-icon><Refresh /></el-icon></el-button>
+                  <el-button @click="loadItems"
+                    ><el-icon><Refresh /></el-icon
+                  ></el-button>
                 </div>
                 <el-button type="primary" @click="openItemDialog()">
                   <el-icon><Plus /></el-icon>&nbsp;新增记忆
@@ -109,7 +129,12 @@
               </div>
             </div>
 
-            <el-table v-loading="itemsLoading" :data="items" class="data-table" empty-text="暂无记忆条目">
+            <el-table
+              v-loading="itemsLoading"
+              :data="items"
+              class="data-table"
+              empty-text="暂无记忆条目"
+            >
               <el-table-column label="记忆内容" min-width="360">
                 <template #default="{ row }">
                   <div class="item-content" :title="row.content">{{ row.content }}</div>
@@ -124,14 +149,22 @@
               </el-table-column>
               <el-table-column label="重要度" width="110" align="center">
                 <template #default="{ row }">
-                  <span class="importance" :class="'lv' + row.importance" :title="importanceText(row.importance)">
+                  <span
+                    class="importance"
+                    :class="'lv' + row.importance"
+                    :title="importanceText(row.importance)"
+                  >
                     {{ '★'.repeat(row.importance) }}
                   </span>
                 </template>
               </el-table-column>
               <el-table-column label="来源" width="90" align="center">
                 <template #default="{ row }">
-                  <el-tag :type="row.source === 'auto' ? 'warning' : 'info'" size="small" effect="plain">
+                  <el-tag
+                    :type="row.source === 'auto' ? 'warning' : 'info'"
+                    size="small"
+                    effect="plain"
+                  >
                     {{ row.source === 'auto' ? '自动' : '手动' }}
                   </el-tag>
                 </template>
@@ -152,8 +185,12 @@
               </el-table-column>
               <el-table-column label="操作" width="130" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="openItemDialog(row)">编辑</el-button>
-                  <el-button link type="danger" size="small" @click="removeItem(row)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="openItemDialog(row)"
+                    >编辑</el-button
+                  >
+                  <el-button link type="danger" size="small" @click="removeItem(row)"
+                    >删除</el-button
+                  >
                 </template>
               </el-table-column>
             </el-table>
@@ -170,7 +207,12 @@
               />
               <div class="toolbar-row">
                 <div class="toolbar-filters">
-                  <el-select v-model="variableFilters.scope" placeholder="全部作用域" clearable class="filter-select">
+                  <el-select
+                    v-model="variableFilters.scope"
+                    placeholder="全部作用域"
+                    clearable
+                    class="filter-select"
+                  >
                     <el-option value="global" label="全局" />
                     <el-option value="session" label="会话" />
                   </el-select>
@@ -182,9 +224,13 @@
                     @keyup.enter="loadVariables"
                     @clear="loadVariables"
                   >
-                    <template #prefix><el-icon><Search /></el-icon></template>
+                    <template #prefix
+                      ><el-icon><Search /></el-icon
+                    ></template>
                   </el-input>
-                  <el-button @click="loadVariables"><el-icon><Refresh /></el-icon></el-button>
+                  <el-button @click="loadVariables"
+                    ><el-icon><Refresh /></el-icon
+                  ></el-button>
                 </div>
                 <el-button type="primary" @click="openVariableDialog()">
                   <el-icon><Plus /></el-icon>&nbsp;新增变量
@@ -192,7 +238,12 @@
               </div>
             </div>
 
-            <el-table v-loading="varLoading" :data="variables" class="data-table" empty-text="暂无会话变量">
+            <el-table
+              v-loading="varLoading"
+              :data="variables"
+              class="data-table"
+              empty-text="暂无会话变量"
+            >
               <el-table-column label="变量名" width="200">
                 <template #default="{ row }">
                   <code class="var-name">{{ row.name }}</code>
@@ -200,7 +251,11 @@
               </el-table-column>
               <el-table-column label="作用域" width="120" align="center">
                 <template #default="{ row }">
-                  <el-tag :type="row.scope === 'global' ? 'success' : 'warning'" size="small" effect="light">
+                  <el-tag
+                    :type="row.scope === 'global' ? 'success' : 'warning'"
+                    size="small"
+                    effect="light"
+                  >
                     {{ row.scope === 'global' ? '全局' : '会话' }}
                   </el-tag>
                 </template>
@@ -225,8 +280,12 @@
               </el-table-column>
               <el-table-column label="操作" width="130" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="openVariableDialog(row)">编辑</el-button>
-                  <el-button link type="danger" size="small" @click="removeVariable(row)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="openVariableDialog(row)"
+                    >编辑</el-button
+                  >
+                  <el-button link type="danger" size="small" @click="removeVariable(row)"
+                    >删除</el-button
+                  >
                 </template>
               </el-table-column>
             </el-table>
@@ -244,11 +303,15 @@
               <el-form label-width="180px" class="strategy-form" label-position="left">
                 <el-form-item label="启用长期记忆">
                   <el-switch v-model="strategy.enabled" :active-value="1" :inactive-value="0" />
-                  <span class="field-tip">关闭后该应用的记忆不再写入，也不会被注入到对话上下文</span>
+                  <span class="field-tip"
+                    >关闭后该应用的记忆不再写入，也不会被注入到对话上下文</span
+                  >
                 </el-form-item>
                 <el-form-item label="对话后自动抽取">
                   <el-switch v-model="strategy.autoExtract" :active-value="1" :inactive-value="0" />
-                  <span class="field-tip">每次对话结束后，由抽取模型将用户偏好/事实沉淀为记忆条目</span>
+                  <span class="field-tip"
+                    >每次对话结束后，由抽取模型将用户偏好/事实沉淀为记忆条目</span
+                  >
                 </el-form-item>
                 <el-form-item v-if="strategy.autoExtract === 1" label="抽取使用模型">
                   <el-select
@@ -271,7 +334,12 @@
                   <span class="field-tip">对话时从记忆中挑选并注入上下文的最大条数</span>
                 </el-form-item>
                 <el-form-item label="单应用条目上限">
-                  <el-input-number v-model="strategy.maxItems" :min="10" :max="100000" :step="100" />
+                  <el-input-number
+                    v-model="strategy.maxItems"
+                    :min="10"
+                    :max="100000"
+                    :step="100"
+                  />
                   <span class="field-tip">达到上限后按“重要度优先”淘汰旧条目</span>
                 </el-form-item>
                 <el-form-item label="记忆保留天数">
@@ -282,7 +350,9 @@
                     placeholder="永久保留"
                     class="keep-days-input"
                   />
-                  <span class="field-tip">留空（0）表示永久保留，非 0 时超过保留期的记忆自动失效</span>
+                  <span class="field-tip"
+                    >留空（0）表示永久保留，非 0 时超过保留期的记忆自动失效</span
+                  >
                 </el-form-item>
                 <el-form-item>
                   <el-button type="primary" :loading="savingStrategy" @click="saveStrategy">
@@ -306,7 +376,12 @@
       <el-form ref="itemFormRef" :model="itemForm" :rules="itemRules" label-width="90px">
         <el-form-item label="类别" prop="category">
           <el-select v-model="itemForm.category" class="full-width">
-            <el-option v-for="c in itemCategories" :key="c.value" :value="c.value" :label="c.label" />
+            <el-option
+              v-for="c in itemCategories"
+              :key="c.value"
+              :value="c.value"
+              :label="c.label"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="作用域" prop="scope">
@@ -346,7 +421,12 @@
       width="560px"
       destroy-on-close
     >
-      <el-form ref="variableFormRef" :model="variableForm" :rules="variableRules" label-width="90px">
+      <el-form
+        ref="variableFormRef"
+        :model="variableForm"
+        :rules="variableRules"
+        label-width="90px"
+      >
         <el-form-item label="变量名" prop="name">
           <el-input
             v-model="variableForm.name"
@@ -391,7 +471,9 @@
       </el-form>
       <template #footer>
         <el-button @click="varDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submittingVariable" @click="submitVariable">保存</el-button>
+        <el-button type="primary" :loading="submittingVariable" @click="submitVariable"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -404,13 +486,7 @@ import { useRouter } from 'vue-router'
 import { appAgentApi } from '@/api/app-agent'
 import { modelApi } from '@/api/model'
 import { memoryApi } from '@/api/memory'
-import type {
-  AppAgent,
-  ChatModelInfo,
-  MemItem,
-  MemStrategy,
-  MemVariable
-} from '@/api/types'
+import type { AppAgent, ChatModelInfo, MemItem, MemStrategy, MemVariable } from '@/api/types'
 
 const router = useRouter()
 
@@ -430,13 +506,15 @@ const itemCategories = [
 
 const catText = (v: string) => itemCategories.find((c) => c.value === v)?.label || '自定义'
 const catTag = (v: string): 'success' | 'primary' | 'warning' | 'danger' | 'info' =>
-  (({
-    preference: 'success',
-    fact: 'primary',
-    event: 'warning',
-    summary: 'danger',
-    custom: 'info'
-  }) as Record<string, 'success' | 'primary' | 'warning' | 'danger' | 'info'>)[v] || 'info'
+  (
+    ({
+      preference: 'success',
+      fact: 'primary',
+      event: 'warning',
+      summary: 'danger',
+      custom: 'info'
+    }) as Record<string, 'success' | 'primary' | 'warning' | 'danger' | 'info'>
+  )[v] || 'info'
 const typeText = (t: string) =>
   ({ string: '字符串', number: '数字', boolean: '布尔', json: 'JSON' })[t] || t
 const importanceText = (lv: number) => ['', '较低', '一般', '重要', '很重要', '极重要'][lv] || ''

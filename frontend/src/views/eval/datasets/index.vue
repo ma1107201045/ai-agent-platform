@@ -11,7 +11,11 @@ const size = ref(10)
 const keyword = ref('')
 const filterStatus = ref<number | undefined>()
 
-const SOURCE_LABEL: Record<string, string> = { manual: '手动创建', import: '批量导入', feedback: '标注回流' }
+const SOURCE_LABEL: Record<string, string> = {
+  manual: '手动创建',
+  import: '批量导入',
+  feedback: '标注回流'
+}
 
 function fmt(s?: string) {
   if (!s) return '-'
@@ -24,7 +28,12 @@ function fmt(s?: string) {
 async function load() {
   loading.value = true
   try {
-    const data = await evalApi.datasetPage({ page: page.value, size: size.value, keyword: keyword.value || undefined, status: filterStatus.value })
+    const data = await evalApi.datasetPage({
+      page: page.value,
+      size: size.value,
+      keyword: keyword.value || undefined,
+      status: filterStatus.value
+    })
     list.value = data.records
     total.value = data.total
   } finally {
@@ -87,10 +96,17 @@ async function save() {
   saving.value = true
   try {
     if (editId.value) {
-      await evalApi.updateDataset(editId.value, { name: form.name.trim(), description: form.description.trim() || undefined })
+      await evalApi.updateDataset(editId.value, {
+        name: form.name.trim(),
+        description: form.description.trim() || undefined
+      })
       ElMessage.success('已保存')
     } else {
-      await evalApi.createDataset({ name: form.name.trim(), description: form.description.trim() || undefined, source: form.source })
+      await evalApi.createDataset({
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        source: form.source
+      })
       ElMessage.success('数据集已创建')
     }
     formVisible.value = false
@@ -120,6 +136,12 @@ async function openDetail(row: EvalDataset) {
   sampleTotal.value = 0
   await loadSamples()
 }
+/** 重置页码并重新加载样本 */
+function searchSamples() {
+  samplePage.value = 1
+  loadSamples()
+}
+
 async function loadSamples() {
   if (!activeDataset.value) return
   sampleLoading.value = true
@@ -231,7 +253,9 @@ onMounted(load)
     <div class="page-head">
       <div>
         <h2 class="head-title">评测数据集</h2>
-        <p class="head-desc">管理用于评测的问答样本，支持手动维护与批量导入 · 共 {{ total }} 个数据集</p>
+        <p class="head-desc">
+          管理用于评测的问答样本，支持手动维护与批量导入 · 共 {{ total }} 个数据集
+        </p>
       </div>
       <el-button type="primary" class="btn-gradient" @click="openCreate">
         <el-icon><Plus /></el-icon>&nbsp;新建数据集
@@ -241,10 +265,25 @@ onMounted(load)
     <el-card shadow="never" class="data-card">
       <div class="table-toolbar">
         <div class="toolbar-left">
-          <el-input v-model="keyword" placeholder="搜索数据集名称 / 描述" clearable class="toolbar-search" @keyup.enter="search" @clear="search">
-            <template #prefix><el-icon><Search /></el-icon></template>
+          <el-input
+            v-model="keyword"
+            placeholder="搜索数据集名称 / 描述"
+            clearable
+            class="toolbar-search"
+            @keyup.enter="search"
+            @clear="search"
+          >
+            <template #prefix
+              ><el-icon><Search /></el-icon
+            ></template>
           </el-input>
-          <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 130px" @change="search">
+          <el-select
+            v-model="filterStatus"
+            placeholder="状态"
+            clearable
+            style="width: 130px"
+            @change="search"
+          >
             <el-option label="启用" :value="1" />
             <el-option label="停用" :value="0" />
           </el-select>
@@ -268,22 +307,35 @@ onMounted(load)
           </template>
         </el-table-column>
         <el-table-column label="来源" width="120">
-          <template #default="{ row }"><el-tag size="small" effect="light">{{ SOURCE_LABEL[row.source] || row.source }}</el-tag></template>
+          <template #default="{ row }"
+            ><el-tag size="small" effect="light">{{
+              SOURCE_LABEL[row.source] || row.source
+            }}</el-tag></template
+          >
         </el-table-column>
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
-            <el-switch :model-value="row.status === 1" @change="(v: string | number | boolean) => toggleDataset(row, v)" />
+            <el-switch
+              :model-value="row.status === 1"
+              @change="(v: string | number | boolean) => toggleDataset(row, v)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="更新时间" width="150">
-          <template #default="{ row }"><span class="dim-text">{{ fmt(row.updateTime) }}</span></template>
+          <template #default="{ row }"
+            ><span class="dim-text">{{ fmt(row.updateTime) }}</span></template
+          >
         </el-table-column>
         <el-table-column label="操作" width="170" fixed="right" align="center">
           <template #default="{ row }">
             <div class="row-links">
-              <el-button link type="primary" size="small" @click="openDetail(row)">管理样本</el-button>
+              <el-button link type="primary" size="small" @click="openDetail(row)"
+                >管理样本</el-button
+              >
               <el-button link size="small" @click="openEdit(row)">编辑</el-button>
-              <el-button link type="danger" size="small" @click="removeDataset(row)">删除</el-button>
+              <el-button link type="danger" size="small" @click="removeDataset(row)"
+                >删除</el-button
+              >
             </div>
           </template>
         </el-table-column>
@@ -299,7 +351,12 @@ onMounted(load)
     </el-card>
 
     <!-- 数据集表单 -->
-    <el-dialog v-model="formVisible" :title="editId ? '编辑数据集' : '新建数据集'" width="520px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="formVisible"
+      :title="editId ? '编辑数据集' : '新建数据集'"
+      width="520px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>数据集名称 <span class="req">*</span></label>
@@ -307,7 +364,13 @@ onMounted(load)
         </div>
         <div class="field-group">
           <label>描述</label>
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="说明数据覆盖场景与用途（可选）" maxlength="512" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="3"
+            placeholder="说明数据覆盖场景与用途（可选）"
+            maxlength="512"
+          />
         </div>
         <div v-if="!editId" class="field-group">
           <label>创建方式</label>
@@ -319,24 +382,40 @@ onMounted(load)
       </div>
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 样本管理抽屉 -->
-    <el-drawer v-model="detailVisible" :title="activeDataset?.name ? `样本管理 · ${activeDataset.name}` : '样本管理'" size="760px">
+    <el-drawer
+      v-model="detailVisible"
+      :title="activeDataset?.name ? `样本管理 · ${activeDataset.name}` : '样本管理'"
+      size="760px"
+    >
       <template v-if="activeDataset">
         <div class="drawer-tip">
           <el-text size="small" type="info">
-            每个样本为「提问 + 参考答案（可选）」。评测时无参考答案视为可执行性通过；有参考答案则按字符重合度自动打分。
+            每个样本为「提问 +
+            参考答案（可选）」。评测时无参考答案视为可执行性通过；有参考答案则按字符重合度自动打分。
           </el-text>
         </div>
         <div class="table-toolbar">
           <div class="toolbar-left">
-            <el-input v-model="sampleKeyword" placeholder="搜索提问 / 参考答案" clearable style="width: 230px" @keyup.enter="samplePage = 1; loadSamples()" @clear="samplePage = 1; loadSamples()">
-              <template #prefix><el-icon><Search /></el-icon></template>
+            <el-input
+              v-model="sampleKeyword"
+              placeholder="搜索提问 / 参考答案"
+              clearable
+              style="width: 230px"
+              @keyup.enter="searchSamples()"
+              @clear="searchSamples()"
+            >
+              <template #prefix
+                ><el-icon><Search /></el-icon
+              ></template>
             </el-input>
-            <el-button @click="samplePage = 1; loadSamples()">查询</el-button>
+            <el-button @click="searchSamples()">查询</el-button>
           </div>
           <div class="toolbar-right">
             <el-button @click="importDialog = true">
@@ -351,7 +430,9 @@ onMounted(load)
         <el-table v-loading="sampleLoading" :data="samples" size="small">
           <el-table-column label="提问" prop="question" min-width="200" show-overflow-tooltip />
           <el-table-column label="参考答案" min-width="160" show-overflow-tooltip>
-            <template #default="{ row }"><span class="dim-text">{{ row.reference || '-' }}</span></template>
+            <template #default="{ row }"
+              ><span class="dim-text">{{ row.reference || '-' }}</span></template
+            >
           </el-table-column>
           <el-table-column label="分类" width="100">
             <template #default="{ row }">
@@ -379,38 +460,74 @@ onMounted(load)
     </el-drawer>
 
     <!-- 样本表单 -->
-    <el-dialog v-model="sampleDialog" :title="sampleEditId ? '编辑样本' : '新增样本'" width="600px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="sampleDialog"
+      :title="sampleEditId ? '编辑样本' : '新增样本'"
+      width="600px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>提问 <span class="req">*</span></label>
-          <el-input v-model="sampleForm.question" type="textarea" :rows="3" placeholder="输入需要评测的提问" maxlength="4000" />
+          <el-input
+            v-model="sampleForm.question"
+            type="textarea"
+            :rows="3"
+            placeholder="输入需要评测的提问"
+            maxlength="4000"
+          />
         </div>
         <div class="field-group">
           <label>参考答案</label>
-          <el-input v-model="sampleForm.reference" type="textarea" :rows="3" placeholder="期望的回答要点（可选，留空则只评测执行性）" maxlength="8000" />
+          <el-input
+            v-model="sampleForm.reference"
+            type="textarea"
+            :rows="3"
+            placeholder="期望的回答要点（可选，留空则只评测执行性）"
+            maxlength="8000"
+          />
         </div>
         <div class="field-group">
           <label>分类标签</label>
-          <el-input v-model="sampleForm.category" placeholder="例如：售后退款 / 物流查询（可选）" maxlength="64" />
+          <el-input
+            v-model="sampleForm.category"
+            placeholder="例如：售后退款 / 物流查询（可选）"
+            maxlength="64"
+          />
         </div>
       </div>
       <template #footer>
         <el-button @click="sampleDialog = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="sampleSaving" @click="saveSample">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="sampleSaving" @click="saveSample"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 批量导入 -->
-    <el-dialog v-model="importDialog" title="批量导入样本" width="620px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="importDialog"
+      title="批量导入样本"
+      width="620px"
+      :close-on-click-modal="false"
+    >
       <p class="import-tip">
         支持两种格式：<br />
-        ① 每行一条，提问与参考答案用 Tab 分隔：<code>请问退货政策？\t支持 7 天无理由退货</code><br />
+        ① 每行一条，提问与参考答案用 Tab 分隔：<code>请问退货政策？\t支持 7 天无理由退货</code
+        ><br />
         ② JSON 数组：<code>[{"question":"...","reference":"...","category":"..."}]</code>
       </p>
-      <el-input v-model="importText" type="textarea" :rows="10" placeholder="粘贴要导入的样本内容…" />
+      <el-input
+        v-model="importText"
+        type="textarea"
+        :rows="10"
+        placeholder="粘贴要导入的样本内容…"
+      />
       <template #footer>
         <el-button @click="importDialog = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="importing" @click="doImport">导入</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="importing" @click="doImport"
+          >导入</el-button
+        >
       </template>
     </el-dialog>
   </div>

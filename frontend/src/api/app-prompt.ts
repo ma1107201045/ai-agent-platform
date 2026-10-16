@@ -40,6 +40,8 @@ export const appPromptApi = {
   },
   /** 解析变量定义 JSON 为 name → desc 映射（供试跑表单展示说明） */
   parseVariables(variables: string) {
-    return request.post<never, Record<string, string>>('/app/prompts/parse-variables', { variables })
+    return request.post<never, Record<string, string>>('/app/prompts/parse-variables', {
+      variables
+    })
   }
 }

@@ -3,7 +3,13 @@ import type { PageResult, Skill, SkillVersion } from './types'
 
 /** 技能（AppSkill）API，与后端 AppSkillController（/api/app/skills）一一对应 */
 export const appSkillApi = {
-  page(params: { page?: number; size?: number; keyword?: string; category?: string; type?: string }) {
+  page(params: {
+    page?: number
+    size?: number
+    keyword?: string
+    category?: string
+    type?: string
+  }) {
     return request.get<never, PageResult<Skill>>('/app/skills', { params })
   },
   /** 启用技能列表（应用绑定下拉 / 编排技能节点选择） */

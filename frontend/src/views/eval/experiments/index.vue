@@ -14,7 +14,13 @@ const size = ref(10)
 const keyword = ref('')
 const datasetOptions = ref<EvalDataset[]>([])
 
-const STATUS_META: Record<string, string> = { pending: '排队中', running: '运行中', success: '已完成', failed: '失败', stopped: '已停止' }
+const STATUS_META: Record<string, string> = {
+  pending: '排队中',
+  running: '运行中',
+  success: '已完成',
+  failed: '失败',
+  stopped: '已停止'
+}
 const pct = (v?: number) => (v == null ? '-' : `${(v * 100).toFixed(1)}%`)
 const fmt = (s?: string) => {
   if (!s) return '-'
@@ -38,7 +44,11 @@ function datasetName(id?: number) {
 async function load() {
   loading.value = true
   try {
-    const data = await evalApi.experimentPage({ page: page.value, size: size.value, keyword: keyword.value || undefined })
+    const data = await evalApi.experimentPage({
+      page: page.value,
+      size: size.value,
+      keyword: keyword.value || undefined
+    })
     list.value = data.records
     total.value = data.total
   } finally {
@@ -76,7 +86,11 @@ async function save() {
   if (!form.datasetId) return ElMessage.warning('请选择共用数据集')
   saving.value = true
   try {
-    const payload = { name: form.name.trim(), description: form.description.trim() || undefined, datasetId: form.datasetId }
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      datasetId: form.datasetId
+    }
     if (editId.value) {
       await evalApi.updateExperiment(editId.value, payload)
       ElMessage.success('已保存')
@@ -94,7 +108,11 @@ async function save() {
 }
 async function remove(row: EvalExperiment) {
   try {
-    await ElMessageBox.confirm(`确认删除实验「${row.name}」？实验下已有评测任务时不可删除。`, '删除确认', { type: 'error' })
+    await ElMessageBox.confirm(
+      `确认删除实验「${row.name}」？实验下已有评测任务时不可删除。`,
+      '删除确认',
+      { type: 'error' }
+    )
     await evalApi.removeExperiment(row.id)
     ElMessage.success('已删除')
     load()
@@ -128,15 +146,26 @@ const appOptions = ref<AppAgent[]>([])
 const modelOptions = ref<ChatModelInfo[]>([])
 const addVisible = ref(false)
 const adding = ref(false)
-const runForm = reactive({ name: '', mode: 'app' as 'app' | 'model', appId: undefined as number | undefined, modelId: undefined as number | undefined })
+const runForm = reactive({
+  name: '',
+  mode: 'app' as 'app' | 'model',
+  appId: undefined as number | undefined,
+  modelId: undefined as number | undefined
+})
 function openAddRun() {
   runForm.name = ''
   runForm.mode = 'app'
   runForm.appId = undefined
   runForm.modelId = undefined
   addVisible.value = true
-  appAgentApi.page({ page: 1, size: 500 }).then((d) => (appOptions.value = d.records.filter((a) => a.status === 1))).catch(() => {})
-  modelApi.chatModels().then((d) => (modelOptions.value = d)).catch(() => {})
+  appAgentApi
+    .page({ page: 1, size: 500 })
+    .then((d) => (appOptions.value = d.records.filter((a) => a.status === 1)))
+    .catch(() => {})
+  modelApi
+    .chatModels()
+    .then((d) => (modelOptions.value = d))
+    .catch(() => {})
 }
 async function addRun() {
   if (!activeExp.value) return
@@ -187,8 +216,17 @@ onMounted(() => {
 
     <el-card shadow="never" class="exp-card">
       <div class="table-toolbar">
-        <el-input v-model="keyword" placeholder="搜索实验名称 / 描述" clearable style="width: 240px" @keyup.enter="search" @clear="search">
-          <template #prefix><el-icon><Search /></el-icon></template>
+        <el-input
+          v-model="keyword"
+          placeholder="搜索实验名称 / 描述"
+          clearable
+          style="width: 240px"
+          @keyup.enter="search"
+          @clear="search"
+        >
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
       </div>
       <el-table v-loading="loading" :data="list">
@@ -204,12 +242,16 @@ onMounted(() => {
           <template #default="{ row }">{{ datasetName(row.datasetId) }}</template>
         </el-table-column>
         <el-table-column label="创建时间" width="150">
-          <template #default="{ row }"><span class="dim-text">{{ fmt(row.createTime) }}</span></template>
+          <template #default="{ row }"
+            ><span class="dim-text">{{ fmt(row.createTime) }}</span></template
+          >
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
             <div class="row-links">
-              <el-button link type="primary" size="small" @click="openDetail(row)">查看对比</el-button>
+              <el-button link type="primary" size="small" @click="openDetail(row)"
+                >查看对比</el-button
+              >
               <el-button link size="small" @click="openEdit(row)">编辑</el-button>
               <el-button link type="danger" size="small" @click="remove(row)">删除</el-button>
             </div>
@@ -227,7 +269,12 @@ onMounted(() => {
     </el-card>
 
     <!-- 实验表单 -->
-    <el-dialog v-model="formVisible" :title="editId ? '编辑实验' : '新建对比实验'" width="560px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="formVisible"
+      :title="editId ? '编辑实验' : '新建对比实验'"
+      width="560px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>实验名称 <span class="req">*</span></label>
@@ -235,24 +282,49 @@ onMounted(() => {
         </div>
         <div class="field-group">
           <label>共用数据集 <span class="req">*</span></label>
-          <el-select v-model="form.datasetId" placeholder="所有组共用同一评测数据集（需已启用且有样本）" style="width: 100%">
-            <el-option v-for="d in datasetOptions" :key="d.id" :label="`${d.name}（${d.sampleCount} 样本）`" :value="d.id" />
+          <el-select
+            v-model="form.datasetId"
+            placeholder="所有组共用同一评测数据集（需已启用且有样本）"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="d in datasetOptions"
+              :key="d.id"
+              :label="`${d.name}（${d.sampleCount} 样本）`"
+              :value="d.id"
+            />
           </el-select>
         </div>
         <div class="field-group">
           <label>描述</label>
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="说明要验证的假设，例如：新 Prompt 是否显著提升售后退款类问题正确率" maxlength="512" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="3"
+            placeholder="说明要验证的假设，例如：新 Prompt 是否显著提升售后退款类问题正确率"
+            maxlength="512"
+          />
         </div>
-        <el-alert type="info" :closable="false" description="创建后进入「查看对比」，为每个版本 / 模型添加一组评测，组间结果将并列展示对比。" />
+        <el-alert
+          type="info"
+          :closable="false"
+          description="创建后进入「查看对比」，为每个版本 / 模型添加一组评测，组间结果将并列展示对比。"
+        />
       </div>
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 实验对比详情 -->
-    <el-drawer v-model="detailVisible" :title="activeExp ? `对比实验 · ${activeExp.name}` : '对比实验'" size="860px">
+    <el-drawer
+      v-model="detailVisible"
+      :title="activeExp ? `对比实验 · ${activeExp.name}` : '对比实验'"
+      size="860px"
+    >
       <template v-if="activeExp">
         <div class="exp-meta">
           <div class="exp-meta-item">
@@ -280,36 +352,87 @@ onMounted(() => {
         <div v-loading="runsLoading" class="cmp-list">
           <div v-for="row in expRuns" :key="row.id" class="cmp-row">
             <span class="cmp-col col-winner">
-              <el-tag v-if="row.passRate != null && row.passRate >= 0.6 && row.status === 'success'" size="small" type="success" effect="plain">优</el-tag>
+              <el-tag
+                v-if="row.passRate != null && row.passRate >= 0.6 && row.status === 'success'"
+                size="small"
+                type="success"
+                effect="plain"
+                >优</el-tag
+              >
               <span v-else>-</span>
             </span>
             <span class="cmp-col col-name">{{ targetText(row) }}</span>
-            <span class="cmp-col col-rate rate-text" :class="row.passRate != null ? (row.passRate >= 0.6 ? 'good' : row.passRate >= 0.3 ? 'mid' : 'bad') : ''">
+            <span
+              class="cmp-col col-rate rate-text"
+              :class="
+                row.passRate != null
+                  ? row.passRate >= 0.6
+                    ? 'good'
+                    : row.passRate >= 0.3
+                      ? 'mid'
+                      : 'bad'
+                  : ''
+              "
+            >
               {{ pct(row.passRate) }}
             </span>
             <span class="cmp-col col-score">{{ pct(row.avgScore) }}</span>
-            <span class="cmp-col col-avg">{{ row.reportJson ? (JSON.parse(row.reportJson)?.avgLatencyMs ?? '-') : '-' }}ms</span>
+            <span class="cmp-col col-avg"
+              >{{
+                row.reportJson ? (JSON.parse(row.reportJson)?.avgLatencyMs ?? '-') : '-'
+              }}ms</span
+            >
             <span class="cmp-col col-status">
-              <el-tag size="small" :type="row.status === 'success' ? 'success' : row.status === 'running' || row.status === 'pending' ? 'primary' : row.status === 'failed' ? 'danger' : 'warning'" effect="light">
+              <el-tag
+                size="small"
+                :type="
+                  row.status === 'success'
+                    ? 'success'
+                    : row.status === 'running' || row.status === 'pending'
+                      ? 'primary'
+                      : row.status === 'failed'
+                        ? 'danger'
+                        : 'warning'
+                "
+                effect="light"
+              >
                 {{ STATUS_META[row.status] }}
               </el-tag>
             </span>
-            <span class="cmp-col col-time dim-text">{{ fmt(row.finishedAt || row.createTime) }}</span>
+            <span class="cmp-col col-time dim-text">{{
+              fmt(row.finishedAt || row.createTime)
+            }}</span>
           </div>
-          <el-empty v-if="!expRuns.length && !runsLoading" description="还没有评测组，点击右上角「添加入组评测」开始对比" :image-size="80" />
+          <el-empty
+            v-if="!expRuns.length && !runsLoading"
+            description="还没有评测组，点击右上角「添加入组评测」开始对比"
+            :image-size="80"
+          />
         </div>
         <div class="exp-tip">
-          <el-text size="small" type="info">评分口径：无参考答案的样本按可执行性计通过；有参考答案按字符重合度打分（≥45% 计通过）。</el-text>
+          <el-text size="small" type="info"
+            >评分口径：无参考答案的样本按可执行性计通过；有参考答案按字符重合度打分（≥45%
+            计通过）。</el-text
+          >
         </div>
       </template>
     </el-drawer>
 
     <!-- 入组评测 -->
-    <el-dialog v-model="addVisible" title="添加一组对比评测" width="540px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="addVisible"
+      title="添加一组对比评测"
+      width="540px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>本组名称 <span class="req">*</span></label>
-          <el-input v-model="runForm.name" placeholder="例如：v2.3 线上版 / GPT-4o 基线" maxlength="128" />
+          <el-input
+            v-model="runForm.name"
+            placeholder="例如：v2.3 线上版 / GPT-4o 基线"
+            maxlength="128"
+          />
         </div>
         <div class="field-group">
           <label>被测对象</label>
@@ -320,13 +443,27 @@ onMounted(() => {
         </div>
         <div class="field-group">
           <label>被测对象 <span class="req">*</span></label>
-          <el-select v-if="runForm.mode === 'app'" v-model="runForm.appId" placeholder="选择已发布应用" filterable style="width: 100%">
+          <el-select
+            v-if="runForm.mode === 'app'"
+            v-model="runForm.appId"
+            placeholder="选择已发布应用"
+            filterable
+            style="width: 100%"
+          >
             <el-option v-for="a in appOptions" :key="a.id" :label="a.name" :value="a.id">
               <span>{{ a.name }}</span>
-              <span style="float: right; font-size: 12px; color: var(--text-tertiary)">{{ a.type }}</span>
+              <span style="float: right; font-size: 12px; color: var(--text-tertiary)">{{
+                a.type
+              }}</span>
             </el-option>
           </el-select>
-          <el-select v-else v-model="runForm.modelId" placeholder="选择对话模型" filterable style="width: 100%">
+          <el-select
+            v-else
+            v-model="runForm.modelId"
+            placeholder="选择对话模型"
+            filterable
+            style="width: 100%"
+          >
             <el-option
               v-for="m in modelOptions"
               :key="m.id"
@@ -338,7 +475,9 @@ onMounted(() => {
       </div>
       <template #footer>
         <el-button @click="addVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="adding" @click="addRun">运行本组评测</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="adding" @click="addRun"
+          >运行本组评测</el-button
+        >
       </template>
     </el-dialog>
   </div>

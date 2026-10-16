@@ -7,8 +7,15 @@ import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent } from '@/api/types'
 
 // ---------------- 常量 ----------------
-const ROUTINGS: Record<string, { label: string; desc: string; tag: 'primary' | 'warning' | 'success' }> = {
-  first_match: { label: '意图匹配', desc: '按关键词把任务分给最合适的成员，未命中走兜底', tag: 'primary' },
+const ROUTINGS: Record<
+  string,
+  { label: string; desc: string; tag: 'primary' | 'warning' | 'success' }
+> = {
+  first_match: {
+    label: '意图匹配',
+    desc: '按关键词把任务分给最合适的成员，未命中走兜底',
+    tag: 'primary'
+  },
   round_robin: { label: '轮询', desc: '按启用顺序轮流分配任务', tag: 'warning' },
   all: { label: '并行汇合', desc: '全部成员同时执行并汇总结果', tag: 'success' }
 }
@@ -39,7 +46,11 @@ const keyword = ref('')
 async function load() {
   loading.value = true
   try {
-    const data = await agentTeamApi.page({ page: page.value, size: size.value, keyword: keyword.value.trim() || undefined })
+    const data = await agentTeamApi.page({
+      page: page.value,
+      size: size.value,
+      keyword: keyword.value.trim() || undefined
+    })
     rows.value = data.records
     total.value = data.total
   } finally {
@@ -111,7 +122,10 @@ async function save() {
 }
 
 function remove(row: AgentTeam) {
-  ElMessageBox.confirm(`删除团队「${row.name}」及其成员与运行记录？`, '删除确认', { type: 'error', confirmButtonText: '删除' })
+  ElMessageBox.confirm(`删除团队「${row.name}」及其成员与运行记录？`, '删除确认', {
+    type: 'error',
+    confirmButtonText: '删除'
+  })
     .then(async () => {
       await agentTeamApi.remove(row.id)
       ElMessage.success('已删除')
@@ -151,7 +165,13 @@ async function openMembers(row: AgentTeam) {
   }
 }
 function addMember() {
-  memberRows.value.push({ name: '', appId: 0, keywords: '', priority: memberRows.value.length + 1, enabled: 1 })
+  memberRows.value.push({
+    name: '',
+    appId: 0,
+    keywords: '',
+    priority: memberRows.value.length + 1,
+    enabled: 1
+  })
 }
 function removeMember(idx: number) {
   memberRows.value.splice(idx, 1)
@@ -219,7 +239,10 @@ async function loadRuns() {
   if (!runTeamForList.value) return
   runsLoading.value = true
   try {
-    const data = await agentTeamApi.runs(runTeamForList.value.id, { page: runsPage.value, size: 20 })
+    const data = await agentTeamApi.runs(runTeamForList.value.id, {
+      page: runsPage.value,
+      size: 20
+    })
     runs.value = data.records
     runsTotal.value = data.total
   } finally {
@@ -262,10 +285,14 @@ onMounted(() => {
           @keyup.enter="onSearch"
           @clear="onSearch"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-tooltip content="刷新">
-          <el-button circle @click="load"><el-icon><Refresh /></el-icon></el-button>
+          <el-button circle @click="load"
+            ><el-icon><Refresh /></el-icon
+          ></el-button>
         </el-tooltip>
       </div>
 
@@ -278,20 +305,31 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="路由策略" width="200">
           <template #default="{ row }">
-            <el-tag :type="routingOf(row.routing).tag" size="small" effect="light">{{ routingOf(row.routing).label }}</el-tag>
+            <el-tag :type="routingOf(row.routing).tag" size="small" effect="light">{{
+              routingOf(row.routing).label
+            }}</el-tag>
             <div class="muted" style="margin-top: 3px">{{ routingOf(row.routing).desc }}</div>
           </template>
         </el-table-column>
         <el-table-column label="运行次数" width="100" align="center">
-          <template #default="{ row }"><span class="mono">{{ row.runCount ?? 0 }}</span></template>
+          <template #default="{ row }"
+            ><span class="mono">{{ row.runCount ?? 0 }}</span></template
+          >
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="toggleStatus(row)" />
+            <el-switch
+              v-model="row.status"
+              :active-value="1"
+              :inactive-value="0"
+              @change="toggleStatus(row)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="更新时间" width="160">
-          <template #default="{ row }"><span class="muted">{{ fmtTime(row.updateTime) }}</span></template>
+          <template #default="{ row }"
+            ><span class="muted">{{ fmtTime(row.updateTime) }}</span></template
+          >
         </el-table-column>
         <el-table-column label="操作" width="250" align="right" fixed="right">
           <template #default="{ row }">
@@ -303,31 +341,64 @@ onMounted(() => {
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination class="pager" layout="total, prev, pager, next" :total="total" :page-size="size" v-model:current-page="page" @current-change="load" />
+      <el-pagination
+        class="pager"
+        layout="total, prev, pager, next"
+        :total="total"
+        :page-size="size"
+        v-model:current-page="page"
+        @current-change="load"
+      />
     </el-card>
 
     <!-- 团队编辑 -->
-    <el-dialog v-model="editVisible" :title="editId ? '编辑团队' : '新建团队'" width="520px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="editVisible"
+      :title="editId ? '编辑团队' : '新建团队'"
+      width="520px"
+      :close-on-click-modal="false"
+    >
       <el-form label-width="86px">
         <el-form-item label="团队名称" required>
-          <el-input v-model="form.name" maxlength="60" show-word-limit placeholder="如 客服应急响应团队" />
+          <el-input
+            v-model="form.name"
+            maxlength="60"
+            show-word-limit
+            placeholder="如 客服应急响应团队"
+          />
         </el-form-item>
         <el-form-item label="团队描述">
-          <el-input v-model="form.description" type="textarea" :rows="2" maxlength="300" placeholder="团队定位与能力说明（可选）" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            maxlength="300"
+            placeholder="团队定位与能力说明（可选）"
+          />
         </el-form-item>
         <el-form-item label="路由策略" required>
           <el-radio-group v-model="form.routing">
-            <el-radio-button v-for="k in ROUTING_KEYS" :key="k" :value="k">{{ ROUTINGS[k].label }}</el-radio-button>
+            <el-radio-button v-for="k in ROUTING_KEYS" :key="k" :value="k">{{
+              ROUTINGS[k].label
+            }}</el-radio-button>
           </el-radio-group>
           <div class="form-tip">{{ routingOf(form.routing).desc }}</div>
         </el-form-item>
         <el-form-item label="状态">
-          <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+          <el-switch
+            v-model="form.status"
+            :active-value="1"
+            :inactive-value="0"
+            active-text="启用"
+            inactive-text="停用"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
@@ -335,20 +406,41 @@ onMounted(() => {
     <el-drawer v-model="memberVisible" :title="`成员编排 · ${team?.name ?? ''}`" size="860px">
       <div class="drawer-tip">
         <el-icon><InfoFilled /></el-icon>
-        <span>路由：{{ routingOf(team?.routing).label }} — {{ routingOf(team?.routing).desc }}。成员需绑定<b>已发布</b>应用；意图匹配下填写关键词可将任务定向分配给该成员。</span>
+        <span
+          >路由：{{ routingOf(team?.routing).label }} —
+          {{
+            routingOf(team?.routing).desc
+          }}。成员需绑定<b>已发布</b>应用；意图匹配下填写关键词可将任务定向分配给该成员。</span
+        >
       </div>
       <div v-loading="memberLoading">
         <el-table :data="memberRows" size="small">
           <el-table-column label="成员" width="180">
             <template #default="{ row }">
               <el-input v-model="row.name" size="small" placeholder="角色名" />
-              <el-input v-model="row.description" size="small" style="margin-top: 4px" placeholder="职责描述（可选）" />
+              <el-input
+                v-model="row.description"
+                size="small"
+                style="margin-top: 4px"
+                placeholder="职责描述（可选）"
+              />
             </template>
           </el-table-column>
           <el-table-column label="绑定应用" width="200">
             <template #default="{ row }">
-              <el-select v-model="row.appId" size="small" style="width: 100%" filterable placeholder="选择已发布应用">
-                <el-option v-for="a in appOptions" :key="a.id" :label="`${a.name}（${a.type}）`" :value="a.id" />
+              <el-select
+                v-model="row.appId"
+                size="small"
+                style="width: 100%"
+                filterable
+                placeholder="选择已发布应用"
+              >
+                <el-option
+                  v-for="a in appOptions"
+                  :key="a.id"
+                  :label="`${a.name}（${a.type}）`"
+                  :value="a.id"
+                />
               </el-select>
             </template>
           </el-table-column>
@@ -359,7 +451,14 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="优先级" width="70" align="center">
             <template #default="{ row }">
-              <el-input-number v-model="row.priority" :min="1" :max="99" size="small" controls-position="right" style="width: 100%" />
+              <el-input-number
+                v-model="row.priority"
+                :min="1"
+                :max="99"
+                size="small"
+                controls-position="right"
+                style="width: 100%"
+              />
             </template>
           </el-table-column>
           <el-table-column label="启用" width="60" align="center">
@@ -369,7 +468,9 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="" width="50" align="center">
             <template #default="{ $index }">
-              <el-button link type="danger" @click="removeMember($index)"><el-icon><Delete /></el-icon></el-button>
+              <el-button link type="danger" @click="removeMember($index)"
+                ><el-icon><Delete /></el-icon
+              ></el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -380,36 +481,71 @@ onMounted(() => {
       <template #footer>
         <span class="form-tip" style="margin-right: auto">共 {{ memberRows.length }} 名成员</span>
         <el-button @click="memberVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="memberLoading" @click="saveMembers">保存成员</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="memberLoading" @click="saveMembers"
+          >保存成员</el-button
+        >
       </template>
     </el-drawer>
 
     <!-- 测试运行 -->
-    <el-dialog v-model="runVisible" :title="`团队运行 · ${runTeam?.name ?? ''}`" width="680px" :close-on-click-modal="false">
-      <el-input v-model="runInput" type="textarea" :rows="3" placeholder="输入任务/问题，将按当前路由策略分发给成员应用执行" />
-      <el-button type="primary" class="btn-gradient" style="margin-top: 10px" :loading="running" @click="doRun">
+    <el-dialog
+      v-model="runVisible"
+      :title="`团队运行 · ${runTeam?.name ?? ''}`"
+      width="680px"
+      :close-on-click-modal="false"
+    >
+      <el-input
+        v-model="runInput"
+        type="textarea"
+        :rows="3"
+        placeholder="输入任务/问题，将按当前路由策略分发给成员应用执行"
+      />
+      <el-button
+        type="primary"
+        class="btn-gradient"
+        style="margin-top: 10px"
+        :loading="running"
+        @click="doRun"
+      >
         {{ running ? '执行中…' : '执行' }}
       </el-button>
       <template v-if="runResult">
         <div class="run-result" :class="runResult.status">
           <div class="rr-head">
-            <el-tag :type="runResult.status === 'success' ? 'success' : 'danger'" size="small" effect="light">
+            <el-tag
+              :type="runResult.status === 'success' ? 'success' : 'danger'"
+              size="small"
+              effect="light"
+            >
               {{ runResult.status === 'success' ? '运行成功' : '运行失败' }}
             </el-tag>
-            <span class="muted">路由成员：{{ runResult.routedMember || '-' }} · 耗时 {{ runResult.costMs ?? 0 }}ms</span>
+            <span class="muted"
+              >路由成员：{{ runResult.routedMember || '-' }} · 耗时
+              {{ runResult.costMs ?? 0 }}ms</span
+            >
           </div>
-          <div v-if="runResult.answer" class="rr-answer"><pre class="pre">{{ runResult.answer }}</pre></div>
-          <div v-if="runResult.error" class="rr-error"><pre class="pre">{{ runResult.error }}</pre></div>
+          <div v-if="runResult.answer" class="rr-answer">
+            <pre class="pre">{{ runResult.answer }}</pre>
+          </div>
+          <div v-if="runResult.error" class="rr-error">
+            <pre class="pre">{{ runResult.error }}</pre>
+          </div>
           <div v-if="parseTrace(runResult).length" class="rr-trace">
             <div v-for="(s, i) in parseTrace(runResult)" :key="s.memberId" class="step">
               <div class="step-head">
                 <span class="step-idx">{{ i + 1 }}</span>
                 <b>{{ s.memberName }}</b>
-                <el-tag :type="s.status === 'success' ? 'success' : 'danger'" size="small">{{ s.status === 'success' ? '成功' : '失败' }}</el-tag>
+                <el-tag :type="s.status === 'success' ? 'success' : 'danger'" size="small">{{
+                  s.status === 'success' ? '成功' : '失败'
+                }}</el-tag>
                 <span class="muted">耗时 {{ s.costMs }}ms</span>
               </div>
-              <div v-if="s.answer" class="step-body"><pre class="pre">{{ s.answer }}</pre></div>
-              <div v-if="s.error" class="step-body error"><pre class="pre">{{ s.error }}</pre></div>
+              <div v-if="s.answer" class="step-body">
+                <pre class="pre">{{ s.answer }}</pre>
+              </div>
+              <div v-if="s.error" class="step-body error">
+                <pre class="pre">{{ s.error }}</pre>
+              </div>
             </div>
           </div>
         </div>
@@ -417,12 +553,20 @@ onMounted(() => {
     </el-dialog>
 
     <!-- 运行记录 -->
-    <el-dialog v-model="runsVisible" :title="`运行记录 · ${runTeamForList?.name ?? ''}`" width="760px">
+    <el-dialog
+      v-model="runsVisible"
+      :title="`运行记录 · ${runTeamForList?.name ?? ''}`"
+      width="760px"
+    >
       <div v-loading="runsLoading">
         <div v-if="runs.length" class="run-list">
           <div v-for="r in runs" :key="r.id" class="run-item">
             <div class="ri-head">
-              <el-tag :type="r.status === 'success' ? 'success' : 'danger'" size="small" effect="light">
+              <el-tag
+                :type="r.status === 'success' ? 'success' : 'danger'"
+                size="small"
+                effect="light"
+              >
                 {{ r.status === 'success' ? '成功' : '失败' }}
               </el-tag>
               <b class="ri-title">{{ r.input }}</b>

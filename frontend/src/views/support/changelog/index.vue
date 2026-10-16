@@ -78,11 +78,12 @@ const versions = ref<Version[]>([
   }
 ])
 
-const typeMeta: Record<Version['type'], { label: string; tag: 'primary' | 'success' | 'warning' }> = {
-  feature: { label: '新功能', tag: 'primary' },
-  improve: { label: '优化', tag: 'success' },
-  fix: { label: '修复', tag: 'warning' }
-}
+const typeMeta: Record<Version['type'], { label: string; tag: 'primary' | 'success' | 'warning' }> =
+  {
+    feature: { label: '新功能', tag: 'primary' },
+    improve: { label: '优化', tag: 'success' },
+    fix: { label: '修复', tag: 'warning' }
+  }
 </script>
 
 <template>
@@ -104,7 +105,9 @@ const typeMeta: Record<Version['type'], { label: string; tag: 'primary' | 'succe
         <div class="tl-card hover-card">
           <div class="tl-top">
             <span class="tl-version">{{ v.version }}</span>
-            <el-tag size="small" :type="typeMeta[v.type].tag" effect="light">{{ typeMeta[v.type].label }}</el-tag>
+            <el-tag size="small" :type="typeMeta[v.type].tag" effect="light">{{
+              typeMeta[v.type].label
+            }}</el-tag>
             <span class="tl-date">{{ v.date }}</span>
           </div>
           <h4 class="tl-title">{{ v.title }}</h4>
@@ -115,7 +118,9 @@ const typeMeta: Record<Version['type'], { label: string; tag: 'primary' | 'succe
       </div>
     </div>
 
-    <p class="chg-foot">以上版本说明面向平台内部版本演进整理，更多能力与规划中的功能可参考侧边栏对应模块。</p>
+    <p class="chg-foot">
+      以上版本说明面向平台内部版本演进整理，更多能力与规划中的功能可参考侧边栏对应模块。
+    </p>
   </div>
 </template>
 

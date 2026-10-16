@@ -1,4 +1,5 @@
 import request from './request'
+import { streamEvents } from '@/utils/stream'
 import type {
   AgentResult,
   AppAgent,
@@ -83,49 +84,31 @@ export const appAgentApi = {
     },
     signal?: AbortSignal
   ): Promise<void> {
-    const token = localStorage.getItem('agent_platform_token') || ''
-    const resp = await fetch(`/api/app/agents/${id}/run-stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ messages }),
-      signal
-    })
-    if (!resp.ok || !resp.body) {
-      const err = await resp.text().catch(() => '')
-      handlers.onError?.(err || `请求失败(${resp.status})`)
-      return
+    const dispatch = (frame: RunStreamFrame) => {
+      const data = frame.data as Record<string, unknown> | null
+      if (frame.type === 'run-started') handlers.onRunStarted?.(String(data?.runId || ''))
+      else if (frame.type === 'node-started') handlers.onNodeStarted?.(String(data?.nodeId || ''))
+      else if (frame.type === 'node-finished') handlers.onNodeFinished?.(frame.data as TraceItem)
+      else if (frame.type === 'done') handlers.onDone?.(frame.data as RunResult)
+      else if (frame.type === 'run-error')
+        handlers.onError?.((data?.message as string) || '工作流运行失败')
     }
-    const reader = resp.body.getReader()
-    const decoder = new TextDecoder('utf-8')
-    let buffer = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const events = buffer.split('\n\n')
-      buffer = events.pop() || ''
-      for (const event of events) {
-        const dataLine = event.split('\n').find((l) => l.startsWith('data:'))
-        if (!dataLine) continue
-        const raw = dataLine.slice(5).trim()
-        if (!raw) continue
-        let frame: RunStreamFrame
-        try {
-          frame = JSON.parse(raw) as RunStreamFrame
-        } catch {
-          continue
+    try {
+      await streamEvents(
+        `/api/app/agents/${id}/run-stream`,
+        { body: { messages }, signal },
+        (raw) => {
+          try {
+            dispatch(JSON.parse(raw) as RunStreamFrame)
+          } catch {
+            // 忽略无法解析的数据帧
+          }
         }
-        const data = frame.data as Record<string, unknown> | null
-        if (frame.type === 'run-started') handlers.onRunStarted?.(String(data?.runId || ''))
-        else if (frame.type === 'node-started') handlers.onNodeStarted?.(String(data?.nodeId || ''))
-        else if (frame.type === 'node-finished') handlers.onNodeFinished?.(frame.data as TraceItem)
-        else if (frame.type === 'done') handlers.onDone?.(frame.data as RunResult)
-        else if (frame.type === 'run-error')
-          handlers.onError?.((data?.message as string) || '工作流运行失败')
-      }
+      )
+    } catch (e) {
+      // 主动中断（AbortError）不算错误
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      handlers.onError?.(e instanceof Error ? e.message : '工作流运行失败')
     }
   },
   /** 取消一次运行中的工作流 */
@@ -135,7 +118,12 @@ export const appAgentApi = {
   /** Agent 自主对话（非流式）：规划-工具调用-观察循环 */
   agentChat(
     appId: number,
-    data: { modelId: number; systemPrompt?: string; messages: ChatMessage[]; maxIterations?: number }
+    data: {
+      modelId: number
+      systemPrompt?: string
+      messages: ChatMessage[]
+      maxIterations?: number
+    }
   ) {
     return request.post<never, AgentResult>(`/app/agents/${appId}/agent/chat`, data)
   }

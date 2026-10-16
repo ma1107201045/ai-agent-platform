@@ -7,7 +7,7 @@ import {
   Files,
   Lightning,
   PriceTag,
-  Refresh,
+  Refresh
 } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
 import { usageApi } from '@/api/chat-stat.ts'
@@ -35,7 +35,7 @@ const shortcuts = [
   { text: '今天', value: () => [today(), today()] },
   { text: '近 7 天', value: () => [daysAgo(6), today()] },
   { text: '近 30 天', value: () => [daysAgo(29), today()] },
-  { text: '近 90 天', value: () => [daysAgo(89), today()] },
+  { text: '近 90 天', value: () => [daysAgo(89), today()] }
 ]
 
 const appOptions = ref<{ id: number; name: string }[]>([])
@@ -53,7 +53,7 @@ const summary = ref({
   endDate: '',
   trend: [] as UsageTrendPoint[],
   apps: [] as UsageAppRow[],
-  models: [] as UsageModelRow[],
+  models: [] as UsageModelRow[]
 })
 
 async function load() {
@@ -62,7 +62,7 @@ async function load() {
     const res = await usageApi.summary({
       appId: appId.value,
       startDate: range.value[0],
-      endDate: range.value[1],
+      endDate: range.value[1]
     })
     summary.value = res
   } finally {
@@ -99,16 +99,52 @@ function fmtMoney(v: number) {
 }
 
 const rangeText = computed(
-  () => `${summary.value.startDate || range.value[0]} ~ ${summary.value.endDate || range.value[1]}`,
+  () => `${summary.value.startDate || range.value[0]} ~ ${summary.value.endDate || range.value[1]}`
 )
 
 const metrics = computed(() => [
-  { label: '会话数', display: fmtNum(summary.value.conversations), note: '仅控制台会话去重', icon: ChatDotRound, color: '#8b5cf6' },
-  { label: '模型调用', display: fmtNum(summary.value.calls), note: `${rangeText.value} 期间`, icon: Lightning, color: '#0ea5e9' },
-  { label: 'Token 总量', display: fmtBig(summary.value.totalTokens), note: `输入 ${fmtBig(summary.value.inputTokens)} / 输出 ${fmtBig(summary.value.outputTokens)}`, icon: Coin, color: '#f59e0b' },
-  { label: '输入 Token', display: fmtBig(summary.value.inputTokens), note: 'prompt_tokens', icon: Connection, color: '#3b82f6' },
-  { label: '输出 Token', display: fmtBig(summary.value.outputTokens), note: 'completion_tokens', icon: Files, color: '#f97316' },
-  { label: '估算成本', display: `¥ ${fmtMoney(summary.value.cost)}`, note: '按模型官方单价估算', icon: PriceTag, color: '#10b981' },
+  {
+    label: '会话数',
+    display: fmtNum(summary.value.conversations),
+    note: '仅控制台会话去重',
+    icon: ChatDotRound,
+    color: '#8b5cf6'
+  },
+  {
+    label: '模型调用',
+    display: fmtNum(summary.value.calls),
+    note: `${rangeText.value} 期间`,
+    icon: Lightning,
+    color: '#0ea5e9'
+  },
+  {
+    label: 'Token 总量',
+    display: fmtBig(summary.value.totalTokens),
+    note: `输入 ${fmtBig(summary.value.inputTokens)} / 输出 ${fmtBig(summary.value.outputTokens)}`,
+    icon: Coin,
+    color: '#f59e0b'
+  },
+  {
+    label: '输入 Token',
+    display: fmtBig(summary.value.inputTokens),
+    note: 'prompt_tokens',
+    icon: Connection,
+    color: '#3b82f6'
+  },
+  {
+    label: '输出 Token',
+    display: fmtBig(summary.value.outputTokens),
+    note: 'completion_tokens',
+    icon: Files,
+    color: '#f97316'
+  },
+  {
+    label: '估算成本',
+    display: `¥ ${fmtMoney(summary.value.cost)}`,
+    note: '按模型官方单价估算',
+    icon: PriceTag,
+    color: '#10b981'
+  }
 ])
 
 // ---------- 趋势图 ----------
@@ -138,7 +174,7 @@ function buildChart(values: UsageTrendPoint[], key: 'totalTokens' | 'calls'): Ch
   const points = list.map((p, i) => ({
     ...p,
     x: pad.l + (n === 1 ? iw / 2 : i * step),
-    y: pad.t + ih - (p.v / max) * ih,
+    y: pad.t + ih - (p.v / max) * ih
   }))
   const line = points.map((p) => `${p.x},${p.y}`).join(' ')
   const first = points[0]
@@ -147,16 +183,32 @@ function buildChart(values: UsageTrendPoint[], key: 'totalTokens' | 'calls'): Ch
   return { points, line, area, max }
 }
 
-const chartDefs = computed<{ title: string; key: 'totalTokens' | 'calls'; color: string; grad: string; total: string }[]>(() => [
-  { title: 'Token 消耗趋势', key: 'totalTokens', color: '#5b6cff', grad: 'gradUsageToken', total: fmtBig(summary.value.totalTokens) },
-  { title: '模型调用趋势', key: 'calls', color: '#10b981', grad: 'gradUsageCalls', total: fmtNum(summary.value.calls) },
+const chartDefs = computed<
+  { title: string; key: 'totalTokens' | 'calls'; color: string; grad: string; total: string }[]
+>(() => [
+  {
+    title: 'Token 消耗趋势',
+    key: 'totalTokens',
+    color: '#5b6cff',
+    grad: 'gradUsageToken',
+    total: fmtBig(summary.value.totalTokens)
+  },
+  {
+    title: '模型调用趋势',
+    key: 'calls',
+    color: '#10b981',
+    grad: 'gradUsageCalls',
+    total: fmtNum(summary.value.calls)
+  }
 ])
 
 const chartDataOf = (key: 'totalTokens' | 'calls') => buildChart(summary.value.trend, key)
 
 // ---------- 排行 ----------
 const maxAppTokens = computed(() => Math.max(1, ...summary.value.apps.map((a) => a.totalTokens)))
-const maxModelTokens = computed(() => Math.max(1, ...summary.value.models.map((m) => m.totalTokens)))
+const maxModelTokens = computed(() =>
+  Math.max(1, ...summary.value.models.map((m) => m.totalTokens))
+)
 const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1) : 0)
 </script>
 
@@ -165,7 +217,9 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
     <div class="page-header">
       <div>
         <h2>用量统计</h2>
-        <p class="page-sub">按应用 / 模型统计调用次数与 Token 消耗，成本按模型官方单价估算，掌控运行成本</p>
+        <p class="page-sub">
+          按应用 / 模型统计调用次数与 Token 消耗，成本按模型官方单价估算，掌控运行成本
+        </p>
       </div>
     </div>
 
@@ -187,7 +241,13 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
         </div>
         <div class="filter-item">
           <span class="filter-label">应用</span>
-          <el-select v-model="appId" placeholder="全部应用" clearable filterable style="width: 200px">
+          <el-select
+            v-model="appId"
+            placeholder="全部应用"
+            clearable
+            filterable
+            style="width: 200px"
+          >
             <el-option v-for="a in appOptions" :key="a.id" :label="a.name" :value="a.id" />
           </el-select>
         </div>
@@ -238,7 +298,13 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
             <template v-for="(p, i) in chartDataOf(c.key).points" :key="i">
               <title>{{ p.date }}：{{ p.v.toLocaleString('zh-CN') }}</title>
               <rect :x="p.x - 4" :y="0" width="8" height="210" fill="transparent" />
-              <circle v-if="chartDataOf(c.key).points.length <= 60" :cx="p.x" :cy="p.y" r="2.5" :fill="c.color" />
+              <circle
+                v-if="chartDataOf(c.key).points.length <= 60"
+                :cx="p.x"
+                :cy="p.y"
+                r="2.5"
+                :fill="c.color"
+              />
             </template>
           </svg>
         </template>
@@ -255,7 +321,9 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
         <el-table :data="summary.apps" size="small" style="width: 100%">
           <el-table-column label="排名" width="56" align="center">
             <template #default="{ $index }">
-              <span :class="['rank', $index < 3 ? `rank-${$index + 1}` : '']">{{ $index + 1 }}</span>
+              <span :class="['rank', $index < 3 ? `rank-${$index + 1}` : '']">{{
+                $index + 1
+              }}</span>
             </template>
           </el-table-column>
           <el-table-column label="应用" min-width="140" show-overflow-tooltip>
@@ -272,7 +340,13 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
               <div class="cell-bar">
                 <div class="cell-bar-text">{{ fmtNum(row.totalTokens) }}</div>
                 <div class="bar-track">
-                  <div class="bar-fill" :style="{ width: pct(row.totalTokens, maxAppTokens) + '%', background: '#5b6cff' }" />
+                  <div
+                    class="bar-fill"
+                    :style="{
+                      width: pct(row.totalTokens, maxAppTokens) + '%',
+                      background: '#5b6cff'
+                    }"
+                  />
                 </div>
               </div>
             </template>
@@ -292,7 +366,9 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
         <el-table :data="summary.models" size="small" style="width: 100%">
           <el-table-column label="排名" width="56" align="center">
             <template #default="{ $index }">
-              <span :class="['rank', $index < 3 ? `rank-${$index + 1}` : '']">{{ $index + 1 }}</span>
+              <span :class="['rank', $index < 3 ? `rank-${$index + 1}` : '']">{{
+                $index + 1
+              }}</span>
             </template>
           </el-table-column>
           <el-table-column label="模型" min-width="120" show-overflow-tooltip>
@@ -312,7 +388,13 @@ const pct = (v: number, max: number) => (max > 0 ? +((v / max) * 100).toFixed(1)
               <div class="cell-bar">
                 <div class="cell-bar-text">{{ fmtNum(row.totalTokens) }}</div>
                 <div class="bar-track">
-                  <div class="bar-fill" :style="{ width: pct(row.totalTokens, maxModelTokens) + '%', background: '#10b981' }" />
+                  <div
+                    class="bar-fill"
+                    :style="{
+                      width: pct(row.totalTokens, maxModelTokens) + '%',
+                      background: '#10b981'
+                    }"
+                  />
                 </div>
               </div>
             </template>

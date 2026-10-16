@@ -185,7 +185,9 @@ async function save() {
 }
 
 function remove(row: AppSchedule) {
-  ElMessageBox.confirm(`确认删除任务「${row.name}」？其执行记录将一并删除。`, '删除确认', { type: 'error' })
+  ElMessageBox.confirm(`确认删除任务「${row.name}」？其执行记录将一并删除。`, '删除确认', {
+    type: 'error'
+  })
     .then(async () => {
       await scheduleApi.remove(row.id)
       ElMessage.success('删除成功')
@@ -227,7 +229,9 @@ onMounted(() => {
         <h2 class="head-title">定时任务</h2>
         <p class="head-desc">按间隔 / 每天 / 每周自动执行已发布应用，支持手动触发与执行记录</p>
       </div>
-      <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新建任务</el-button>
+      <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+        >新建任务</el-button
+      >
     </div>
 
     <div class="sched-toolbar">
@@ -245,7 +249,9 @@ onMounted(() => {
           @keyup.enter="search"
           @clear="search"
         >
-          <template #prefix><el-icon><Search /></el-icon></template>
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
         <el-button @click="search">搜索</el-button>
       </div>
@@ -280,12 +286,23 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="启用" width="70" align="center">
           <template #default="{ row }">
-            <el-switch v-model="row.enabled" :active-value="1" :inactive-value="0" @change="toggle(row)" />
+            <el-switch
+              v-model="row.enabled"
+              :active-value="1"
+              :inactive-value="0"
+              @change="toggle(row)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" :icon="VideoPlay" :loading="runningId === row.id" @click="runNow(row)">
+            <el-button
+              link
+              type="primary"
+              :icon="VideoPlay"
+              :loading="runningId === row.id"
+              @click="runNow(row)"
+            >
               立即执行
             </el-button>
             <el-button link @click="openLogs(row)">记录</el-button>
@@ -306,7 +323,12 @@ onMounted(() => {
     </el-card>
 
     <!-- 新建 / 编辑 -->
-    <el-dialog v-model="dialogVisible" :title="editingId == null ? '新建定时任务' : '编辑定时任务'" width="600px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editingId == null ? '新建定时任务' : '编辑定时任务'"
+      width="600px"
+      :close-on-click-modal="false"
+    >
       <div class="dialog-body">
         <div class="field-group">
           <label>任务名称</label>
@@ -314,8 +336,18 @@ onMounted(() => {
         </div>
         <div class="field-group">
           <label>执行应用</label>
-          <el-select v-model="form.appId" filterable style="width: 100%" placeholder="选择已发布或待发布的应用">
-            <el-option v-for="app in appOptions" :key="app.id" :label="`${app.icon || ''} ${app.name}`" :value="app.id" />
+          <el-select
+            v-model="form.appId"
+            filterable
+            style="width: 100%"
+            placeholder="选择已发布或待发布的应用"
+          >
+            <el-option
+              v-for="app in appOptions"
+              :key="app.id"
+              :label="`${app.icon || ''} ${app.name}`"
+              :value="app.id"
+            />
           </el-select>
         </div>
         <div class="field-group">
@@ -338,7 +370,12 @@ onMounted(() => {
         <template v-else-if="form.triggerType === 'daily'">
           <div class="field-group inline">
             <label>执行时刻</label>
-            <el-time-picker v-model="form.runTime" format="HH:mm" value-format="HH:mm" style="width: 180px" />
+            <el-time-picker
+              v-model="form.runTime"
+              format="HH:mm"
+              value-format="HH:mm"
+              style="width: 180px"
+            />
           </div>
         </template>
         <template v-else>
@@ -346,12 +383,22 @@ onMounted(() => {
             <div class="field-group">
               <label>执行星期</label>
               <el-select v-model="form.runWeekday" style="width: 100%">
-                <el-option v-for="opt in weekdayOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+                <el-option
+                  v-for="opt in weekdayOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
               </el-select>
             </div>
             <div class="field-group">
               <label>执行时刻</label>
-              <el-time-picker v-model="form.runTime" format="HH:mm" value-format="HH:mm" style="width: 100%" />
+              <el-time-picker
+                v-model="form.runTime"
+                format="HH:mm"
+                value-format="HH:mm"
+                style="width: 100%"
+              />
             </div>
           </div>
         </template>
@@ -372,7 +419,9 @@ onMounted(() => {
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
@@ -385,26 +434,40 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="触发" width="90">
             <template #default="{ row }">
-              <el-tag size="small" effect="plain" :type="row.triggerBy === 'manual' ? 'warning' : 'info'">
+              <el-tag
+                size="small"
+                effect="plain"
+                :type="row.triggerBy === 'manual' ? 'warning' : 'info'"
+              >
                 {{ row.triggerBy === 'manual' ? '手动' : '自动' }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="结果" width="80">
             <template #default="{ row }">
-              <el-tag size="small" :type="row.status === 'success' ? 'success' : 'danger'" effect="light">
+              <el-tag
+                size="small"
+                :type="row.status === 'success' ? 'success' : 'danger'"
+                effect="light"
+              >
                 {{ row.status === 'success' ? '成功' : '失败' }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="耗时" width="90">
-            <template #default="{ row }">{{ row.costMs != null ? `${row.costMs}ms` : '-' }}</template>
+            <template #default="{ row }">{{
+              row.costMs != null ? `${row.costMs}ms` : '-'
+            }}</template>
           </el-table-column>
           <el-table-column label="摘要 / 错误" min-width="200" show-overflow-tooltip>
             <template #default="{ row }">{{ row.message || '-' }}</template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="!logLoading && logRows.length === 0" description="暂无执行记录" :image-size="80" />
+        <el-empty
+          v-if="!logLoading && logRows.length === 0"
+          description="暂无执行记录"
+          :image-size="80"
+        />
       </div>
     </el-drawer>
   </div>

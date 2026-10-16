@@ -61,10 +61,7 @@ export const knowledgeApi = {
   },
 
   // ---------- 检索 ----------
-  search(
-    datasetId: number,
-    data: { query: string; topK?: number; rerankModelId?: number | null }
-  ) {
+  search(datasetId: number, data: { query: string; topK?: number; rerankModelId?: number | null }) {
     return request.post<never, SearchHit[]>(`/knowledge/datasets/${datasetId}/search`, data)
   }
 }

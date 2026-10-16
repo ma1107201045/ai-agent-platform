@@ -53,7 +53,14 @@ const form = ref<Partial<AppAgentTool>>({})
 function openCreate() {
   isEdit.value = false
   dialogTitle.value = '新建工具'
-  form.value = { name: '', description: '', type: 'http', method: 'GET', authType: 'none', status: 1 }
+  form.value = {
+    name: '',
+    description: '',
+    type: 'http',
+    method: 'GET',
+    authType: 'none',
+    status: 1
+  }
   dialogVisible.value = true
 }
 
@@ -75,7 +82,9 @@ function onTypeChange() {
 async function save() {
   if (!form.value.name) return ElMessage.warning('请填写工具名称')
   if (!NAME_RE.test(form.value.name)) {
-    return ElMessage.warning('工具名称须为英文标识符（字母/数字/下划线，首字符非数字），如 get_weather')
+    return ElMessage.warning(
+      '工具名称须为英文标识符（字母/数字/下划线，首字符非数字），如 get_weather'
+    )
   }
   if (!form.value.description?.trim()) return ElMessage.warning('请填写工具描述')
   if (form.value.type === 'http') {
@@ -128,11 +137,15 @@ async function toggleStatus(row: AppAgentTool, val: string | number | boolean) {
 
 async function remove(tool: AppAgentTool) {
   try {
-    await ElMessageBox.confirm(`确认删除工具「${tool.name}」？删除后使用该工具的应用将无法再调用。`, '删除确认', {
-      type: 'error',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消'
-    })
+    await ElMessageBox.confirm(
+      `确认删除工具「${tool.name}」？删除后使用该工具的应用将无法再调用。`,
+      '删除确认',
+      {
+        type: 'error',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消'
+      }
+    )
   } catch {
     return
   }
@@ -264,8 +277,9 @@ const paramsSummary = computed(() => {
     <el-alert type="info" :closable="false" class="info-banner">
       <div class="banner-inner">
         <span class="banner-text">
-          想最快接入一个工具？内置模板零配置 → <el-link type="primary" @click="goMarket">插件市场一键安装</el-link>；
-          已有现成的 API / 数据库 → <el-link type="primary" @click="goIntegrations">数据集成自动生成</el-link>；
+          想最快接入一个工具？内置模板零配置 →
+          <el-link type="primary" @click="goMarket">插件市场一键安装</el-link>； 已有现成的 API /
+          数据库 → <el-link type="primary" @click="goIntegrations">数据集成自动生成</el-link>；
           以下表单适合手动创建。
         </span>
       </div>
@@ -276,7 +290,9 @@ const paramsSummary = computed(() => {
       <div class="toolbar-actions">
         <el-button :icon="ShoppingCart" @click="goMarket">从插件市场安装</el-button>
         <el-button :icon="Link" @click="goIntegrations">去数据集成</el-button>
-        <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate">新建工具</el-button>
+        <el-button type="primary" class="btn-gradient" :icon="Plus" @click="openCreate"
+          >新建工具</el-button
+        >
       </div>
     </div>
 
@@ -304,7 +320,9 @@ const paramsSummary = computed(() => {
         <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
         <el-table-column label="类型" width="105">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.type === 'http' ? 'warning' : 'info'">{{ typeLabels[row.type] }}</el-tag>
+            <el-tag size="small" :type="row.type === 'http' ? 'warning' : 'info'">{{
+              typeLabels[row.type]
+            }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="参数" width="90" align="center">
@@ -343,14 +361,24 @@ const paramsSummary = computed(() => {
     </el-card>
 
     <!-- 新建 / 编辑工具 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" :close-on-click-modal="false" destroy-on-close>
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="720px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
       <div class="form-body">
         <!-- 基本信息 -->
         <div class="field-group">
           <div class="field-label">工具名称 <span class="req">*</span></div>
-          <el-input v-model="form.name" :placeholder="isEdit ? '工具名称' : '英文标识符，如 get_weather'" />
+          <el-input
+            v-model="form.name"
+            :placeholder="isEdit ? '工具名称' : '英文标识符，如 get_weather'"
+          />
           <p class="field-tip">
-            智能体通过名称识别并调用该工具。可先用拼音或英文直译，如「查天气 → get_weather」；创建后仍可修改。
+            智能体通过名称识别并调用该工具。可先用拼音或英文直译，如「查天气 →
+            get_weather」；创建后仍可修改。
           </p>
         </div>
         <div class="field-group">
@@ -383,7 +411,12 @@ const paramsSummary = computed(() => {
             <div class="field-group grow">
               <div class="field-label">请求方式</div>
               <el-select v-model="form.method" style="width: 100%">
-                <el-option v-for="m in ['GET', 'POST', 'PUT', 'DELETE']" :key="m" :label="m" :value="m" />
+                <el-option
+                  v-for="m in ['GET', 'POST', 'PUT', 'DELETE']"
+                  :key="m"
+                  :label="m"
+                  :value="m"
+                />
               </el-select>
             </div>
             <div class="field-group grow">
@@ -396,7 +429,12 @@ const paramsSummary = computed(() => {
           </div>
           <div v-if="form.authType === 'bearer'" class="field-group">
             <div class="field-label">Token</div>
-            <el-input v-model="form.authToken" type="password" show-password placeholder="访问该接口所需的 Bearer Token" />
+            <el-input
+              v-model="form.authToken"
+              type="password"
+              show-password
+              placeholder="访问该接口所需的 Bearer Token"
+            />
           </div>
 
           <el-collapse class="adv-collapse">
@@ -416,7 +454,9 @@ const paramsSummary = computed(() => {
               :rows="8"
               placeholder="MVEL 脚本：可直接使用参数名与 input（参数整体），return 返回结果。&#10;示例：&#10;return '城市 ' + city + ' 今天晴朗，25℃'"
             />
-            <p class="field-tip">适合在智能体调用时对入参做加工 / 返回固定结果，无需请求外部服务。</p>
+            <p class="field-tip">
+              适合在智能体调用时对入参做加工 / 返回固定结果，无需请求外部服务。
+            </p>
           </div>
         </template>
 
@@ -431,12 +471,19 @@ const paramsSummary = computed(() => {
       </div>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" class="btn-gradient" :loading="saving" @click="save"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 工具测试 -->
-    <el-dialog v-model="testDialogVisible" :title="`工具测试 - ${testTool?.name || ''}`" width="620px" destroy-on-close>
+    <el-dialog
+      v-model="testDialogVisible"
+      :title="`工具测试 - ${testTool?.name || ''}`"
+      width="620px"
+      destroy-on-close
+    >
       <el-alert type="info" :closable="false" class="test-tip">
         模拟智能体调用：按下方参数填入示例值（形如模型会生成的真实调用）。
       </el-alert>
@@ -455,13 +502,19 @@ const paramsSummary = computed(() => {
             style="width: 100%"
             :placeholder="f.desc || f.key"
           />
-          <el-select v-else-if="f.type === 'boolean'" v-model="testValues[f.key]" style="width: 100%">
+          <el-select
+            v-else-if="f.type === 'boolean'"
+            v-model="testValues[f.key]"
+            style="width: 100%"
+          >
             <el-option label="是 / true" :value="true" />
             <el-option label="否 / false" :value="false" />
           </el-select>
           <el-input v-else v-model="testValues[f.key]" :placeholder="`示例：${f.desc || f.key}`" />
         </div>
-        <el-button link type="primary" class="raw-toggle" @click="useRawArgs = true">改用原始 JSON 输入（高级）</el-button>
+        <el-button link type="primary" class="raw-toggle" @click="useRawArgs = true"
+          >改用原始 JSON 输入（高级）</el-button
+        >
       </template>
 
       <template v-else>
@@ -479,13 +532,21 @@ const paramsSummary = computed(() => {
 
       <el-form label-width="80px" style="margin-top: 12px">
         <el-form-item label="执行结果">
-          <el-input v-model="testResult" type="textarea" :rows="6" readonly placeholder="点击「执行测试」后展示结果" />
+          <el-input
+            v-model="testResult"
+            type="textarea"
+            :rows="6"
+            readonly
+            placeholder="点击「执行测试」后展示结果"
+          />
         </el-form-item>
       </el-form>
 
       <template #footer>
         <el-button @click="testDialogVisible = false">关闭</el-button>
-        <el-button type="primary" :icon="VideoPlay" :loading="testing" @click="doTest">执行测试</el-button>
+        <el-button type="primary" :icon="VideoPlay" :loading="testing" @click="doTest"
+          >执行测试</el-button
+        >
       </template>
     </el-dialog>
   </div>

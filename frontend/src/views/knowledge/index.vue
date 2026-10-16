@@ -3,13 +3,23 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadFile, UploadUserFile } from 'element-plus'
 import {
-  ChatDotRound, Delete, FolderOpened,
-  Plus, Refresh, Search, Upload, UploadFilled
+  ChatDotRound,
+  Delete,
+  FolderOpened,
+  Plus,
+  Refresh,
+  Search,
+  Upload,
+  UploadFilled
 } from '@element-plus/icons-vue'
 import { knowledgeApi } from '@/api/knowledge'
 import { modelApi } from '@/api/model'
 import type {
-  ChatModelInfo, KnowledgeChunk, KnowledgeDataset, KnowledgeDocument, SearchHit
+  ChatModelInfo,
+  KnowledgeChunk,
+  KnowledgeDataset,
+  KnowledgeDocument,
+  SearchHit
 } from '@/api/types'
 
 // ---------- 数据集列表 ----------
@@ -93,7 +103,9 @@ async function loadDocuments() {
   if (!selectedDatasetId.value) return
   loadingDocs.value = true
   try {
-    documents.value = (await knowledgeApi.documentPage(selectedDatasetId.value, { size: 100 })).records
+    documents.value = (
+      await knowledgeApi.documentPage(selectedDatasetId.value, { size: 100 })
+    ).records
   } finally {
     loadingDocs.value = false
   }
@@ -233,18 +245,22 @@ async function doUpload() {
 async function reindexDoc(doc: KnowledgeDocument) {
   await ElMessageBox.confirm(`重新对文档「${doc.name}」进行向量化？`, '重试确认', {
     type: 'warning'
-  }).catch(() => null).then(async (v) => {
-    if (!v) return
-    await knowledgeApi.reindexDocument(doc.id)
-    ElMessage.success('已重新提交向量化')
-    await loadDocuments()
   })
+    .catch(() => null)
+    .then(async (v) => {
+      if (!v) return
+      await knowledgeApi.reindexDocument(doc.id)
+      ElMessage.success('已重新提交向量化')
+      await loadDocuments()
+    })
 }
 
 async function removeDoc(doc: KnowledgeDocument) {
   try {
     await ElMessageBox.confirm(`确认删除文档「${doc.name}」？`, '删除确认', {
-      type: 'error', confirmButtonText: '删除', cancelButtonText: '取消'
+      type: 'error',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
     })
   } catch {
     return
@@ -297,7 +313,14 @@ onMounted(async () => {
       <aside class="ds-panel">
         <div class="ds-head">
           <span class="ds-head-title">数据集</span>
-          <el-button type="primary" size="small" class="btn-gradient" :icon="Plus" @click="openCreateDs">新建</el-button>
+          <el-button
+            type="primary"
+            size="small"
+            class="btn-gradient"
+            :icon="Plus"
+            @click="openCreateDs"
+            >新建</el-button
+          >
         </div>
         <el-scrollbar class="ds-scroll">
           <div
@@ -336,7 +359,9 @@ onMounted(async () => {
           <div class="detail-head">
             <div>
               <span class="detail-title">{{ ds.name }}</span>
-              <el-tag size="small" type="info" effect="plain">{{ ds.description || '无描述' }}</el-tag>
+              <el-tag size="small" type="info" effect="plain">{{
+                ds.description || '无描述'
+              }}</el-tag>
             </div>
             <el-tabs v-model="activeTab" class="detail-tabs">
               <el-tab-pane label="文档管理" name="documents" />
@@ -349,10 +374,12 @@ onMounted(async () => {
           <div v-show="activeTab === 'documents'" class="tab-content">
             <div class="toolbar">
               <span class="toolbar-count">共 {{ documents.length }} 个文档</span>
-              <el-button type="primary" class="btn-gradient" :icon="Upload" @click="openUpload">上传文档</el-button>
+              <el-button type="primary" class="btn-gradient" :icon="Upload" @click="openUpload"
+                >上传文档</el-button
+              >
             </div>
             <el-card shadow="never">
-              <el-table v-loading="loadingDocs" :data="documents" style="width:100%">
+              <el-table v-loading="loadingDocs" :data="documents" style="width: 100%">
                 <el-table-column prop="name" label="文档名称" min-width="180" />
                 <el-table-column label="字符数" width="100">
                   <template #default="{ row }">{{ row.charCount }}</template>
@@ -371,8 +398,12 @@ onMounted(async () => {
                 <el-table-column label="操作" width="230" fixed="right">
                   <template #default="{ row }">
                     <el-button link type="primary" @click="viewChunks(row)">分块预览</el-button>
-                    <el-button link type="warning" :icon="Refresh" @click="reindexDoc(row)">重建</el-button>
-                    <el-button link type="danger" :icon="Delete" @click="removeDoc(row)">删除</el-button>
+                    <el-button link type="warning" :icon="Refresh" @click="reindexDoc(row)"
+                      >重建</el-button
+                    >
+                    <el-button link type="danger" :icon="Delete" @click="removeDoc(row)"
+                      >删除</el-button
+                    >
                   </template>
                 </el-table-column>
               </el-table>
@@ -388,12 +419,18 @@ onMounted(async () => {
                   placeholder="输入检索问题"
                   @keydown.enter="doSearch"
                 />
-                <el-input-number v-model="searchTopK" :min="1" :max="20" controls-position="right" style="width:110px" />
+                <el-input-number
+                  v-model="searchTopK"
+                  :min="1"
+                  :max="20"
+                  controls-position="right"
+                  style="width: 110px"
+                />
                 <el-select
                   v-model="searchRerankId"
                   placeholder="重排序模型(可选)"
                   clearable
-                  style="width:200px"
+                  style="width: 200px"
                 >
                   <el-option
                     v-for="m in rerankModels"
@@ -402,15 +439,23 @@ onMounted(async () => {
                     :value="m.id"
                   />
                 </el-select>
-                <el-button type="primary" :icon="Search" :loading="searching" @click="doSearch">检索</el-button>
+                <el-button type="primary" :icon="Search" :loading="searching" @click="doSearch"
+                  >检索</el-button
+                >
               </div>
               <div class="search-result">
-                <el-empty v-if="searchHits.length === 0" description="输入问题后检索相关分块" :image-size="80" />
+                <el-empty
+                  v-if="searchHits.length === 0"
+                  description="输入问题后检索相关分块"
+                  :image-size="80"
+                />
                 <div v-for="(hit, i) in searchHits" :key="hit.id" class="hit-item">
                   <div class="hit-head">
                     <el-tag size="small" type="success">#{{ i + 1 }}</el-tag>
                     <span class="hit-score">相似度 {{ (hit.score * 100).toFixed(2) }}%</span>
-                    <span class="hit-meta">文档 #{{ hit.documentId }} · 块 #{{ hit.chunkIndex }}</span>
+                    <span class="hit-meta"
+                      >文档 #{{ hit.documentId }} · 块 #{{ hit.chunkIndex }}</span
+                    >
                   </div>
                   <div class="hit-content">{{ hit.content }}</div>
                 </div>
@@ -423,20 +468,34 @@ onMounted(async () => {
             <el-card shadow="never" class="setting-card">
               <el-descriptions :column="1" border>
                 <el-descriptions-item label="名称">{{ ds.name }}</el-descriptions-item>
-                <el-descriptions-item label="描述">{{ ds.description || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="描述">{{
+                  ds.description || '-'
+                }}</el-descriptions-item>
                 <el-descriptions-item label="向量化模型">
-                  {{ embeddingModels.find(m => m.id === ds.embeddingModel)?.modelName || ds.embeddingModel }}
+                  {{
+                    embeddingModels.find((m) => m.id === ds.embeddingModel)?.modelName ||
+                    ds.embeddingModel
+                  }}
                 </el-descriptions-item>
-                <el-descriptions-item label="分块大小">{{ ds.chunkSize }} 字符</el-descriptions-item>
-                <el-descriptions-item label="分块重叠">{{ ds.chunkOverlap }} 字符</el-descriptions-item>
+                <el-descriptions-item label="分块大小"
+                  >{{ ds.chunkSize }} 字符</el-descriptions-item
+                >
+                <el-descriptions-item label="分块重叠"
+                  >{{ ds.chunkOverlap }} 字符</el-descriptions-item
+                >
               </el-descriptions>
-              <div style="margin-top:16px">
+              <div style="margin-top: 16px">
                 <el-button type="primary" @click="openEditDs(ds)">编辑设置</el-button>
               </div>
             </el-card>
           </div>
         </template>
-        <el-empty v-else description="请选择或创建一个数据集" :image-size="120" class="empty-center" />
+        <el-empty
+          v-else
+          description="请选择或创建一个数据集"
+          :image-size="120"
+          class="empty-center"
+        />
       </div>
     </div>
 
@@ -450,7 +509,11 @@ onMounted(async () => {
           <el-input v-model="dsForm.description" type="textarea" :rows="2" />
         </el-form-item>
         <el-form-item label="向量化模型" required>
-          <el-select v-model="dsForm.embeddingModel" placeholder="选择 embedding 模型" style="width:100%">
+          <el-select
+            v-model="dsForm.embeddingModel"
+            placeholder="选择 embedding 模型"
+            style="width: 100%"
+          >
             <el-option
               v-for="m in embeddingModels"
               :key="m.id"
@@ -537,7 +600,11 @@ onMounted(async () => {
           </div>
           <div class="chunk-content">{{ c.content }}</div>
         </div>
-        <el-empty v-if="!loadingChunks && chunks.length === 0" description="暂无分块" :image-size="60" />
+        <el-empty
+          v-if="!loadingChunks && chunks.length === 0"
+          description="暂无分块"
+          :image-size="60"
+        />
       </div>
     </el-drawer>
   </div>

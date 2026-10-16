@@ -30,10 +30,21 @@
         </button>
       </div>
       <div class="filter-right">
-        <el-input v-model="keyword" placeholder="搜索素材名称" clearable class="search-input" @keyup.enter="reload" @clear="reload">
-          <template #prefix><el-icon><Search /></el-icon></template>
+        <el-input
+          v-model="keyword"
+          placeholder="搜索素材名称"
+          clearable
+          class="search-input"
+          @keyup.enter="reload"
+          @clear="reload"
+        >
+          <template #prefix
+            ><el-icon><Search /></el-icon
+          ></template>
         </el-input>
-        <el-button @click="reload"><el-icon><Refresh /></el-icon></el-button>
+        <el-button @click="reload"
+          ><el-icon><Refresh /></el-icon
+        ></el-button>
       </div>
     </div>
 
@@ -43,7 +54,12 @@
         <el-empty description="还没有素材，点击右上角「上传素材」开始" />
       </div>
       <div v-else class="asset-grid">
-        <div v-for="asset in assets" :key="asset.id" class="asset-card hover-card" @click="openDetail(asset)">
+        <div
+          v-for="asset in assets"
+          :key="asset.id"
+          class="asset-card hover-card"
+          @click="openDetail(asset)"
+        >
           <div class="asset-preview" :class="`cat-${asset.category}`">
             <el-icon v-if="categoryIconComp(asset.category)">
               <component :is="categoryIconComp(asset.category)" />
@@ -62,16 +78,24 @@
           </div>
           <div class="asset-actions" @click.stop>
             <el-tooltip content="预览/查看" placement="top">
-              <button class="round-btn" @click="openDetail(asset)"><el-icon><View /></el-icon></button>
+              <button class="round-btn" @click="openDetail(asset)">
+                <el-icon><View /></el-icon>
+              </button>
             </el-tooltip>
             <el-tooltip content="下载" placement="top">
-              <button class="round-btn" @click="download(asset)"><el-icon><Download /></el-icon></button>
+              <button class="round-btn" @click="download(asset)">
+                <el-icon><Download /></el-icon>
+              </button>
             </el-tooltip>
             <el-tooltip content="编辑" placement="top">
-              <button class="round-btn" @click="openEdit(asset)"><el-icon><EditPen /></el-icon></button>
+              <button class="round-btn" @click="openEdit(asset)">
+                <el-icon><EditPen /></el-icon>
+              </button>
             </el-tooltip>
             <el-tooltip content="删除" placement="top">
-              <button class="round-btn danger" @click="removeAsset(asset)"><el-icon><Delete /></el-icon></button>
+              <button class="round-btn danger" @click="removeAsset(asset)">
+                <el-icon><Delete /></el-icon>
+              </button>
             </el-tooltip>
           </div>
         </div>
@@ -132,14 +156,25 @@
       </div>
       <template #footer>
         <el-button @click="uploadDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="uploading" :disabled="!pendingFiles.length" @click="doUpload">
+        <el-button
+          type="primary"
+          :loading="uploading"
+          :disabled="!pendingFiles.length"
+          @click="doUpload"
+        >
           开始上传（{{ pendingFiles.length }}）
         </el-button>
       </template>
     </el-dialog>
 
     <!-- 预览 / 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="素材详情" width="720px" destroy-on-close @closed="releasePreview">
+    <el-dialog
+      v-model="detailVisible"
+      title="素材详情"
+      width="720px"
+      destroy-on-close
+      @closed="releasePreview"
+    >
       <div v-loading="previewLoading" class="detail-body">
         <template v-if="detail">
           <div class="preview-area" v-if="previewUrl && detail.category === 'image'">
@@ -185,8 +220,12 @@
               <el-button :disabled="!previewUrl" @click="copyLink">
                 <el-icon><Link /></el-icon>&nbsp;复制引用地址
               </el-button>
-              <el-button @click="openEdit(detail)"><el-icon><EditPen /></el-icon>&nbsp;编辑</el-button>
-              <el-button type="danger" plain @click="removeAsset(detail)"><el-icon><Delete /></el-icon>&nbsp;删除</el-button>
+              <el-button @click="openEdit(detail)"
+                ><el-icon><EditPen /></el-icon>&nbsp;编辑</el-button
+              >
+              <el-button type="danger" plain @click="removeAsset(detail)"
+                ><el-icon><Delete /></el-icon>&nbsp;删除</el-button
+              >
             </div>
           </div>
         </template>
@@ -253,8 +292,15 @@ const categories: { value: string; label: string; icon?: AnyIcon }[] = [
 ]
 
 const categoryIconComp = (c: string) =>
-  ({ image: Picture, document: Document, audio: Headset, video: VideoCamera, other: Folder } as Record<string, AnyIcon>)[c] ||
-  Folder
+  (
+    ({
+      image: Picture,
+      document: Document,
+      audio: Headset,
+      video: VideoCamera,
+      other: Folder
+    }) as Record<string, AnyIcon>
+  )[c] || Folder
 
 // ---------- 列表 ----------
 const loading = ref(false)
@@ -308,9 +354,7 @@ const pendingFiles = ref<File[]>([])
 const uploading = ref(false)
 
 function onFilesChange(_file: { raw?: File }, files: { raw?: File }[]) {
-  pendingFiles.value = files
-    .map((f) => f.raw)
-    .filter((f): f is File => !!f)
+  pendingFiles.value = files.map((f) => f.raw).filter((f): f is File => !!f)
 }
 
 async function doUpload() {
@@ -386,7 +430,11 @@ async function copyLink() {
 // ---------- 编辑 ----------
 const editVisible = ref(false)
 const saving = ref(false)
-const editForm = reactive<{ id?: number; name: string; category: AssetCategory }>({ id: undefined, name: '', category: 'other' })
+const editForm = reactive<{ id?: number; name: string; category: AssetCategory }>({
+  id: undefined,
+  name: '',
+  category: 'other'
+})
 
 function openEdit(asset: AssetFile) {
   editForm.id = asset.id
@@ -413,11 +461,15 @@ async function saveEdit() {
 
 // ---------- 删除 ----------
 async function removeAsset(asset: AssetFile) {
-  await ElMessageBox.confirm(`确定删除素材「${asset.name}」吗？删除后文件与记录均无法恢复。`, '删除确认', {
-    type: 'warning',
-    confirmButtonText: '删除',
-    cancelButtonText: '取消'
-  })
+  await ElMessageBox.confirm(
+    `确定删除素材「${asset.name}」吗？删除后文件与记录均无法恢复。`,
+    '删除确认',
+    {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    }
+  )
   await assetsApi.remove(asset.id)
   ElMessage.success('素材已删除')
   if (detail.value?.id === asset.id) {
