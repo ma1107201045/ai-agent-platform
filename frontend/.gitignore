@@ -6,3 +6,8 @@ dist-ssr
 .tmp
 src/auto-imports.d.ts
 src/components.d.ts
+vite.config.js
+vite.config.d.ts
+vitest.config.js
+vitest.config.d.ts
+*.tsbuildinfo
