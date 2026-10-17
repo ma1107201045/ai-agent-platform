@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import VarChips from '../VarChips.vue'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig } from '@/utils/flow'
 import type { ChatModelInfo, Skill } from '@/api/types'
 
 /** 技能执行节点 */
 defineProps<{
-  cfg: Record<string, any>
+  cfg: NodeConfig
   vars: VarItem[]
   chatModels: ChatModelInfo[]
   skills: Skill[]

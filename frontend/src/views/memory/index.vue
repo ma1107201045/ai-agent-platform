@@ -123,7 +123,7 @@
                     ><el-icon><Refresh /></el-icon
                   ></el-button>
                 </div>
-                <el-button type="primary" @click="openItemDialog()">
+                <el-button type="primary" @click="itemDialog?.open()">
                   <el-icon><Plus /></el-icon>&nbsp;新增记忆
                 </el-button>
               </div>
@@ -181,11 +181,11 @@
                 </template>
               </el-table-column>
               <el-table-column label="更新时间" width="170">
-                <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
+                <template #default="{ row }">{{ formatTime(row.updateTime, true) }}</template>
               </el-table-column>
               <el-table-column label="操作" width="130" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="openItemDialog(row)"
+                  <el-button link type="primary" size="small" @click="itemDialog?.open(row)"
                     >编辑</el-button
                   >
                   <el-button link type="danger" size="small" @click="removeItem(row)"
@@ -232,7 +232,7 @@
                     ><el-icon><Refresh /></el-icon
                   ></el-button>
                 </div>
-                <el-button type="primary" @click="openVariableDialog()">
+                <el-button type="primary" @click="variableDialog?.open()">
                   <el-icon><Plus /></el-icon>&nbsp;新增变量
                 </el-button>
               </div>
@@ -276,11 +276,11 @@
                 </template>
               </el-table-column>
               <el-table-column label="更新时间" width="170">
-                <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
+                <template #default="{ row }">{{ formatTime(row.updateTime, true) }}</template>
               </el-table-column>
               <el-table-column label="操作" width="130" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="openVariableDialog(row)"
+                  <el-button link type="primary" size="small" @click="variableDialog?.open(row)"
                     >编辑</el-button
                   >
                   <el-button link type="danger" size="small" @click="removeVariable(row)"
@@ -293,200 +293,34 @@
 
           <!-- ==================== 记忆策略 ==================== -->
           <el-tab-pane label="记忆策略" name="strategy">
-            <div v-if="strategy" class="strategy-wrap">
-              <div class="strategy-intro">
-                <h3 class="strategy-title">记忆策略</h3>
-                <p class="strategy-desc">
-                  配置该应用如何存储与召回长期记忆。建议在发布时同步调整；自动抽取依赖可用的对话模型完成记忆沉淀。
-                </p>
-              </div>
-              <el-form label-width="180px" class="strategy-form" label-position="left">
-                <el-form-item label="启用长期记忆">
-                  <el-switch v-model="strategy.enabled" :active-value="1" :inactive-value="0" />
-                  <span class="field-tip"
-                    >关闭后该应用的记忆不再写入，也不会被注入到对话上下文</span
-                  >
-                </el-form-item>
-                <el-form-item label="对话后自动抽取">
-                  <el-switch v-model="strategy.autoExtract" :active-value="1" :inactive-value="0" />
-                  <span class="field-tip"
-                    >每次对话结束后，由抽取模型将用户偏好/事实沉淀为记忆条目</span
-                  >
-                </el-form-item>
-                <el-form-item v-if="strategy.autoExtract === 1" label="抽取使用模型">
-                  <el-select
-                    v-model="strategy.extractModelId"
-                    placeholder="请选择对话模型"
-                    clearable
-                    filterable
-                    class="model-select"
-                  >
-                    <el-option
-                      v-for="m in chatModels"
-                      :key="m.id"
-                      :value="m.id"
-                      :label="`${m.providerName} · ${m.modelName}`"
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="每次注入条数">
-                  <el-input-number v-model="strategy.topN" :min="1" :max="20" />
-                  <span class="field-tip">对话时从记忆中挑选并注入上下文的最大条数</span>
-                </el-form-item>
-                <el-form-item label="单应用条目上限">
-                  <el-input-number
-                    v-model="strategy.maxItems"
-                    :min="10"
-                    :max="100000"
-                    :step="100"
-                  />
-                  <span class="field-tip">达到上限后按“重要度优先”淘汰旧条目</span>
-                </el-form-item>
-                <el-form-item label="记忆保留天数">
-                  <el-input-number
-                    v-model="strategy.keepDays"
-                    :min="0"
-                    :max="3650"
-                    placeholder="永久保留"
-                    class="keep-days-input"
-                  />
-                  <span class="field-tip"
-                    >留空（0）表示永久保留，非 0 时超过保留期的记忆自动失效</span
-                  >
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" :loading="savingStrategy" @click="saveStrategy">
-                    保存记忆策略
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </div>
+            <MemoryStrategyPanel
+              v-model="strategy"
+              :chat-models="chatModels"
+              @saved="loadStrategy"
+            />
           </el-tab-pane>
         </el-tabs>
       </el-card>
     </template>
 
-    <!-- 记忆条目 编辑弹窗 -->
-    <el-dialog
-      v-model="itemDialogVisible"
-      :title="itemForm.id ? '编辑记忆' : '新增记忆'"
-      width="560px"
-      destroy-on-close
-    >
-      <el-form ref="itemFormRef" :model="itemForm" :rules="itemRules" label-width="90px">
-        <el-form-item label="类别" prop="category">
-          <el-select v-model="itemForm.category" class="full-width">
-            <el-option
-              v-for="c in itemCategories"
-              :key="c.value"
-              :value="c.value"
-              :label="c.label"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="作用域" prop="scope">
-          <el-radio-group v-model="itemForm.scope">
-            <el-radio value="global">全局记忆</el-radio>
-            <el-radio value="user">用户记忆</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="内容" prop="content">
-          <el-input
-            v-model="itemForm.content"
-            type="textarea"
-            :rows="4"
-            maxlength="2000"
-            show-word-limit
-            placeholder="例如：用户偏好简洁直接的回答风格，喜欢先给结论再给理由"
-          />
-        </el-form-item>
-        <el-form-item label="重要度" prop="importance">
-          <el-radio-group v-model="itemForm.importance">
-            <el-radio v-for="lv in [1, 2, 3, 4, 5]" :key="lv" :value="lv" class="importance-radio">
-              {{ '★'.repeat(lv) }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="itemDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submittingItem" @click="submitItem">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 会话变量 编辑弹窗 -->
-    <el-dialog
-      v-model="varDialogVisible"
-      :title="variableForm.id ? '编辑变量' : '新增变量'"
-      width="560px"
-      destroy-on-close
-    >
-      <el-form
-        ref="variableFormRef"
-        :model="variableForm"
-        :rules="variableRules"
-        label-width="90px"
-      >
-        <el-form-item label="变量名" prop="name">
-          <el-input
-            v-model="variableForm.name"
-            placeholder="英文变量名，如 user_city，运行时按变量名引用"
-          />
-        </el-form-item>
-        <el-form-item label="作用域" prop="scope">
-          <el-radio-group v-model="variableForm.scope">
-            <el-radio value="global">全局</el-radio>
-            <el-radio value="session">会话</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="variableForm.scope === 'session'" label="会话ID">
-          <el-input-number
-            v-model="variableForm.conversationId"
-            :min="0"
-            :controls="false"
-            placeholder="空 = 全部会话"
-            class="full-width"
-          />
-          <div class="field-tip">为空时该变量作用于此应用的全部会话</div>
-        </el-form-item>
-        <el-form-item label="类型" prop="valueType">
-          <el-select v-model="variableForm.valueType" class="full-width">
-            <el-option value="string" label="string 字符串" />
-            <el-option value="number" label="number 数字" />
-            <el-option value="boolean" label="boolean 布尔" />
-            <el-option value="json" label="json 对象" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="变量值" prop="value">
-          <el-input
-            v-model="variableForm.value"
-            type="textarea"
-            :rows="3"
-            placeholder="变量内容（json 类型请输入 JSON 文本）"
-          />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="variableForm.remark" placeholder="可选，说明该变量的用途" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="varDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submittingVariable" @click="submitVariable"
-          >保存</el-button
-        >
-      </template>
-    </el-dialog>
+    <MemoryItemDialog ref="itemDialog" :app-id="selectedAppId" @saved="onItemSaved" />
+    <MemoryVariableDialog ref="variableDialog" :app-id="selectedAppId" @saved="onVariableSaved" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { appAgentApi } from '@/api/app-agent'
 import { modelApi } from '@/api/model'
 import { memoryApi } from '@/api/memory'
 import type { AppAgent, ChatModelInfo, MemItem, MemStrategy, MemVariable } from '@/api/types'
+import { formatTime } from '@/utils/format'
+import { itemCategories, catText, catTag, typeText, importanceText } from './memoryMeta'
+import MemoryItemDialog from './components/MemoryItemDialog.vue'
+import MemoryVariableDialog from './components/MemoryVariableDialog.vue'
+import MemoryStrategyPanel from './components/MemoryStrategyPanel.vue'
 
 const router = useRouter()
 
@@ -495,30 +329,6 @@ const apps = ref<AppAgent[]>([])
 const selectedAppId = ref<number | null>(null)
 const activeTab = ref('items')
 const chatModels = ref<ChatModelInfo[]>([])
-
-const itemCategories = [
-  { value: 'preference', label: '用户偏好' },
-  { value: 'fact', label: '事实' },
-  { value: 'event', label: '事件' },
-  { value: 'summary', label: '总结' },
-  { value: 'custom', label: '自定义' }
-]
-
-const catText = (v: string) => itemCategories.find((c) => c.value === v)?.label || '自定义'
-const catTag = (v: string): 'success' | 'primary' | 'warning' | 'danger' | 'info' =>
-  (
-    ({
-      preference: 'success',
-      fact: 'primary',
-      event: 'warning',
-      summary: 'danger',
-      custom: 'info'
-    }) as Record<string, 'success' | 'primary' | 'warning' | 'danger' | 'info'>
-  )[v] || 'info'
-const typeText = (t: string) =>
-  ({ string: '字符串', number: '数字', boolean: '布尔', json: 'JSON' })[t] || t
-const importanceText = (lv: number) => ['', '较低', '一般', '重要', '很重要', '极重要'][lv] || ''
-const formatTime = (t?: string) => (t ? t.replace('T', ' ').slice(0, 19) : '—')
 
 // ---------- 数据 ----------
 const loading = ref(false)
@@ -605,61 +415,11 @@ async function loadChatModels() {
 }
 
 // ---------- 记忆条目操作 ----------
-const itemDialogVisible = ref(false)
-const submittingItem = ref(false)
-const itemFormRef = ref<FormInstance>()
-const itemForm = ref<Partial<MemItem>>({})
-const itemRules: FormRules = {
-  content: [{ required: true, message: '请输入记忆内容', trigger: 'blur' }]
-}
+const itemDialog = ref<InstanceType<typeof MemoryItemDialog> | null>(null)
 
-function openItemDialog(row?: MemItem) {
-  itemForm.value = row
-    ? { ...row }
-    : {
-        appId: selectedAppId.value ?? 0,
-        scope: 'global',
-        source: 'manual',
-        category: 'preference',
-        importance: 3,
-        content: '',
-        status: 1,
-        hitCount: 0
-      }
-  itemDialogVisible.value = true
-}
-
-async function submitItem() {
-  const valid = await itemFormRef.value?.validate().catch(() => false)
-  if (!valid || selectedAppId.value == null) return
-  submittingItem.value = true
-  try {
-    const form = itemForm.value
-    if (form.id) {
-      await memoryApi.updateItem(form.id, {
-        content: form.content,
-        category: form.category,
-        scope: form.scope,
-        importance: form.importance
-      })
-    } else {
-      await memoryApi.createItem(selectedAppId.value, {
-        appId: selectedAppId.value,
-        scope: form.scope ?? 'global',
-        source: 'manual',
-        category: form.category ?? 'preference',
-        content: form.content ?? '',
-        importance: form.importance ?? 3,
-        status: 1
-      })
-    }
-    ElMessage.success(form.id ? '记忆已更新' : '记忆已新增')
-    itemDialogVisible.value = false
-    await loadItems()
-    itemTotal.value = items.value.length
-  } finally {
-    submittingItem.value = false
-  }
+async function onItemSaved() {
+  await loadItems()
+  itemTotal.value = items.value.length
 }
 
 async function toggleItem(row: MemItem) {
@@ -686,65 +446,11 @@ async function removeItem(row: MemItem) {
 }
 
 // ---------- 会话变量操作 ----------
-const varDialogVisible = ref(false)
-const submittingVariable = ref(false)
-const variableFormRef = ref<FormInstance>()
-const variableForm = ref<Partial<MemVariable>>({})
-const variableRules: FormRules = {
-  name: [
-    { required: true, message: '请输入变量名', trigger: 'blur' },
-    {
-      pattern: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
-      message: '须为字母/数字/下划线，且以字母或下划线开头',
-      trigger: 'blur'
-    }
-  ]
-}
+const variableDialog = ref<InstanceType<typeof MemoryVariableDialog> | null>(null)
 
-function openVariableDialog(row?: MemVariable) {
-  variableForm.value = row
-    ? { ...row }
-    : {
-        appId: selectedAppId.value ?? 0,
-        scope: 'global',
-        valueType: 'string',
-        name: '',
-        value: '',
-        status: 1
-      }
-  varDialogVisible.value = true
-}
-
-async function submitVariable() {
-  const valid = await variableFormRef.value?.validate().catch(() => false)
-  if (!valid || selectedAppId.value == null) return
-  submittingVariable.value = true
-  try {
-    const form = variableForm.value
-    const payload = {
-      name: form.name?.trim(),
-      scope: form.scope ?? 'global',
-      valueType: form.valueType ?? 'string',
-      value: form.value ?? '',
-      remark: form.remark,
-      conversationId: form.scope === 'session' && form.conversationId ? form.conversationId : null,
-      status: 1
-    }
-    if (form.id) {
-      await memoryApi.updateVariable(form.id, payload)
-    } else {
-      await memoryApi.createVariable(selectedAppId.value, {
-        appId: selectedAppId.value,
-        ...payload
-      })
-    }
-    ElMessage.success(form.id ? '变量已更新' : '变量已新增')
-    varDialogVisible.value = false
-    await loadVariables()
-    variableTotal.value = variables.value.length
-  } finally {
-    submittingVariable.value = false
-  }
+async function onVariableSaved() {
+  await loadVariables()
+  variableTotal.value = variables.value.length
 }
 
 async function removeVariable(row: MemVariable) {
@@ -757,29 +463,6 @@ async function removeVariable(row: MemVariable) {
   ElMessage.success('变量已删除')
   await loadVariables()
   variableTotal.value = variables.value.length
-}
-
-// ---------- 策略保存 ----------
-const savingStrategy = ref(false)
-
-async function saveStrategy() {
-  const s = strategy.value
-  if (!s) return
-  if (s.autoExtract === 1 && !s.extractModelId) {
-    ElMessage.warning('已开启自动抽取但未选择抽取模型，自动抽取将不会执行')
-  }
-  savingStrategy.value = true
-  try {
-    await memoryApi.saveStrategy({
-      ...s,
-      keepDays: s.keepDays || null,
-      extractModelId: s.autoExtract === 1 ? s.extractModelId || null : null
-    })
-    ElMessage.success('记忆策略已保存')
-    await loadStrategy()
-  } finally {
-    savingStrategy.value = false
-  }
 }
 
 const goCreateApp = () => router.push('/app/agents')
@@ -987,39 +670,6 @@ onMounted(async () => {
   border: 1px solid var(--border-color, #e4e7ed);
   padding: 1px 8px;
   border-radius: 10px;
-}
-
-.strategy-wrap {
-  padding: 12px 4px 20px;
-  max-width: 780px;
-}
-.strategy-title {
-  margin: 0 0 6px;
-  font-size: 16px;
-  font-weight: 700;
-}
-.strategy-desc {
-  margin: 0 0 18px;
-  font-size: 13px;
-  color: var(--text-tertiary, #8a8f98);
-  line-height: 1.7;
-}
-.field-tip {
-  margin-left: 12px;
-  font-size: 12px;
-  color: var(--text-tertiary, #8a8f98);
-}
-.model-select {
-  width: 320px;
-}
-.keep-days-input {
-  width: 200px;
-}
-.full-width {
-  width: 100%;
-}
-.importance-radio {
-  margin-right: 6px;
 }
 .empty-guide {
   margin-top: 24px;

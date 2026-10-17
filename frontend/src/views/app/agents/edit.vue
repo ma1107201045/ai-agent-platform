@@ -20,7 +20,8 @@ import {
   RefreshRight,
   VideoPlay
 } from '@element-plus/icons-vue'
-import { useVueFlow, VueFlow } from '@vue-flow/core'
+import { useVueFlow, VueFlow, type Connection } from '@vue-flow/core'
+import type { FlowGraphEdge, FlowGraphNode } from '@/utils/flow'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
@@ -65,8 +66,8 @@ const themeStore = useThemeStore()
 const gridColor = computed(() => (themeStore.isDark ? '#333a52' : '#d5dbe3'))
 
 // ---------- 画布 ----------
-const nodes = ref<Array<any>>([])
-const edges = ref<Array<any>>([])
+const nodes = ref<FlowGraphNode[]>([])
+const edges = ref<FlowGraphEdge[]>([])
 const { addNodes, removeNodes, onConnect, setCenter, fitView, getNodes, getEdges } = useVueFlow()
 
 // ---------- 选中与编辑基线 ----------
@@ -468,7 +469,7 @@ async function loadDatasets() {
 }
 
 // ---------- 节点操作 ----------
-function onNodeClick({ node }: any) {
+function onNodeClick({ node }: { node: FlowGraphNode }) {
   selectedNodeId.value = node.id
   selectedEdgeId.value = null
   // 同步更新内容基线：避免 watch(selectedData) 把"切换选中"误判为"编辑"
@@ -480,7 +481,7 @@ function onPaneClick() {
   selectedEdgeId.value = null
 }
 
-function onEdgeClick({ edge }: any) {
+function onEdgeClick({ edge }: { edge: FlowGraphEdge }) {
   selectedEdgeId.value = edge.id
   selectedNodeId.value = null
 }
@@ -490,7 +491,7 @@ function onNodeDragStop() {
   snapshot()
 }
 
-onConnect((params: any) => {
+onConnect((params: Connection) => {
   const srcType = nodes.value.find((n) => n.id === params.source)?.data?.nodeType
   const tgtType = nodes.value.find((n) => n.id === params.target)?.data?.nodeType
   if (srcType === 'end') {
@@ -722,7 +723,8 @@ function varItemsFor(nodeId: string): VarItem[] {
   }
   for (const id of upstreamNodeIds(nodeId)) {
     const n = nodes.value.find((x) => x.id === id)
-    if (!OUTPUT_NODE_TYPES.has(n?.data?.nodeType)) continue
+    const nType = n?.data?.nodeType
+    if (!nType || !OUTPUT_NODE_TYPES.has(nType)) continue
     const alias = n?.data?.config?.outputVar
     const label = n?.data?.label || id
     items.push({ text: wrap(id), desc: `节点「${label}」的输出` })
@@ -1087,9 +1089,12 @@ onUnmounted(() => {
                   <el-form label-position="top" size="small" class="edge-label-form">
                     <el-form-item label="连线标签">
                       <el-input
-                        v-model="selectedEdge.label"
+                        :model-value="selectedEdge?.label"
                         placeholder="留空显示默认（条件分支显示 是/否）"
                         clearable
+                        @update:model-value="
+                          (v: string) => selectedEdge && (selectedEdge.label = v)
+                        "
                       />
                     </el-form-item>
                   </el-form>

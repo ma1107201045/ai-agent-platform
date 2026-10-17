@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import VarChips from '../VarChips.vue'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig } from '@/utils/flow'
 
 /** 结束节点：回答模板 */
-defineProps<{ cfg: Record<string, any>; vars: VarItem[] }>()
+defineProps<{ cfg: NodeConfig; vars: VarItem[] }>()
 </script>
 
 <template>

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent } from '@/api/types'
+import { copyText } from '@/utils/clipboard'
 
 const base = location.origin + '/api'
 
@@ -132,10 +133,7 @@ async function run() {
 }
 
 function copyCode(code: string) {
-  navigator.clipboard?.writeText(code).then(
-    () => ElMessage.success('已复制'),
-    () => ElMessage.error('复制失败')
-  )
+  copyText(code, '已复制', '复制失败')
 }
 
 onMounted(loadApps)

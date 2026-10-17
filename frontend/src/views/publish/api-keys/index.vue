@@ -4,6 +4,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { appApiKeyApi } from '@/api/app-api-key'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent, AppApiKey } from '@/api/types'
+import { formatTime } from '@/utils/format'
+import { copyText } from '@/utils/clipboard'
 
 const loading = ref(false)
 const list = ref<AppApiKey[]>([])
@@ -76,14 +78,6 @@ function appType(id?: number) {
 }
 
 /* ---------------- 时间 / 状态工具 ---------------- */
-function formatTime(s?: string) {
-  if (!s) return '-'
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime())) return s
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 function isExpired(row: AppApiKey) {
   return !!row.expiresAt && new Date(row.expiresAt).getTime() <= Date.now()
 }
@@ -93,26 +87,6 @@ function maskKey(row: AppApiKey) {
 }
 
 /* ---------------- 复制 ---------------- */
-async function copyText(text: string, tip = '已复制到剪贴板') {
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success(tip)
-  } catch {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    try {
-      document.execCommand('copy')
-      ElMessage.success(tip)
-    } catch {
-      ElMessage.error('复制失败，请手动复制')
-    }
-    document.body.removeChild(ta)
-  }
-}
 
 /* ---------------- 新建 / 编辑 ---------------- */
 const dialogVisible = ref(false)

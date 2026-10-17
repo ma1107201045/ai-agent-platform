@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { VarItem } from '@/utils/flow.ts'
+import type { NodeConfig, VarItem } from '@/utils/flow'
 
 /** 可点击插入的变量块：把变量追加到目标配置字段末尾 */
 const props = defineProps<{
   vars: VarItem[]
   /** 目标配置对象（节点 config 引用） */
-  target: Record<string, any>
+  target: NodeConfig
   /** 目标字段名 */
   field: string
 }>()

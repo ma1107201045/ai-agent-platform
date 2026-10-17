@@ -5,13 +5,26 @@
  * - checkStructure：流程结构健康检查（start/end、孤立节点、循环依赖）
  */
 
+import type { BranchItem, NodeDataLike } from './flow'
+
+/** 校验用的最小节点/边形态（兼容 Vue Flow Node/Edge 与 DSL 转换产物） */
+export interface ValidatableNode {
+  id: string
+  data: NodeDataLike
+}
+
+export interface ValidatableEdge {
+  source: string
+  target: string
+}
+
 export interface NodeWarning {
   severity: 'error' | 'warn'
   text: string
 }
 
 /** 节点配置完整性检查：缺少关键配置为 error，可能影响效果但不阻断运行为 warn */
-export function nodeWarnings(data: any): NodeWarning[] {
+export function nodeWarnings(data: NodeDataLike | null | undefined): NodeWarning[] {
   const cfg = data?.config ?? {}
   const list: NodeWarning[] = []
   const str = (v: unknown) => (v == null ? '' : String(v))
@@ -42,7 +55,7 @@ export function nodeWarnings(data: any): NodeWarning[] {
     case 'condition': {
       const branches = Array.isArray(cfg.branches) ? cfg.branches : []
       if (branches.length > 0) {
-        const empty = branches.filter((b: any) => !str(b?.expression).trim()).length
+        const empty = branches.filter((b: Partial<BranchItem>) => !str(b?.expression).trim()).length
         if (empty === branches.length) {
           list.push({ severity: 'warn', text: '所有分支条件均为空，将命中第一条分支' })
         }
@@ -64,13 +77,15 @@ export function nodeWarnings(data: any): NodeWarning[] {
   return list
 }
 
-export function hasNodeError(data: any): boolean {
+export function hasNodeError(data: NodeDataLike | null | undefined): boolean {
   return nodeWarnings(data).some((w) => w.severity === 'error')
 }
 
 /** 运行/发布前统一校验，返回存在 error 级缺失的节点列表 */
-export function validateWorkflow(nodes: any[]): Array<{ node: any; text: string }> {
-  const errors: Array<{ node: any; text: string }> = []
+export function validateWorkflow<T extends ValidatableNode>(
+  nodes: T[]
+): Array<{ node: T; text: string }> {
+  const errors: Array<{ node: T; text: string }> = []
   for (const n of nodes) {
     for (const w of nodeWarnings(n.data)) {
       if (w.severity === 'error')
@@ -81,7 +96,7 @@ export function validateWorkflow(nodes: any[]): Array<{ node: any; text: string 
 }
 
 /** 检查流程结构问题：start/end 缺失或重复、孤立节点、循环依赖（返回警告文案列表） */
-export function checkStructure(nodes: any[], edges: any[]): string[] {
+export function checkStructure(nodes: ValidatableNode[], edges: ValidatableEdge[]): string[] {
   const issues: string[] = []
   const labelOf = (id: string) => nodes.find((n) => n.id === id)?.data?.label || id
 

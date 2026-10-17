@@ -2,10 +2,10 @@
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import VarChips from '../VarChips.vue'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig } from '@/utils/flow'
 
 /** HTTP 请求节点：地址 / 方法 / Headers / 鉴权 / 请求体 / 响应处理 */
-const props = defineProps<{ cfg: Record<string, any>; vars: VarItem[] }>()
+const props = defineProps<{ cfg: NodeConfig; vars: VarItem[] }>()
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 

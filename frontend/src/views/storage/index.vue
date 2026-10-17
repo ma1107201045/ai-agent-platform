@@ -10,7 +10,7 @@
         </p>
       </div>
       <div class="head-actions">
-        <el-button type="primary" @click="openTableDialog()">
+        <el-button type="primary" @click="tableDialog?.open()">
           <el-icon><Plus /></el-icon>&nbsp;新建数据表
         </el-button>
       </div>
@@ -70,10 +70,10 @@
               <p v-if="current.description" class="detail-desc">{{ current.description }}</p>
             </div>
             <div class="detail-actions">
-              <el-button type="primary" @click="openRowDialog()">
+              <el-button type="primary" @click="rowDialog?.open()">
                 <el-icon><Plus /></el-icon>&nbsp;新增行
               </el-button>
-              <el-button @click="openTableDialog(current)">
+              <el-button @click="tableDialog?.open(current ?? undefined)">
                 <el-icon><Setting /></el-icon>&nbsp;列设置
               </el-button>
               <el-dropdown trigger="click" @command="onMoreCommand">
@@ -154,11 +154,11 @@
               </template>
             </el-table-column>
             <el-table-column label="更新时间" width="170">
-              <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
+              <template #default="{ row }">{{ formatTime(row.updateTime, true) }}</template>
             </el-table-column>
             <el-table-column label="操作" width="130" align="center" fixed="right">
               <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="openRowDialog(row)"
+                <el-button link type="primary" size="small" @click="rowDialog?.open(row)"
                   >编辑</el-button
                 >
                 <el-button link type="danger" size="small" @click="removeRow(row)">删除</el-button>
@@ -182,199 +182,33 @@
       </el-card>
     </div>
 
-    <!-- 数据表 新建/编辑 弹窗 -->
-    <el-dialog
-      v-model="tableDialogVisible"
-      :title="tableForm.id ? '数据表设置' : '新建数据表'"
-      width="720px"
-      destroy-on-close
-    >
-      <el-form ref="tableFormRef" :model="tableForm" :rules="tableRules" label-width="90px">
-        <el-form-item label="表名" prop="name">
-          <el-input v-model="tableForm.name" placeholder="数据表名称（租户内唯一），如：客户资料" />
-        </el-form-item>
-        <el-form-item label="显示名">
-          <el-input v-model="tableForm.label" placeholder="可选，列表页展示的别名" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input
-            v-model="tableForm.description"
-            type="textarea"
-            :rows="2"
-            placeholder="可选，说明这张表存什么"
-          />
-        </el-form-item>
-        <el-form-item label="列定义">
-          <div class="columns-editor">
-            <div v-for="(col, idx) in tableForm.columns" :key="idx" class="column-row">
-              <el-input v-model="col.key" placeholder="key（字母/下划线）" class="col-key" />
-              <el-input v-model="col.label" placeholder="列名（显示用）" class="col-label" />
-              <el-select v-model="col.type" class="col-type">
-                <el-option value="text" label="文本 text" />
-                <el-option value="number" label="数字 number" />
-                <el-option value="boolean" label="布尔 boolean" />
-                <el-option value="date" label="日期 date" />
-                <el-option value="select" label="选项 select" />
-              </el-select>
-              <el-input
-                v-if="col.type === 'select'"
-                v-model="col.optionsText"
-                placeholder="选项，用英文逗号分隔"
-                class="col-options"
-              />
-              <el-button
-                link
-                type="danger"
-                :icon="Delete"
-                :disabled="tableForm.columns.length <= 1"
-                @click="removeColumn(idx)"
-              />
-            </div>
-            <div class="columns-actions">
-              <el-button size="small" type="primary" plain @click="addColumn">
-                <el-icon><Plus /></el-icon>&nbsp;添加列
-              </el-button>
-              <span class="editor-tip"
-                >列的 key 用于记录字段与模板引用；已有数据后再调整列名不会清空数据。</span
-              >
-            </div>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="tableDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submittingTable" @click="submitTable">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 行记录 新增/编辑 弹窗 -->
-    <el-dialog
-      v-model="rowDialogVisible"
-      :title="rowForm.id ? '编辑记录' : '新增记录'"
-      width="640px"
-      destroy-on-close
-    >
-      <el-form :model="rowForm.data" label-width="110px" class="row-form">
-        <el-form-item v-for="c in cols" :key="c.key" :label="c.label || c.key">
-          <el-input
-            v-if="c.type === 'text'"
-            v-model="rowForm.data[c.key]"
-            :placeholder="`请输入${c.label || c.key}`"
-          />
-          <el-input-number
-            v-else-if="c.type === 'number'"
-            v-model="rowForm.data[c.key]"
-            :controls="false"
-            class="full-width"
-          />
-          <el-switch
-            v-else-if="c.type === 'boolean'"
-            v-model="rowForm.data[c.key]"
-            active-text="是"
-            inactive-text="否"
-          />
-          <el-date-picker
-            v-else-if="c.type === 'date'"
-            v-model="rowForm.data[c.key]"
-            type="date"
-            value-format="YYYY-MM-DD"
-            placeholder="选择日期"
-            class="full-width"
-          />
-          <el-select
-            v-else-if="c.type === 'select'"
-            v-model="rowForm.data[c.key]"
-            clearable
-            placeholder="请选择"
-            class="full-width"
-          >
-            <el-option v-for="opt in c.options || []" :key="opt" :value="opt" :label="opt" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rowDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submittingRow" @click="submitRow">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 导入数据 弹窗 -->
-    <el-dialog v-model="importDialogVisible" title="导入数据" width="620px" destroy-on-close>
-      <el-radio-group v-model="importMode" class="import-mode">
-        <el-radio-button value="json">粘贴 JSON</el-radio-button>
-        <el-radio-button value="csv">上传 CSV</el-radio-button>
-      </el-radio-group>
-
-      <template v-if="importMode === 'json'">
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          class="import-alert"
-          title='按行粘贴 JSON 数组，键与列 key 对应，例如：[{"name": "张三", "age": 30}]'
-        />
-        <el-input
-          v-model="importJsonText"
-          type="textarea"
-          :rows="8"
-          placeholder='[{"name": "张三", "age": 30}, {"name": "李四", "age": 28}]'
-          class="full-width"
-        />
-      </template>
-
-      <template v-else>
-        <el-upload
-          drag
-          :auto-upload="false"
-          :limit="1"
-          accept=".csv"
-          :on-change="onCsvFileChange"
-          :on-exceed="onCsvExceed"
-          :on-remove="() => (importCsvFile = null)"
-          class="csv-uploader"
-        >
-          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-          <div class="el-upload__text">将 CSV 拖到此处，或<em>点击选择文件</em></div>
-          <template #tip>
-            <div class="el-upload__tip">
-              首行需为表头（列名或列 key）；UTF-8 编码；大小不超过 5MB。
-            </div>
-          </template>
-        </el-upload>
-      </template>
-
-      <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="importing" @click="doImport">开始导入</el-button>
-      </template>
-    </el-dialog>
+    <TableEditDialog ref="tableDialog" @saved="onTableSaved" />
+    <RowEditDialog ref="rowDialog" :table-id="selectedId" :cols="cols" @saved="onRowSaved" />
+    <ImportDialog ref="importDialog" :table-id="selectedId" @imported="onRowSaved" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  Collection,
   Delete,
+  Download,
   MoreFilled,
   Plus,
   Refresh,
   Search,
   Setting,
-  Upload,
-  Download,
-  Collection
+  Upload
 } from '@element-plus/icons-vue'
 import { dataStoreApi, downloadTableCsv } from '@/api/data-store'
 import type { DataColumn, DataRecordRow, DataTable } from '@/api/types'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyRow = Record<string, any>
-
-/** 列编辑器行（含选项文本输入） */
-interface ColumnEditRow extends DataColumn {
-  optionsText?: string
-}
+import { formatTime } from '@/utils/format'
+import { cellText, tableColumns } from './storageMeta'
+import TableEditDialog from './components/TableEditDialog.vue'
+import RowEditDialog from './components/RowEditDialog.vue'
+import ImportDialog from './components/ImportDialog.vue'
 
 // ---------- 列表 ----------
 const loading = ref(false)
@@ -398,16 +232,6 @@ async function loadTables() {
     }
   } finally {
     loading.value = false
-  }
-}
-
-const tableColumns = (t: DataTable | null): DataColumn[] => {
-  if (!t?.columnsJson) return []
-  try {
-    const list = JSON.parse(t.columnsJson) as DataColumn[]
-    return Array.isArray(list) ? list : []
-  } catch {
-    return []
   }
 }
 
@@ -447,174 +271,26 @@ function sizeChange() {
   loadRecords()
 }
 
-const cellText = (v: unknown) => {
-  if (v === null || v === undefined) return '—'
-  return String(v)
-}
+// ---------- 弹窗回调 ----------
+const tableDialog = ref<InstanceType<typeof TableEditDialog> | null>(null)
+const rowDialog = ref<InstanceType<typeof RowEditDialog> | null>(null)
+const importDialog = ref<InstanceType<typeof ImportDialog> | null>(null)
 
-const formatTime = (t?: string) => (t ? t.replace('T', ' ').slice(0, 19) : '—')
-
-// ---------- 数据表 编辑 ----------
-const tableDialogVisible = ref(false)
-const submittingTable = ref(false)
-const tableFormRef = ref<FormInstance>()
-const tableForm = ref<{
-  id?: number
-  name: string
-  label?: string
-  description?: string
-  columns: ColumnEditRow[]
-}>({
-  name: '',
-  label: '',
-  description: '',
-  columns: []
-})
-const tableRules: FormRules = {
-  name: [{ required: true, message: '请输入数据表名称', trigger: 'blur' }]
-}
-
-function newColumn(): ColumnEditRow {
-  return { key: '', label: '', type: 'text', options: [], optionsText: '' }
-}
-
-function addColumn() {
-  tableForm.value.columns.push(newColumn())
-}
-
-function removeColumn(idx: number) {
-  tableForm.value.columns.splice(idx, 1)
-}
-
-function openTableDialog(table?: DataTable) {
-  if (table) {
-    const colsOf = tableColumns(table)
-    tableForm.value = {
-      id: table.id,
-      name: table.name,
-      label: table.label,
-      description: table.description,
-      columns: colsOf.map((c) => ({ ...c, optionsText: (c.options || []).join(',') }))
-    }
-  } else {
-    tableForm.value = {
-      name: '',
-      label: '',
-      description: '',
-      columns: [newColumn(), newColumn()]
-    }
-  }
-  tableDialogVisible.value = true
-}
-
-function buildColumnsPayload(): DataColumn[] {
-  return tableForm.value.columns
-    .filter((c) => c.key.trim())
-    .map((c) => {
-      const base: DataColumn = {
-        key: c.key.trim(),
-        label: c.label?.trim() || c.key.trim(),
-        type: c.type
-      }
-      if (c.type === 'select') {
-        base.options = (c.optionsText || '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      }
-      return base
-    })
-}
-
-async function submitTable() {
-  const valid = await tableFormRef.value?.validate().catch(() => false)
-  if (!valid) return
-  if (!buildColumnsPayload().length) {
-    ElMessage.warning('请至少填写一个有效的列 key')
-    return
-  }
-  submittingTable.value = true
-  try {
-    const payload = {
-      name: tableForm.value.name.trim(),
-      label: tableForm.value.label?.trim(),
-      description: tableForm.value.description,
-      columns: buildColumnsPayload()
-    }
-    if (tableForm.value.id) {
-      const updated = await dataStoreApi.updateTable(tableForm.value.id, payload)
-      ElMessage.success('数据表已更新')
-      current.value = updated
-      await loadRecords()
-    } else {
-      const created = await dataStoreApi.createTable(payload)
-      ElMessage.success('数据表已创建')
-      tableDialogVisible.value = false
-      await loadTables()
-      selectedId.value = created.id
-      current.value = created
-      await loadRecords()
-    }
-  } finally {
-    submittingTable.value = false
-  }
-}
-
-// ---------- 行记录 新增/编辑 ----------
-const rowDialogVisible = ref(false)
-const submittingRow = ref(false)
-const rowForm = ref<{ id?: number; data: AnyRow }>({ data: {} })
-
-function blankRow(): AnyRow {
-  const data: AnyRow = {}
-  for (const c of cols.value) {
-    if (c.type === 'boolean') data[c.key] = false
-    else if (c.type === 'number') data[c.key] = undefined
-    else data[c.key] = ''
-  }
-  return data
-}
-
-function openRowDialog(row?: DataRecordRow) {
-  if (row) {
-    const data: AnyRow = {}
-    for (const c of cols.value) {
-      const v = row.data?.[c.key]
-      data[c.key] = v === undefined || v === null ? (c.type === 'boolean' ? false : '') : v
-    }
-    rowForm.value = { id: row.id, data }
-  } else {
-    rowForm.value = { data: blankRow() }
-  }
-  rowDialogVisible.value = true
-}
-
-async function submitRow() {
-  if (selectedId.value == null) return
-  submittingRow.value = true
-  try {
-    const data: AnyRow = {}
-    for (const c of cols.value) {
-      const v = rowForm.value.data[c.key]
-      if (c.type === 'text') {
-        data[c.key] = (v ?? '').toString().trim()
-      } else {
-        data[c.key] = v
-      }
-    }
-    if (rowForm.value.id) {
-      await dataStoreApi.updateRecord(rowForm.value.id, data)
-      ElMessage.success('记录已更新')
-    } else {
-      await dataStoreApi.createRecord(selectedId.value, data)
-      ElMessage.success('记录已新增')
-    }
-    rowDialogVisible.value = false
+async function onTableSaved(table: DataTable, isEdit: boolean) {
+  if (isEdit) {
+    current.value = table
     await loadRecords()
+  } else {
     await loadTables()
-  } finally {
-    submittingRow.value = false
+    selectedId.value = table.id
+    current.value = table
+    await loadRecords()
   }
+}
+
+async function onRowSaved() {
+  await loadRecords()
+  await loadTables()
 }
 
 async function removeRow(row: DataRecordRow) {
@@ -632,7 +308,7 @@ async function removeRow(row: DataRecordRow) {
 // ---------- 更多操作 ----------
 async function onMoreCommand(cmd: string) {
   if (cmd === 'import') {
-    importDialogVisible.value = true
+    importDialog.value?.open()
   } else if (cmd === 'export') {
     await doExport()
   } else if (cmd === 'delete') {
@@ -665,60 +341,6 @@ async function doExport() {
     ElMessage.success('已开始导出 CSV')
   } catch (e) {
     ElMessage.error((e as Error).message || '导出失败')
-  }
-}
-
-// ---------- 导入 ----------
-const importDialogVisible = ref(false)
-const importMode = ref<'json' | 'csv'>('json')
-const importJsonText = ref('')
-const importCsvFile = ref<File | null>(null)
-const importing = ref(false)
-
-function onCsvFileChange(file: { raw?: File }) {
-  if (file.raw) importCsvFile.value = file.raw
-}
-
-function onCsvExceed() {
-  ElMessage.warning('每次仅支持一个 CSV 文件')
-}
-
-async function doImport() {
-  const t = current.value
-  if (!t) return
-  importing.value = true
-  try {
-    let count: number
-    if (importMode.value === 'json') {
-      let rows: AnyRow[]
-      try {
-        const parsed = JSON.parse(importJsonText.value)
-        if (!Array.isArray(parsed)) throw new Error('JSON 顶层应为数组')
-        rows = parsed
-      } catch (e) {
-        ElMessage.error(`JSON 解析失败：${(e as Error).message}`)
-        return
-      }
-      if (!rows.length) {
-        ElMessage.warning('没有可导入的数据')
-        return
-      }
-      count = await dataStoreApi.importJson(t.id, rows)
-    } else {
-      if (!importCsvFile.value) {
-        ElMessage.warning('请先选择 CSV 文件')
-        return
-      }
-      count = await dataStoreApi.importCsv(t.id, importCsvFile.value)
-    }
-    ElMessage.success(`成功导入 ${count} 行记录`)
-    importDialogVisible.value = false
-    importJsonText.value = ''
-    importCsvFile.value = null
-    await loadRecords()
-    await loadTables()
-  } finally {
-    importing.value = false
   }
 }
 
@@ -930,51 +552,5 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   padding-top: 14px;
-}
-
-.columns-editor {
-  width: 100%;
-  border: 1px dashed var(--border-color, #d9dce1);
-  border-radius: 10px;
-  padding: 12px;
-}
-.column-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-  align-items: center;
-}
-.col-key {
-  width: 170px;
-}
-.col-label {
-  width: 140px;
-}
-.col-type {
-  width: 130px;
-}
-.col-options {
-  flex: 1;
-}
-.columns-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.editor-tip {
-  font-size: 12px;
-  color: var(--text-tertiary, #8a8f98);
-}
-.full-width {
-  width: 100%;
-}
-.import-mode {
-  margin-bottom: 14px;
-}
-.import-alert {
-  margin-bottom: 10px;
-}
-.csv-uploader {
-  width: 100%;
 }
 </style>

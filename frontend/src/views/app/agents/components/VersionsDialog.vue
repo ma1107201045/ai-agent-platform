@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgentVersion } from '@/api/types'
+import { formatTime } from '@/utils/format'
 
 /** 版本历史弹窗：加载 / 回滚自闭环，回滚成功后通知父组件刷新画布 */
 const props = defineProps<{ appId: number }>()
@@ -17,17 +18,12 @@ const versions = ref<AppAgentVersion[]>([])
 const loadingVersions = ref(false)
 const rollingBack = ref(false)
 
-function formatTime(t?: string) {
-  if (!t) return ''
-  return t.replace('T', ' ').slice(0, 19)
-}
-
 async function openVersions() {
   loadingVersions.value = true
   try {
     versions.value = await appAgentApi.versions(props.appId)
-  } catch (e: any) {
-    ElMessage.error(e?.message || '加载版本列表失败')
+  } catch (e) {
+    ElMessage.error((e as Error)?.message || '加载版本列表失败')
   } finally {
     loadingVersions.value = false
   }
@@ -45,8 +41,8 @@ async function rollbackTo(version: AppAgentVersion) {
     ElMessage.success(`已回滚到 v${version.version}，请检查后重新发布`)
     visible.value = false
     emit('rolledBack')
-  } catch (e: any) {
-    ElMessage.error(e?.message || '回滚失败')
+  } catch (e) {
+    ElMessage.error((e as Error)?.message || '回滚失败')
   } finally {
     rollingBack.value = false
   }
@@ -76,7 +72,7 @@ watch(visible, (v) => {
               <el-tag v-else size="small" type="info" effect="plain">历史</el-tag>
             </div>
             <div class="version-time">
-              {{ formatTime(v.createTime) }} · {{ v.createdBy || '未知' }}
+              {{ formatTime(v.createTime, true) }} · {{ v.createdBy || '未知' }}
             </div>
           </div>
           <el-button size="small" :disabled="rollingBack" @click="rollbackTo(v)">

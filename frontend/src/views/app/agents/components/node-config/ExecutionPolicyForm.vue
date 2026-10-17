@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { QuestionFilled } from '@element-plus/icons-vue'
 import VarChips from '../VarChips.vue'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig } from '@/utils/flow'
 
 /** 通用执行策略（重试 / 超时 / 错误处理 / 输出别名），起止节点不渲染本组件 */
-defineProps<{ cfg: Record<string, any>; vars: VarItem[] }>()
+defineProps<{ cfg: NodeConfig; vars: VarItem[] }>()
 
 const TIP_OUTPUT_VAR = '填写后下游可用 {{别名}} 引用本节点输出'
 </script>

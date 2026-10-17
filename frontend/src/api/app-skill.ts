@@ -1,4 +1,5 @@
 import request from './request'
+import { invalidatePrefix } from '@/utils/httpCache'
 import type { PageResult, Skill, SkillVersion } from './types'
 
 /** 技能（AppSkill）API，与后端 AppSkillController（/api/app/skills）一一对应 */
@@ -14,19 +15,28 @@ export const appSkillApi = {
   },
   /** 启用技能列表（应用绑定下拉 / 编排技能节点选择） */
   enabled(category?: string, type?: string) {
-    return request.get<never, Skill[]>('/app/skills/enabled', { params: { category, type } })
+    return request.get<never, Skill[]>('/app/skills/enabled', {
+      params: { category, type },
+      cache: 30_000
+    })
   },
   get(id: number) {
     return request.get<never, Skill>(`/app/skills/${id}`)
   },
   create(data: Partial<Skill>) {
-    return request.post<never, Skill>('/app/skills', data)
+    return request
+      .post<never, Skill>('/app/skills', data)
+      .then((r) => (invalidatePrefix('/app/skills'), r))
   },
   update(id: number, data: Partial<Skill>) {
-    return request.put<never, Skill>(`/app/skills/${id}`, data)
+    return request
+      .put<never, Skill>(`/app/skills/${id}`, data)
+      .then((r) => (invalidatePrefix('/app/skills'), r))
   },
   remove(id: number) {
-    return request.delete<never, void>(`/app/skills/${id}`)
+    return request
+      .delete<never, void>(`/app/skills/${id}`)
+      .then((r) => (invalidatePrefix('/app/skills'), r))
   },
   /** 版本快照列表（按版本号倒序） */
   versions(id: number) {
@@ -34,7 +44,9 @@ export const appSkillApi = {
   },
   /** 回退到指定历史版本（生成新版本留痕） */
   rollback(id: number, version: number) {
-    return request.post<never, Skill>(`/app/skills/${id}/rollback`, { version })
+    return request
+      .post<never, Skill>(`/app/skills/${id}/rollback`, { version })
+      .then((r) => (invalidatePrefix('/app/skills'), r))
   },
   /** 导出技能（自包含 JSON，可分享/备份） */
   exportSkill(id: number) {
@@ -42,7 +54,9 @@ export const appSkillApi = {
   },
   /** 导入技能（code 冲突自动追加后缀） */
   importSkill(data: Partial<Skill>) {
-    return request.post<never, Skill>('/app/skills/import', data)
+    return request
+      .post<never, Skill>('/app/skills/import', data)
+      .then((r) => (invalidatePrefix('/app/skills'), r))
   },
   /** 引用该技能的应用列表 */
   apps(id: number) {

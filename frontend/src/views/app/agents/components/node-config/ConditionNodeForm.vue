@@ -3,16 +3,16 @@ import { computed, watch } from 'vue'
 import { Delete, Plus } from '@element-plus/icons-vue'
 import VarChips from '../VarChips.vue'
 import { initialBranches, isMultiBranch, nextBranchKey } from '@/utils/flow'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig, FlowGraphNode, FlowGraphEdge } from '@/utils/flow'
 
 /** 条件分支节点：是/否 二分 或 多分支规则（分支增删改名时同步画布连线） */
 const props = defineProps<{
-  cfg: Record<string, any>
+  cfg: NodeConfig
   vars: VarItem[]
   /** Vue Flow 节点对象 */
-  node: any
+  node: FlowGraphNode | null
   /** 画布连线数组（可写：分支改名/删除时同步连线） */
-  edges: any[]
+  edges: FlowGraphEdge[]
 }>()
 
 const conditionPlaceholder =
@@ -62,7 +62,7 @@ function removeEdgesOf(keys: string[]) {
   if (!keys.length) return
   for (let i = props.edges.length - 1; i >= 0; i--) {
     const e = props.edges[i]
-    if (e.source === props.node?.id && keys.includes(e.sourceHandle)) {
+    if (e.source === props.node?.id && e.sourceHandle && keys.includes(e.sourceHandle)) {
       props.edges.splice(i, 1)
     }
   }

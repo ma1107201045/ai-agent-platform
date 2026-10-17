@@ -24,13 +24,14 @@ import TemplateNodeForm from './node-config/TemplateNodeForm.vue'
 import KnowledgeNodeForm from './node-config/KnowledgeNodeForm.vue'
 import ExecutionPolicyForm from './node-config/ExecutionPolicyForm.vue'
 import PromptPickerDialog from './node-config/PromptPickerDialog.vue'
+import type { FlowGraphEdge, FlowGraphNode, NodeConfig } from '@/utils/flow'
 
 /** 节点配置面板：按节点类型渲染差异化配置 + 通用执行策略 */
 const props = defineProps<{
   /** Vue Flow 节点对象（直接修改其 data 完成编辑） */
-  node: any
+  node: FlowGraphNode | null
   /** 画布连线数组（可写：分支改名/删除时同步连线） */
-  edges: any[]
+  edges: FlowGraphEdge[]
   chatModels: ChatModelInfo[]
   rerankModels: ChatModelInfo[]
   datasets: KnowledgeDataset[]
@@ -41,11 +42,11 @@ const props = defineProps<{
   vars: VarItem[]
 }>()
 
-const type = computed<WorkflowNodeType>(() => props.node?.data?.nodeType)
+const type = computed<WorkflowNodeType>(() => props.node?.data?.nodeType as WorkflowNodeType)
 const meta = computed(() => NODE_TYPE_META[type.value])
 
 // ---------- 配置对象（与 node.data.config 双向绑定） ----------
-const cfg = ref<Record<string, any>>({})
+const cfg = ref<NodeConfig>({})
 
 /** Schema 必填校验（与后端 NodeExecutionPolicy 同规则；字段与校验逻辑由后端单源声明） */
 const schemaErrors = computed<string[]>(() =>

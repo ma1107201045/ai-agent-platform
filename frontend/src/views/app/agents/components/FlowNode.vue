@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FlowNodeData } from '@/utils/flow'
 import { Handle, Position } from '@vue-flow/core'
 import { Notebook } from '@element-plus/icons-vue'
 import { branchHandlesOf } from '@/utils/flow'
@@ -11,7 +12,7 @@ import { iconOf, metaOf, nodeRunClass } from '../nodeVisual'
  */
 defineProps<{
   id: string
-  data: any
+  data: FlowNodeData
   selected?: boolean
   highlighted?: boolean
 }>()

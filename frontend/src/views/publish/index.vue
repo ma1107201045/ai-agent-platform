@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { CopyDocument, Promotion, Right } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent, AppAgentVersion, AppAgentStats } from '@/api/types'
+import { formatTime } from '@/utils/format'
+import { copyText } from '@/utils/clipboard'
 
 const router = useRouter()
 const loading = ref(false)
@@ -31,24 +32,11 @@ const gradientOf = (row: AppAgent) => {
 
 const publicUrl = (id: number) => `${location.origin}/public/${id}`
 
-async function copyUrl(row: AppAgent) {
-  try {
-    await navigator.clipboard.writeText(publicUrl(row.id))
-    ElMessage.success('链接已复制')
-  } catch {
-    ElMessage.warning('复制失败，请手动复制')
-  }
+function copyUrl(row: AppAgent) {
+  copyText(publicUrl(row.id), '链接已复制', '复制失败，请手动复制')
 }
 
 /** 格式化时间：ISO 字符串 → YYYY-MM-DD HH:mm */
-function formatTime(s?: string) {
-  if (!s) return '-'
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime())) return s
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 async function load() {
   loading.value = true
   try {

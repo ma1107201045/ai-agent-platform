@@ -1,4 +1,5 @@
 import request from './request'
+import { invalidatePrefix } from '@/utils/httpCache'
 import type { PageResult, PromptTemplate, PromptTemplateVersion } from './types'
 
 /** 提示词模板（AppPromptTemplate）API，与后端 AppPromptTemplateController（/api/app/prompts）一一对应 */
@@ -8,19 +9,28 @@ export const appPromptApi = {
   },
   /** 启用模板列表（试跑/编排下拉用） */
   enabled(category?: string) {
-    return request.get<never, PromptTemplate[]>('/app/prompts/enabled', { params: { category } })
+    return request.get<never, PromptTemplate[]>('/app/prompts/enabled', {
+      params: { category },
+      cache: 30_000
+    })
   },
   get(id: number) {
     return request.get<never, PromptTemplate>(`/app/prompts/${id}`)
   },
   create(data: Partial<PromptTemplate>) {
-    return request.post<never, PromptTemplate>('/app/prompts', data)
+    return request
+      .post<never, PromptTemplate>('/app/prompts', data)
+      .then((r) => (invalidatePrefix('/app/prompts'), r))
   },
   update(id: number, data: Partial<PromptTemplate>) {
-    return request.put<never, PromptTemplate>(`/app/prompts/${id}`, data)
+    return request
+      .put<never, PromptTemplate>(`/app/prompts/${id}`, data)
+      .then((r) => (invalidatePrefix('/app/prompts'), r))
   },
   remove(id: number) {
-    return request.delete<never, void>(`/app/prompts/${id}`)
+    return request
+      .delete<never, void>(`/app/prompts/${id}`)
+      .then((r) => (invalidatePrefix('/app/prompts'), r))
   },
   /** 版本快照列表（按版本号倒序） */
   versions(id: number) {

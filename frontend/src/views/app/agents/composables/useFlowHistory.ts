@@ -1,8 +1,9 @@
 import { ref, type Ref } from 'vue'
+import type { FlowGraphEdge, FlowGraphNode } from '@/utils/flow'
 
 interface FlowState {
-  nodes: any[]
-  edges: any[]
+  nodes: FlowGraphNode[]
+  edges: FlowGraphEdge[]
 }
 
 /**
@@ -10,8 +11,8 @@ interface FlowState {
  * 只覆盖画布结构（节点与连线的增删改移），右侧表单配置修改不进历史栈。
  */
 export function useFlowHistory(
-  nodes: Ref<any[]>,
-  edges: Ref<any[]>,
+  nodes: Ref<FlowGraphNode[]>,
+  edges: Ref<FlowGraphEdge[]>,
   /** 恢复历史后的收尾（清空选中、重置编辑基线等） */
   onRestored?: () => void
 ) {

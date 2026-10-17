@@ -191,10 +191,10 @@ export const DEFAULT_ADVANCED = {
 }
 
 /** 读取条件节点的分支列表（多分支模式），无则为空数组 */
-export function branchesOf(data: any): BranchItem[] {
+export function branchesOf(data: NodeDataLike | null | undefined): BranchItem[] {
   const list = data?.config?.branches
   if (!Array.isArray(list)) return []
-  return list.map((b: any) => ({
+  return list.map((b: Partial<BranchItem>) => ({
     key: String(b?.key ?? ''),
     label: String(b?.label ?? b?.key ?? ''),
     expression: String(b?.expression ?? '')
@@ -202,12 +202,12 @@ export function branchesOf(data: any): BranchItem[] {
 }
 
 /** 是否为多分支模式 */
-export function isMultiBranch(data: any): boolean {
+export function isMultiBranch(data: NodeDataLike | null | undefined): boolean {
   return branchesOf(data).length > 0
 }
 
 /** 生成下一个分支 key，避免与现有重复 */
-export function nextBranchKey(data: any): string {
+export function nextBranchKey(data: NodeDataLike | null | undefined): string {
   const used = new Set(branchesOf(data).map((b) => b.key))
   let i = used.size + 1
   while (used.has(`branch${i}`)) i += 1
@@ -223,7 +223,9 @@ export function initialBranches(): BranchItem[] {
 }
 
 /** 节点在画布上渲染的分支 handle 列表（含默认分支） */
-export function branchHandlesOf(data: any): Array<{ key: string; label: string; color: string }> {
+export function branchHandlesOf(
+  data: NodeDataLike | null | undefined
+): Array<{ key: string; label: string; color: string }> {
   if (isMultiBranch(data)) {
     const list = branchesOf(data).map((b, i) => ({
       key: b.key,
@@ -239,12 +241,54 @@ export function branchHandlesOf(data: any): Array<{ key: string; label: string; 
   ]
 }
 
-/** 画布节点（Vue Flow 形态） */
-export interface FlowNodeData {
+/** 画布节点数据（Vue Flow 形态）。type 字面量以便与 Vue Flow 的 Record<string, any> 互转 */
+export type FlowNodeData = {
   label: string
   nodeType: WorkflowNodeType
   config: Record<string, unknown>
   /** 节点备注（持久化到 config.remark） */
+  remark?: string
+  /** 调试运行态（运行时注入，不入库） */
+  runStatus?: string
+  runCost?: number
+  runError?: string
+  /** 粘贴时剔除的选中态残留 */
+  selected?: boolean
+}
+
+/**
+ * 画布节点/连线的结构类型（与 Vue Flow Node/Edge 结构兼容，但不引用其泛型——
+ * Vue Flow 的条件类型在 TS 5.4 下会触发编译器崩溃，保持结构化最稳妥）
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRecord = Record<string, any>
+
+export type FlowGraphNode = {
+  id: string
+  type?: string
+  position: { x: number; y: number }
+  data: FlowNodeData
+  selected?: boolean
+  dimensions?: { width: number; height: number }
+} & AnyRecord
+
+export type FlowGraphEdge = {
+  id: string
+  source: string
+  target: string
+  sourceHandle?: string | null
+  targetHandle?: string | null
+} & AnyRecord
+
+/** 节点配置对象（字段随节点类型而异，必填/校验由后端 Node Schema 单源约束） */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type NodeConfig = Record<string, any>
+
+/** 节点数据的最小宽松形态（校验/分支读取等场景；FlowNodeData 可直接赋值） */
+export interface NodeDataLike {
+  label?: string
+  nodeType?: string
+  config?: Record<string, unknown>
   remark?: string
 }
 
@@ -310,9 +354,9 @@ export function flowToDsl(
     id: string
     source: string
     target: string
-    sourceHandle?: string
-    targetHandle?: string
-    label?: string
+    sourceHandle?: string | null
+    targetHandle?: string | null
+    label?: unknown
   }>
 ): string {
   const workflow: AppAgentWorkflow = {
@@ -327,9 +371,9 @@ export function flowToDsl(
       id: e.id,
       source: e.source,
       target: e.target,
-      sourceHandle: e.sourceHandle,
-      targetHandle: e.targetHandle,
-      label: e.label || undefined
+      sourceHandle: e.sourceHandle ?? undefined,
+      targetHandle: e.targetHandle ?? undefined,
+      label: typeof e.label === 'string' && e.label ? e.label : undefined
     }))
   }
   return JSON.stringify(workflow)

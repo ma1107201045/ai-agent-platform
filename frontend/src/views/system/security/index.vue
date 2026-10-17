@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { userSecurityApi, type SysProfile } from '@/api/user-security'
+import { copyText } from '@/utils/clipboard'
 
 const loading = ref(false)
 const profile = ref<SysProfile | null>(null)
@@ -112,13 +113,8 @@ async function mfaStep2() {
     mfaBusy.value = false
   }
 }
-async function copySecret() {
-  try {
-    await navigator.clipboard.writeText(mfaSecret.value)
-    ElMessage.success('密钥已复制')
-  } catch {
-    ElMessage.info(`请手动复制：${mfaSecret.value}`)
-  }
+function copySecret() {
+  copyText(mfaSecret.value, '密钥已复制', `请手动复制：${mfaSecret.value}`)
 }
 
 /* MFA 关闭 */

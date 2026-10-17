@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import VarChips from '../VarChips.vue'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig } from '@/utils/flow'
 
 /** 表达式计算节点（MVEL 脚本） */
-defineProps<{ cfg: Record<string, any>; vars: VarItem[] }>()
+defineProps<{ cfg: NodeConfig; vars: VarItem[] }>()
 
 const TIP_SCRIPT_VARS =
   '脚本内可直接使用 input（用户输入）、outputs（全部节点输出集合）以及各上游节点 id 变量。'

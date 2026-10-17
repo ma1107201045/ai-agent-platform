@@ -56,6 +56,13 @@ export function invalidate(key: string): void {
   cache.delete(key)
 }
 
+/** 按 URL 片段批量失效（写操作后清理相关列表缓存，如 invalidatePrefix('/model/models')） */
+export function invalidatePrefix(urlFragment: string): void {
+  for (const key of cache.keys()) {
+    if (key.includes(urlFragment)) cache.delete(key)
+  }
+}
+
 /** 清空全部缓存（退出登录 / 切换租户时调用） */
 export function clearHttpCache(): void {
   cache.clear()

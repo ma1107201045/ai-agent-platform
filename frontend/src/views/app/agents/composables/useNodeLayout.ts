@@ -1,5 +1,6 @@
 import { ElMessage } from 'element-plus'
 import type { Ref } from 'vue'
+import type { FlowGraphEdge, FlowGraphNode } from '@/utils/flow'
 
 export type AlignMode = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
 export type DistributeMode = 'horizontal' | 'vertical'
@@ -8,10 +9,10 @@ export type DistributeMode = 'horizontal' | 'vertical'
 const SELECT_HINT = '请先选中至少 2 个节点：按住 Shift 拖拽框选，或按住 Ctrl 点击追加选中'
 
 interface LayoutDeps {
-  nodes: Ref<any[]>
-  edges: Ref<any[]>
+  nodes: Ref<FlowGraphNode[]>
+  edges: Ref<FlowGraphEdge[]>
   /** vue-flow 内部真实渲染节点（框选后 v-model 回写不可靠，必须从这里取） */
-  getNodes: Ref<any[]>
+  getNodes: Ref<FlowGraphNode[]>
   snapshot: () => void
 }
 

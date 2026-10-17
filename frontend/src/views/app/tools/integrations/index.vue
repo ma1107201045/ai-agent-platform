@@ -7,6 +7,7 @@ import { appAgentToolApi } from '@/api/app-tool-info.ts'
 import type { AppAgentTool, ToolConnector } from '@/api/types'
 import HeadersEditor from '@/components/tool/HeadersEditor.vue'
 import ParamsSchemaEditor from '@/components/tool/ParamsSchemaEditor.vue'
+import { formatTime } from '@/utils/format'
 
 const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
@@ -29,14 +30,6 @@ const statusOptions = [
   { value: 1, label: '启用' },
   { value: 0, label: '禁用' }
 ]
-
-function formatTime(s?: string) {
-  if (!s) return '-'
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime())) return s
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 async function load() {
   loading.value = true

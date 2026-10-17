@@ -22,6 +22,24 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       }
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // 大依赖独立分包：只有用到的路由才加载对应 chunk
+          manualChunks: {
+            'vue-flow': [
+              '@vue-flow/core',
+              '@vue-flow/background',
+              '@vue-flow/controls',
+              '@vue-flow/minimap',
+              '@vue-flow/node-toolbar'
+            ],
+            sanitize: ['dompurify'],
+            'vue-vendor': ['vue', 'vue-router', 'pinia', 'axios']
+          }
+        }
+      }
+    },
     server: {
       port: 5173,
       proxy: {

@@ -278,6 +278,8 @@ import {
 } from '@element-plus/icons-vue'
 import { assetsApi, assetCategoryText, assetContentUrl, downloadAsset } from '@/api/assets'
 import type { AssetCategory, AssetFile } from '@/api/types'
+import { formatTime } from '@/utils/format'
+import { copyText } from '@/utils/clipboard'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyIcon = any
@@ -344,8 +346,6 @@ const formatSize = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
-
-const formatTime = (t?: string) => (t ? t.replace('T', ' ').slice(0, 16) : '—')
 
 // ---------- 上传 ----------
 const uploadDialogVisible = ref(false)
@@ -419,12 +419,11 @@ async function download(asset: AssetFile) {
 async function copyLink() {
   const asset = detail.value
   if (!asset) return
-  try {
-    await navigator.clipboard.writeText(assetContentUrl(asset.id))
-    ElMessage.success('引用地址已复制')
-  } catch {
-    ElMessage.warning('复制失败，请手动复制：' + assetContentUrl(asset.id))
-  }
+  copyText(
+    assetContentUrl(asset.id),
+    '引用地址已复制',
+    '复制失败，请手动复制：' + assetContentUrl(asset.id)
+  )
 }
 
 // ---------- 编辑 ----------

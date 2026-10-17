@@ -38,7 +38,7 @@ export const marketApi = {
     return request.get<never, PageResult<MarketItem>>('/app-market', { params })
   },
   stats() {
-    return request.get<never, MarketStats>('/app-market/stats')
+    return request.get<never, MarketStats>('/app-market/stats', { cache: 60_000 })
   },
   get(id: number) {
     return request.get<never, MarketItem>(`/app-market/${id}`)

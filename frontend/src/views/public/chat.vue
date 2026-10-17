@@ -72,8 +72,8 @@ async function send() {
       }
       traceVisible.value = true
     }
-  } catch (err: any) {
-    assistant.content = err?.message || '请求失败，请稍后重试'
+  } catch (err) {
+    assistant.content = (err as Error)?.message || '请求失败，请稍后重试'
     assistant.error = true
   } finally {
     assistant.loading = false
@@ -88,8 +88,8 @@ onMounted(async () => {
     if (appInfo.value.welcomeMessage) {
       messages.value.push({ role: 'assistant', content: appInfo.value.welcomeMessage })
     }
-  } catch (err: any) {
-    loadError.value = err?.message || '应用不存在或未发布'
+  } catch (err) {
+    loadError.value = (err as Error)?.message || '应用不存在或未发布'
   } finally {
     loaded.value = true
   }

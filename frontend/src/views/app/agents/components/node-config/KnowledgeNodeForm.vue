@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import VarChips from '../VarChips.vue'
-import type { VarItem } from '@/utils/flow'
+import type { VarItem, NodeConfig } from '@/utils/flow'
 import type { ChatModelInfo, KnowledgeDataset } from '@/api/types'
 
 /** 知识库检索节点 */
 defineProps<{
-  cfg: Record<string, any>
+  cfg: NodeConfig
   vars: VarItem[]
   rerankModels: ChatModelInfo[]
   datasets: KnowledgeDataset[]

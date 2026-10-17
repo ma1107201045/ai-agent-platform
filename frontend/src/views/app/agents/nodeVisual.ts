@@ -10,7 +10,7 @@ import {
   Share
 } from '@element-plus/icons-vue'
 import type { WorkflowNodeType } from '@/api/types'
-import { NODE_TYPE_META } from '@/utils/flow'
+import { NODE_TYPE_META, type FlowNodeData, type NodeDataLike } from '@/utils/flow'
 
 /** 节点视觉相关共享工具：图标缓存 / 类型元信息 / 运行态样式 / 节点面板分组 */
 
@@ -38,13 +38,13 @@ export function metaOf(type: WorkflowNodeType) {
 }
 
 /** MiniMap 节点颜色：按节点类型取主题色 */
-export function miniMapNodeColor(node: any): string {
+export function miniMapNodeColor(node: { data?: NodeDataLike } | null | undefined): string {
   const type = node?.data?.nodeType as WorkflowNodeType | undefined
   return type && NODE_TYPE_META[type] ? NODE_TYPE_META[type].color : '#d1d5db'
 }
 
 /** trace 状态 -> 节点着色 class（含实时 running / canceled） */
-export function nodeRunClass(data: any): string {
+export function nodeRunClass(data: Partial<FlowNodeData> | null | undefined): string {
   const s = data?.runStatus
   if (s === 'success') return 'run-success'
   if (s === 'error') return 'run-error'

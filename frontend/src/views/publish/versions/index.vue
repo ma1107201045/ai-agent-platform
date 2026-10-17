@@ -13,6 +13,8 @@ import {
 } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent, AppAgentVersion } from '@/api/types'
+import { formatTime } from '@/utils/format'
+import { copyText } from '@/utils/clipboard'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,14 +73,6 @@ onMounted(() => {
 })
 
 /* ---------------- 展示工具 ---------------- */
-function formatTime(s?: string) {
-  if (!s) return '-'
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime())) return s
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 const NODE_TYPE_NAMES: Record<string, string> = {
   start: '开始',
   end: '结束',
@@ -178,27 +172,6 @@ function openDetail(row: AppAgentVersion) {
   detailVersion.value = row
   detailTab.value = detailParts.value.length ? detailParts.value[0].key : 'raw'
   detailVisible.value = true
-}
-
-async function copyText(text: string, tip = '已复制到剪贴板') {
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success(tip)
-  } catch {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    try {
-      document.execCommand('copy')
-      ElMessage.success(tip)
-    } catch {
-      ElMessage.error('复制失败，请手动复制')
-    }
-    document.body.removeChild(ta)
-  }
 }
 
 /* ---------------- 回滚 ---------------- */

@@ -1,19 +1,19 @@
 import { ref, type Ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { genNodeId } from '@/utils/flow'
+import { genNodeId, type FlowGraphEdge, type FlowGraphNode, type FlowNodeData } from '@/utils/flow'
 
 interface ClipboardDeps {
-  edges: Ref<any[]>
+  edges: Ref<FlowGraphEdge[]>
   /** vue-flow 内部真实渲染节点（选中态始终准确） */
-  getNodes: Ref<any[]>
-  addNodes: (nodes: any[]) => void
+  getNodes: Ref<FlowGraphNode[]>
+  addNodes: (nodes: FlowGraphNode[]) => void
   snapshot: () => void
   branchStyleOf: (sourceId: string, handle: string) => Record<string, unknown>
 }
 
 /** 画布节点复制 / 粘贴（含节点间内部连线关系） */
 export function useFlowClipboard(deps: ClipboardDeps) {
-  const clipboard = ref<Array<{ id: string; data: any }> | null>(null)
+  const clipboard = ref<Array<{ id: string; data: FlowNodeData }> | null>(null)
 
   /** 复制当前选中的节点（含节点间内部连线关系） */
   function copySelected() {
@@ -54,7 +54,7 @@ export function useFlowClipboard(deps: ClipboardDeps) {
       }
     })
     const idSet = new Set(clipboard.value.map((c) => c.id))
-    const newEdges: Array<any> = []
+    const newEdges: FlowGraphEdge[] = []
     for (const e of deps.edges.value) {
       if (idSet.has(e.source) && idSet.has(e.target)) {
         newEdges.push({

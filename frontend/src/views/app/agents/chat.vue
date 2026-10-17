@@ -269,8 +269,8 @@ async function send() {
       }
       assistant.loading = false
     }
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') {
       assistant.content = assistant.content || '（已停止）'
     } else {
       assistant.content = assistant.content || '请求失败，请检查模型配置或网络'

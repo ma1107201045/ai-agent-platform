@@ -1,9 +1,9 @@
 import { watch, type Ref } from 'vue'
-import { branchHandlesOf } from '@/utils/flow'
+import { branchHandlesOf, type FlowGraphEdge, type FlowGraphNode } from '@/utils/flow'
 import { useThemeStore } from '@/stores/theme'
 
 /** 条件分支出边：标签 / 配色 / 样式同步 */
-export function useBranchEdges(nodes: Ref<any[]>, edges: Ref<any[]>) {
+export function useBranchEdges(nodes: Ref<FlowGraphNode[]>, edges: Ref<FlowGraphEdge[]>) {
   const themeStore = useThemeStore()
 
   /** 分支 handle 对应的展示名（多分支取分支名，二分支取 是/否，非分支返回 undefined） */

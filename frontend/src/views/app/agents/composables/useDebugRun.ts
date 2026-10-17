@@ -3,11 +3,12 @@ import { ElMessage } from 'element-plus'
 import { appAgentApi } from '@/api/app-agent'
 import type { RunResult, TraceItem } from '@/api/types'
 import { checkStructure, validateWorkflow } from '@/utils/flowValidation'
+import type { FlowGraphEdge, FlowGraphNode } from '@/utils/flow'
 
 interface DebugRunDeps {
   appId: number
-  nodes: Ref<any[]>
-  edges: Ref<any[]>
+  nodes: Ref<FlowGraphNode[]>
+  edges: Ref<FlowGraphEdge[]>
   setCenter: (x: number, y: number, options?: { zoom?: number }) => void
   /** 运行前先保存草稿，确保后端运行的是当前画布内容 */
   saveDraft: () => Promise<void>
@@ -185,8 +186,8 @@ export function useDebugRun(deps: DebugRunDeps) {
           ElMessage.error(message || '运行失败')
         }
       })
-    } catch (e: any) {
-      ElMessage.error(e?.message || '运行失败')
+    } catch (e) {
+      ElMessage.error((e as Error)?.message || '运行失败')
     } finally {
       running.value = false
     }
@@ -202,8 +203,8 @@ export function useDebugRun(deps: DebugRunDeps) {
     try {
       await appAgentApi.cancelRun(rid)
       ElMessage.info('已请求停止，等待当前节点返回…')
-    } catch (e: any) {
-      ElMessage.error(e?.message || '停止失败')
+    } catch (e) {
+      ElMessage.error((e as Error)?.message || '停止失败')
       running.value = false
     }
   }

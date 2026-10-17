@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import DOMPurify from 'dompurify'
+import { copyTextSilent } from '@/utils/clipboard'
 
 const props = defineProps<{ content: string }>()
 
@@ -164,11 +165,10 @@ const blocks = computed<Block[]>(() => parseBlocks(props.content ?? ''))
 /* ---------------- 复制代码 ---------------- */
 const copiedLang = ref('')
 async function copyCode(code: string, lang: string) {
-  try {
-    await navigator.clipboard.writeText(code)
+  if (await copyTextSilent(code)) {
     copiedLang.value = lang
     setTimeout(() => (copiedLang.value = ''), 1500)
-  } catch {
+  } else {
     ElMessage.warning('复制失败')
   }
 }

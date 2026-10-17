@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Delete, Plus } from '@element-plus/icons-vue'
+import type { NodeConfig } from '@/utils/flow'
 
 /** 开始节点：流程变量 + 开场白 */
-const props = defineProps<{ cfg: Record<string, any> }>()
+const props = defineProps<{ cfg: NodeConfig }>()
 
 const TIP_VAR_USAGE = '变量渲染后写入全局，下游节点可用 {{变量名}} 引用；常用于抽取、改写用户输入。'
 
