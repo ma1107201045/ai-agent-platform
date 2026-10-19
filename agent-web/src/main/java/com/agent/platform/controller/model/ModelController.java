@@ -1,6 +1,7 @@
 package com.agent.platform.controller.model;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.common.security.RequireAdmin;
 import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.vo.model.ModelInfoVO;
@@ -33,11 +34,13 @@ public class ModelController {
     }
 
     @PostMapping("/providers")
+    @RequireAdmin
     public Result<ModelProvider> createProvider(@RequestBody ModelProvider provider) {
         return Result.ok(modelService.createProvider(provider));
     }
 
     @PutMapping("/providers/{id}")
+    @RequireAdmin
     public Result<Void> updateProvider(@PathVariable Long id, @RequestBody ModelProvider provider) {
         provider.setId(id);
         modelService.updateProvider(provider);
@@ -45,6 +48,7 @@ public class ModelController {
     }
 
     @DeleteMapping("/providers/{id}")
+    @RequireAdmin
     public Result<Void> deleteProvider(@PathVariable Long id) {
         modelService.deleteProvider(id);
         return Result.ok();
@@ -58,12 +62,14 @@ public class ModelController {
     }
 
     @PostMapping("/providers/{providerId}/models")
+    @RequireAdmin
     public Result<ModelInfo> createModel(@PathVariable Long providerId, @RequestBody ModelInfo model) {
         model.setProviderId(providerId);
         return Result.ok(modelService.createModel(model));
     }
 
     @PutMapping("/models/{id}")
+    @RequireAdmin
     public Result<Void> updateModel(@PathVariable Long id, @RequestBody ModelInfo model) {
         model.setId(id);
         modelService.updateModel(model);
@@ -71,6 +77,7 @@ public class ModelController {
     }
 
     @DeleteMapping("/models/{id}")
+    @RequireAdmin
     public Result<Void> deleteModel(@PathVariable Long id) {
         modelService.deleteModel(id);
         return Result.ok();

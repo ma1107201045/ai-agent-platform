@@ -1,6 +1,7 @@
 package com.agent.platform.controller.sys;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.common.security.RequireAdmin;
 import com.agent.platform.service.sys.TrashService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,15 +39,17 @@ public class TrashController {
         return Result.ok();
     }
 
-    /** 彻底删除 {type,id}（不可恢复） */
+    /** 彻底删除 {type,id}（不可恢复，仅管理员） */
     @PostMapping("/purge")
+    @RequireAdmin
     public Result<Void> purge(@RequestBody Map<String, Object> body) {
         trashService.purge(String.valueOf(body.get("type")), toId(body.get("id")));
         return Result.ok();
     }
 
-    /** 清理超过保留期(默认30天)的回收站数据 {days?} */
+    /** 清理超过保留期(默认30天)的回收站数据 {days?}（仅管理员） */
     @PostMapping("/cleanup")
+    @RequireAdmin
     public Result<Map<String, Object>> cleanup(@RequestBody(required = false) Map<String, Object> body) {
         int days = body == null || body.get("days") == null
                 ? TrashService.DEFAULT_RETENTION_DAYS

@@ -69,4 +69,8 @@ DELIMITER ;
 
 CALL add_index_if_missing('app_agent_version', 'uk_app_version', 'UNIQUE INDEX `uk_app_version`(`app_id` ASC, `version` ASC) USING BTREE');
 
+-- 用户角色列（轻量权限体系）：默认普通用户，内置 admin 账号提升为管理员
+CALL add_column_if_missing('sys_user', 'role', '`role` varchar(20) NOT NULL DEFAULT ''user'' COMMENT ''角色: admin管理员 user普通用户''');
+UPDATE `sys_user` SET `role` = 'admin' WHERE `username` = 'admin' AND `role` = 'user';
+
 DROP PROCEDURE IF EXISTS add_index_if_missing;

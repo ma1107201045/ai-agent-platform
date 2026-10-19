@@ -17,3 +17,7 @@ ALTER TABLE "data_table"           ADD COLUMN IF NOT EXISTS "deleted" smallint N
 
 -- 同步补建：发布版本号唯一索引（防并发发布产生重复版本号）
 CREATE UNIQUE INDEX IF NOT EXISTS "uk_app_version" ON "app_agent_version" ("app_id", "version");
+
+-- 用户角色列（轻量权限体系）：默认普通用户，内置 admin 账号提升为管理员
+ALTER TABLE "sys_user" ADD COLUMN IF NOT EXISTS "role" varchar(20) NOT NULL DEFAULT 'user';
+UPDATE "sys_user" SET "role" = 'admin' WHERE "username" = 'admin' AND "role" = 'user';

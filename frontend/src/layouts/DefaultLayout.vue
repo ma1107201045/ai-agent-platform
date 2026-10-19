@@ -49,6 +49,16 @@ const menuKey = computed(
   () => `${collapsed.value ? 'menu-collapsed' : 'menu'}-${activeGroupKey.value}`
 )
 
+/** 按角色过滤后的菜单分组：非管理员不展示 adminOnly 项（如供应商管理、团队与权限） */
+const visibleMenuGroups = computed(() =>
+  menuGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => !item.adminOnly || userStore.isAdmin)
+    }))
+    .filter((g) => g.items.length > 0)
+)
+
 function onMenuSelect(index: string) {
   router.push(index)
 }
@@ -132,7 +142,7 @@ if (import.meta.env.DEV) {
           class="sidebar-menu"
           @select="onMenuSelect"
         >
-          <el-sub-menu v-for="g in menuGroups" :key="g.key" :index="g.key">
+          <el-sub-menu v-for="g in visibleMenuGroups" :key="g.key" :index="g.key">
             <template #title>
               <el-icon :size="18"><component :is="g.icon" /></el-icon>
               <span class="group-label">{{ g.title }}</span>

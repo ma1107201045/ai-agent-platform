@@ -1,6 +1,7 @@
 package com.agent.platform.controller.sys;
 
 import com.agent.platform.common.result.Result;
+import com.agent.platform.common.security.RequireAdmin;
 import com.agent.platform.dao.entity.sys.SysUser;
 import com.agent.platform.service.sys.SysUserService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -10,11 +11,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 用户管理
+ * 用户管理（仅管理员）
  */
 @RestController
 @RequestMapping("/api/sys/users")
 @RequiredArgsConstructor
+@RequireAdmin
 public class SysUserController {
 
     private final SysUserService userService;

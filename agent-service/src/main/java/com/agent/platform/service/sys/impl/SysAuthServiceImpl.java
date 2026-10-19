@@ -45,7 +45,7 @@ public class SysAuthServiceImpl implements SysAuthService {
         }
         upgradeLegacyPassword(user, password);
         recordLoginTrace(user);
-        String token = jwtUtil.createToken(user.getId(), user.getTenantId(), user.getUsername());
+        String token = jwtUtil.createToken(user.getId(), user.getTenantId(), user.getUsername(), user.getRole());
         return new SysAuthLoginVO(token, toProfile(user));
     }
 
@@ -120,6 +120,7 @@ public class SysAuthServiceImpl implements SysAuthService {
         p.setNickname(user.getNickname());
         p.setEmail(user.getEmail());
         p.setAvatar(user.getAvatar());
+        p.setRole(user.getRole());
         p.setStatus(user.getStatus());
         return p;
     }

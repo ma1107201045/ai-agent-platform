@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { authApi } from '@/api/auth'
 import type { UserProfile } from '@/api/types'
 import { clearToken, getToken, setToken } from '@/utils/token'
@@ -7,6 +7,9 @@ import { clearToken, getToken, setToken } from '@/utils/token'
 export const useUserStore = defineStore('user', () => {
   const token = ref(getToken())
   const profile = ref<UserProfile | null>(null)
+
+  /** 是否管理员（控制管理类菜单显隐；权限本身由后端强制校验） */
+  const isAdmin = computed(() => profile.value?.role === 'admin')
 
   async function login(params: { username: string; password: string }) {
     const data = await authApi.login(params)
@@ -27,5 +30,5 @@ export const useUserStore = defineStore('user', () => {
     clearToken()
   }
 
-  return { token, profile, login, fetchMe, logout }
+  return { token, profile, isAdmin, login, fetchMe, logout }
 })

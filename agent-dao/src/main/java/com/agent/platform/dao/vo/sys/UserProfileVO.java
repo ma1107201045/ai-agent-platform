@@ -13,5 +13,6 @@ public class UserProfileVO {
     private String nickname;
     private String email;
     private String avatar;
+    private String role;
     private Integer status;
 }

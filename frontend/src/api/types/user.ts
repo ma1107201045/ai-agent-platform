@@ -4,6 +4,7 @@ export interface SysUser {
   username: string
   nickname?: string
   email?: string
+  role?: string
   status: number
   createTime?: string
 }
@@ -16,6 +17,7 @@ export interface UserProfile {
   nickname?: string
   email?: string
   avatar?: string
+  role?: string
   status: number
 }
 

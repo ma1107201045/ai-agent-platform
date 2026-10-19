@@ -30,12 +30,13 @@ public class JwtUtil {
     }
 
     /** 签发 Token */
-    public String createToken(Long userId, Long tenantId, String username) {
+    public String createToken(Long userId, Long tenantId, String username, String role) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("tenantId", tenantId)
                 .claim("username", username)
+                .claim("role", role == null ? "user" : role)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expireMillis))
                 .signWith(key)

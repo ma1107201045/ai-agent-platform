@@ -33,6 +33,9 @@ public class SysUser {
 
     private String avatar;
 
+    /** 角色：admin 管理员 / user 普通用户 */
+    private String role;
+
     /** 状态：0禁用 1启用 */
     private Integer status;
 

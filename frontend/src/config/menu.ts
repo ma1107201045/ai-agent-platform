@@ -65,6 +65,8 @@ export interface MenuItem {
   title: string
   icon: Component
   planned?: boolean
+  /** 仅管理员可见（后端同样做了 @RequireAdmin 强制校验，此处只控制菜单显隐） */
+  adminOnly?: boolean
 }
 
 export interface MenuGroup {
@@ -156,7 +158,7 @@ export const menuGroups: MenuGroup[] = [
     title: '模型',
     icon: Cpu,
     items: [
-      { path: '/models', title: '供应商管理', icon: Management },
+      { path: '/models', title: '供应商管理', icon: Management, adminOnly: true },
       { path: '/models/playground', title: '模型广场', icon: Box },
       { path: '/models/finetune', title: '模型微调', icon: EditPen },
       { path: '/models/gateway', title: '模型网关', icon: Connection }
@@ -167,8 +169,8 @@ export const menuGroups: MenuGroup[] = [
     title: '系统管理',
     icon: Setting,
     items: [
-      { path: '/system/users', title: '团队与权限', icon: User },
-      { path: '/system/users/audit', title: '操作日志', icon: Document },
+      { path: '/system/users', title: '团队与权限', icon: User, adminOnly: true },
+      { path: '/system/users/audit', title: '操作日志', icon: Document, adminOnly: true },
       { path: '/system/workspace', title: '工作空间', icon: OfficeBuilding },
       { path: '/system/trash', title: '回收站', icon: Delete },
       { path: '/system/announcements', title: '公告管理', icon: Notification }
