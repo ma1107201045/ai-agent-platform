@@ -7,7 +7,7 @@ import { DEFAULT_HOME } from '@/config/menu'
  * 路由规范：
  * 1. 除 /login、/public/:id 外，所有页面都挂在 DefaultLayout 下作为 children
  * 2. 一级路径前缀与侧边栏菜单分组一一对应（见 @/config/menu.ts）：
- *    /workbench 工作台 · /app-agents 应用 · /data 数据 · /tools 工具 · /publish 发布
+ *    /workbench 工作台 · /app/agents 应用 · /data 数据 · /tools 工具 · /publish 发布
  *    /ops 观测 · /eval 评测 · /models 模型 · /system 系统管理 · /support 帮助与文档
  * 3. 每个分组内：已上线页面在前，规划中（planned）页面居中，详情页（带动态参数、meta.hidden）在末尾
  */
@@ -54,7 +54,7 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '通知中心' }
       },
 
-      /* ---------------- 应用 /app-agents ---------------- */
+      /* ---------------- 应用 /app/agents ---------------- */
       {
         path: 'app/agents',
         name: 'Apps',

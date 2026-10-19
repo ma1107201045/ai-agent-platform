@@ -53,7 +53,7 @@ import {
  *
  * 约定：
  * 1. group.key 即该分组的路由一级路径前缀，分组内所有页面路径都以 /{key} 开头
- *    （/workbench 工作台 · /app-agents 应用 · /data 数据 · /tools 工具 · /publish 发布
+ *    （/workbench 工作台 · /app/agents 应用 · /data 数据 · /tools 工具 · /publish 发布
  *      /ops 观测 · /eval 评测 · /models 模型 · /system 系统管理 · /support 帮助与文档）
  * 2. item.path 必须与 router 中已注册的路由 path 完全一致（开发环境启动时自动校验）
  * 3. planned: true 的菜单项对应“建设中”占位页

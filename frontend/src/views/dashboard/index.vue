@@ -49,7 +49,7 @@ const quickActions = [
     title: '创建智能体应用',
     desc: '对话流 / 工作流 / 智能体',
     icon: MagicStick,
-    path: '/app-agents',
+    path: '/app/agents',
     color: '#5b6cff'
   },
   {
@@ -98,7 +98,7 @@ onMounted(async () => {
         <h1>你好，欢迎回来 👋</h1>
         <p>开始构建你的下一个 AI 智能体，从灵感走向生产。</p>
       </div>
-      <el-button class="btn-gradient welcome-btn" @click="router.push('/app-agents')">
+      <el-button class="btn-gradient welcome-btn" @click="router.push('/app/agents')">
         创建应用
       </el-button>
     </div>

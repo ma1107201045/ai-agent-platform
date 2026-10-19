@@ -26,7 +26,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,16 +62,38 @@ public class ChatConversationServiceImpl implements ChatConversationService {
 
     private final ChatUsageMapper usageMapper;
 
+    private final PlatformTransactionManager transactionManager;
+
+    /** 发送给 LLM 的历史消息上限（最近 N 条），避免超出模型上下文窗口后抛出裸上游错误 */
+    private static final int MAX_HISTORY_MESSAGES = 20;
+
+    private volatile TransactionTemplate txTemplate;
+
+    /** 短事务模板：只包裹消息落库等 DB 操作，LLM/工作流等远程调用必须在事务外执行 */
+    private TransactionTemplate tx() {
+        if (txTemplate == null) {
+            synchronized (this) {
+                if (txTemplate == null) {
+                    txTemplate = new TransactionTemplate(transactionManager);
+                }
+            }
+        }
+        return txTemplate;
+    }
+
     // ---------- 会话 CRUD ----------
 
     @Override
-    public Page<ChatConversation> page(Long appId, long page, long size, Long userId) {
+    public Page<ChatConversation> page(Long appId, String mode, long page, long size, Long userId) {
         LambdaQueryWrapper<ChatConversation> qw = new LambdaQueryWrapper<ChatConversation>()
                 .eq(ChatConversation::getUserId, userId)
                 .eq(ChatConversation::getStatus, 1)
                 .orderByDesc(ChatConversation::getUpdateTime);
         if (appId != null) {
             qw.eq(ChatConversation::getAppId, appId);
+        }
+        if (mode != null && !mode.isBlank()) {
+            qw.eq(ChatConversation::getMode, mode);
         }
         return conversationMapper.selectPage(new Page<>(page, size), qw);
     }
@@ -199,14 +223,19 @@ public class ChatConversationServiceImpl implements ChatConversationService {
 
     /**
      * 非流式发送：保存用户消息 → 按会话模式执行（直连模型 / Agent / 运行工作流）→ 保存助手消息。
-     * 调用成功且拿到 usage 时，以 console 渠道写入一条用量事件。
+     * LLM/工作流等远程调用在事务外执行，仅消息落库包短事务，避免长事务占满连接池。
+     * 用户消息先于远程调用落库，即使调用失败也不会出现"消息发了但记录没了"。
      *
      * @return 保存后的助手消息（含回答文本与工作流轨迹）
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public ChatMessage send(Long conversationId, Long userId, String content, Long modelId) {
         ChatConversation conv = getById(conversationId, userId);
+        // 历史需在保存本次用户消息之前读取，避免重复
+        List<ChatMessage> history = messages(conversationId, userId);
+        // 用户消息先落库（独立短事务）
+        tx().executeWithoutResult(s -> saveMessage(conversationId, "user", content, null, 0));
+
         String answer;
         String traceJson = null;
         long tokens = 0;
@@ -221,7 +250,6 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             if (mid == null) {
                 throw new BizException("请选择对话模型");
             }
-            List<ChatMessage> history = messages(conversationId, userId);
             List<com.agent.platform.llm.model.ChatMessage> llmHistory = toLlmMessages(history);
             llmHistory.add(com.agent.platform.llm.model.ChatMessage.user(content));
             AppAgentChatVO result = appAgentService.chat(conv.getAppId(), mid, null, llmHistory, null);
@@ -235,7 +263,6 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             if (mid == null) {
                 throw new BizException("请选择对话模型");
             }
-            List<ChatMessage> history = messages(conversationId, userId);
             ChatModel model = modelRuntimeService.chatModelOf(mid);
             ChatResponse response = model.call(buildChatRequest(conv, history, content, mid));
             answer = response == null ? "" : response.getContent();
@@ -243,16 +270,19 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             tokens = usage == null ? 0 : usage.totalTokens();
             usedModelId = mid;
         }
-        saveMessage(conversationId, "user", content, null, 0);
-        ChatMessage assistant = saveMessage(conversationId, "assistant", answer, traceJson, tokens);
+        String finalAnswer = answer;
+        String finalTraceJson = traceJson;
+        long finalTokens = tokens;
+        ChatMessage assistant = tx().execute(s ->
+                saveMessage(conversationId, "assistant", finalAnswer, finalTraceJson, finalTokens));
         recordUsageSafely(conv, usedModelId, usage);
         return assistant;
     }
 
     /**
-     * 流式发送（仅直连模式）：先保存用户消息，增量推送 SSE 块，结束后持久化完整回答并记录用量事件
+     * 流式发送（仅直连模式）：先保存用户消息，增量推送 SSE 块，结束后持久化完整回答并记录用量事件。
+     * 流式生成全程不持有数据库事务/连接。
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public void streamSend(Long conversationId, Long userId, String content, Long modelId, Consumer<ChatChunk> onChunk) {
         ChatConversation conv = getById(conversationId, userId);
@@ -264,7 +294,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             throw new BizException("请选择对话模型");
         }
         List<ChatMessage> history = messages(conversationId, userId);
-        saveMessage(conversationId, "user", content, null, 0);
+        tx().executeWithoutResult(s -> saveMessage(conversationId, "user", content, null, 0));
         ChatModel model = modelRuntimeService.chatModelOf(mid);
         StringBuilder sb = new StringBuilder();
         long[] tokens = {0};
@@ -279,7 +309,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
             }
             onChunk.accept(chunk);
         });
-        saveMessage(conversationId, "assistant", sb.toString(), null, tokens[0]);
+        tx().executeWithoutResult(s -> saveMessage(conversationId, "assistant", sb.toString(), null, tokens[0]));
         recordUsageSafely(conv, mid, usage[0]);
     }
 
@@ -321,7 +351,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
         return ChatRequest.builder().messages(messages).build();
     }
 
-    /** 会话历史实体 → LLM 消息列表（过滤空内容） */
+    /** 会话历史实体 → LLM 消息列表（过滤空内容，仅保留最近 N 条防止超出上下文窗口） */
     private List<com.agent.platform.llm.model.ChatMessage> toLlmMessages(List<ChatMessage> history) {
         List<com.agent.platform.llm.model.ChatMessage> messages = new ArrayList<>();
         if (history != null) {
@@ -331,6 +361,9 @@ public class ChatConversationServiceImpl implements ChatConversationService {
                 }
                 messages.add(new com.agent.platform.llm.model.ChatMessage(h.getRole(), h.getContent()));
             }
+        }
+        if (messages.size() > MAX_HISTORY_MESSAGES) {
+            return new ArrayList<>(messages.subList(messages.size() - MAX_HISTORY_MESSAGES, messages.size()));
         }
         return messages;
     }

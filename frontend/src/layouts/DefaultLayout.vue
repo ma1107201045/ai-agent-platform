@@ -63,16 +63,26 @@ function onCommand(command: string | number | object) {
   }
 }
 
+/** 页面重新可见时立即刷新一次未读数 */
+function onVisibilityChange() {
+  if (!document.hidden) notificationStore.refresh()
+}
+
 onMounted(() => {
   if (userStore.token && !userStore.profile) {
     userStore.fetchMe().catch(() => {})
   }
   notificationStore.refresh()
-  unreadTimer = window.setInterval(() => notificationStore.refresh(), 60000)
+  // 后台标签页不轮询，避免无谓请求
+  unreadTimer = window.setInterval(() => {
+    if (!document.hidden) notificationStore.refresh()
+  }, 60000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onBeforeUnmount(() => {
   if (unreadTimer) window.clearInterval(unreadTimer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 /** 开发环境下校验：菜单项必须存在对应路由，且路径前缀与分组 key 一致 */

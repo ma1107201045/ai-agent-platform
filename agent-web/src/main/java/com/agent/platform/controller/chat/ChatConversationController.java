@@ -30,12 +30,13 @@ public class ChatConversationController {
     private final ChatConversationService conversationService;
     private final ExecutorService streamExecutor = Executors.newCachedThreadPool();
 
-    /** 当前用户的会话列表（可按应用过滤） */
+    /** 当前用户的会话列表（可按应用、对话模式过滤） */
     @GetMapping
     public Result<Page<ChatConversation>> page(@RequestParam(required = false) Long appId,
+                                               @RequestParam(required = false) String mode,
                                                @RequestParam(defaultValue = "1") long page,
                                                @RequestParam(defaultValue = "20") long size) {
-        return Result.ok(conversationService.page(appId, page, size, UserContext.getUserId()));
+        return Result.ok(conversationService.page(appId, mode, page, size, UserContext.getUserId()));
     }
 
     /** 创建会话 */

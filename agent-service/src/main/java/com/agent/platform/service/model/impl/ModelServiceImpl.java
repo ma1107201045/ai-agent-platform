@@ -41,7 +41,9 @@ public class ModelServiceImpl implements ModelService {
                                 .or().like(ModelProvider::getType, keyword)
                                 .or().like(ModelProvider::getBaseUrl, keyword))
                 .orderByDesc(ModelProvider::getId);
-        return providerMapper.selectPage(new Page<>(page, size), qw);
+        Page<ModelProvider> result = providerMapper.selectPage(new Page<>(page, size), qw);
+        result.getRecords().forEach(ModelServiceImpl::maskApiKey);
+        return result;
     }
 
     @Override
@@ -50,7 +52,7 @@ public class ModelServiceImpl implements ModelService {
         if (provider == null) {
             throw new BizException("模型供应商不存在: " + id);
         }
-        return provider;
+        return maskApiKey(provider);
     }
 
     @Override
@@ -64,14 +66,36 @@ public class ModelServiceImpl implements ModelService {
             provider.setTenantId(1L);
         }
         providerMapper.insert(provider);
-        return provider;
+        return maskApiKey(provider);
     }
 
     @Override
     public void updateProvider(ModelProvider provider) {
         getProvider(provider.getId());
+        // 前端回传的是脱敏掩码（含 ****）或空值时，不修改已存储的密钥
+        if (!StringUtils.hasText(provider.getApiKey()) || provider.getApiKey().contains("****")) {
+            provider.setApiKey(null);
+        }
         provider.setUpdateTime(LocalDateTime.now());
         providerMapper.updateById(provider);
+    }
+
+    /** apiKey 脱敏：保留前 3 后 4 位，中间以 **** 替代，避免密钥随接口明文返回前端 */
+    private static ModelProvider maskApiKey(ModelProvider provider) {
+        if (provider != null) {
+            provider.setApiKey(mask(provider.getApiKey()));
+        }
+        return provider;
+    }
+
+    private static String mask(String key) {
+        if (!StringUtils.hasText(key)) {
+            return key;
+        }
+        if (key.length() <= 8) {
+            return "****";
+        }
+        return key.substring(0, 3) + "****" + key.substring(key.length() - 4);
     }
 
     @Override

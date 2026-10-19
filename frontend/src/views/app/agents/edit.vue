@@ -664,7 +664,25 @@ async function publish() {
         ? JSON.stringify({ nodes: [], edges: [] })
         : flowToDsl(nodes.value, edges.value)
     await appAgentApi.publish(appId, { workflowJson, promptConfig: '' })
-    ElMessage.success('发布成功')
+    // 发布内容即当前画布：同步保存草稿并清除"未保存"标记，避免发布后仍提示有未保存修改
+    if (appType.value === 'agent') {
+      await appAgentApi.update(appId, {
+        toolIds: JSON.stringify(boundToolIds.value),
+        datasetIds: JSON.stringify(boundDatasetIds.value),
+        skillIds: JSON.stringify(boundSkillIds.value),
+        welcomeMessage: welcomeMessage.value,
+        openingQuestions: JSON.stringify(
+          openingQuestionsText.value
+            .split('\n')
+            .map((q) => q.trim())
+            .filter(Boolean)
+        )
+      })
+    } else {
+      await appAgentApi.update(appId, { workflowJson })
+    }
+    dirty.value = false
+    ElMessage.success('发布成功，当前画布已同步保存为草稿')
   } finally {
     publishing.value = false
   }

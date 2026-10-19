@@ -5,7 +5,7 @@ import type { ChatChunk, ChatConversation, ChatMessageRecord, PageResult } from 
 /** 聊天会话 API */
 export const conversationApi = {
   /** 当前用户的会话列表 */
-  page(params: { appId?: number; page?: number; size?: number }) {
+  page(params: { appId?: number; mode?: string; page?: number; size?: number }) {
     return request.get<never, PageResult<ChatConversation>>('/chat/conversations', { params })
   },
   /** 创建会话 */
@@ -25,9 +25,11 @@ export const conversationApi = {
   messages(id: number) {
     return request.get<never, ChatMessageRecord[]>(`/chat/conversations/${id}/messages`)
   },
-  /** 发送消息（非流式；直连模型 / 工作流通用） */
-  send(id: number, data: { content: string; modelId?: number | null }) {
-    return request.post<never, ChatMessageRecord>(`/chat/conversations/${id}/messages`, data)
+  /** 发送消息（非流式；直连模型 / 工作流通用），支持 AbortSignal 取消 */
+  send(id: number, data: { content: string; modelId?: number | null }, signal?: AbortSignal) {
+    return request.post<never, ChatMessageRecord>(`/chat/conversations/${id}/messages`, data, {
+      signal
+    })
   },
   /**
    * 发送消息（SSE 流式，仅直连模型）

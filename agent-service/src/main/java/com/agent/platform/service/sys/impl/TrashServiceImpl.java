@@ -1,6 +1,7 @@
 package com.agent.platform.service.sys.impl;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.mapper.sys.TrashMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,9 +50,10 @@ public class TrashServiceImpl implements TrashService {
         return result;
     }
 
-    /** 恢复单个数据（deleted=0，删除时间清空） */
+    /** 恢复单个数据（deleted=0，删除时间清空）；仅允许操作当前租户的数据 */
     @Override
     public void restore(String type, Long id) {
+        assertOwnedByCurrentTenant(type, id);
         int affected = switch (type) {
             case TYPE_AGENT -> trashMapper.restoreAgent(id);
             case TYPE_DATASET -> trashMapper.restoreDataset(id);
@@ -70,10 +72,11 @@ public class TrashServiceImpl implements TrashService {
         }
     }
 
-    /** 彻底删除单个数据（应用/知识库级联清理子数据，不可恢复） */
+    /** 彻底删除单个数据（应用/知识库级联清理子数据，不可恢复）；仅允许操作当前租户的数据 */
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void purge(String type, Long id) {
+        assertOwnedByCurrentTenant(type, id);
         switch (type) {
             case TYPE_AGENT -> {
                 trashMapper.purgeAgentVersions(id);
@@ -142,20 +145,40 @@ public class TrashServiceImpl implements TrashService {
         return removed;
     }
 
-    private void collect(List<Map<String, Object>> result, String type) {
-        List<Map<String, Object>> rows = switch (type) {
-            case TYPE_AGENT -> trashMapper.listDeletedAgent();
-            case TYPE_DATASET -> trashMapper.listDeletedDataset();
-            case TYPE_TEMPLATE -> trashMapper.listDeletedTemplate();
-            case TYPE_ANNOUNCEMENT -> trashMapper.listDeletedAnnouncement();
-            case TYPE_TEAM -> trashMapper.listDeletedTeam();
-            case TYPE_TOOL -> trashMapper.listDeletedTool();
-            case TYPE_SKILL -> trashMapper.listDeletedSkill();
-            case TYPE_PROMPT_TEMPLATE -> trashMapper.listDeletedPromptTemplate();
-            case TYPE_CONVERSATION -> trashMapper.listDeletedConversation();
-            case TYPE_DATA_TABLE -> trashMapper.listDeletedDataTable();
+    /**
+     * 归属校验：登录场景下只能操作本租户的回收站数据；无登录上下文（如定时清理）时跳过校验。
+     * 父级资源归属确认后，级联删除子表数据是安全的。
+     */
+    private void assertOwnedByCurrentTenant(String type, Long id) {
+        Long tenantId = UserContext.getTenantId();
+        if (tenantId == null) {
+            return;
+        }
+        boolean owned = rowsOf(type, tenantId).stream()
+                .anyMatch(row -> row.get("id") != null && ((Number) row.get("id")).longValue() == id);
+        if (!owned) {
+            throw new BizException("未找到可操作的回收站数据，或不属于当前租户");
+        }
+    }
+
+    private List<Map<String, Object>> rowsOf(String type, Long tenantId) {
+        return switch (type) {
+            case TYPE_AGENT -> trashMapper.listDeletedAgent(tenantId);
+            case TYPE_DATASET -> trashMapper.listDeletedDataset(tenantId);
+            case TYPE_TEMPLATE -> trashMapper.listDeletedTemplate(tenantId);
+            case TYPE_ANNOUNCEMENT -> trashMapper.listDeletedAnnouncement(tenantId);
+            case TYPE_TEAM -> trashMapper.listDeletedTeam(tenantId);
+            case TYPE_TOOL -> trashMapper.listDeletedTool(tenantId);
+            case TYPE_SKILL -> trashMapper.listDeletedSkill(tenantId);
+            case TYPE_PROMPT_TEMPLATE -> trashMapper.listDeletedPromptTemplate(tenantId);
+            case TYPE_CONVERSATION -> trashMapper.listDeletedConversation(tenantId);
+            case TYPE_DATA_TABLE -> trashMapper.listDeletedDataTable(tenantId);
             default -> List.of();
         };
+    }
+
+    private void collect(List<Map<String, Object>> result, String type) {
+        List<Map<String, Object>> rows = rowsOf(type, UserContext.getTenantId());
         for (Map<String, Object> row : rows) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", row.get("id"));

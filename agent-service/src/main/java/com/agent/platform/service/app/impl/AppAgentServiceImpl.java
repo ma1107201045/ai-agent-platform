@@ -46,6 +46,9 @@ public class AppAgentServiceImpl implements AppAgentService {
     /** Agent 循环默认最大迭代轮数 */
     private static final int DEFAULT_MAX_ITERATIONS = 6;
 
+    /** 迭代轮数硬上限：防止前端传入超大值导致长时间阻塞与高额 LLM 费用 */
+    private static final int HARD_MAX_ITERATIONS = 20;
+
     /** Agent 默认系统提示词（技能注入时以此为基底追加技能指令） */
     private static final String DEFAULT_SYSTEM_PROMPT =
             "你是一个智能助手。请根据对话内容判断是否需要调用工具来完成任务，如果工具结果对回答有帮助，请结合工具结果作答。";
@@ -172,7 +175,12 @@ public class AppAgentServiceImpl implements AppAgentService {
         version.setIsPublished(1);
         version.setCreatedBy(operatorId);
         version.setCreateTime(LocalDateTime.now());
-        appAgentVersionMapper.insert(version);
+        try {
+            appAgentVersionMapper.insert(version);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // (app_id, version) 唯一索引兜底并发发布冲突
+            throw new BizException("发布冲突：有其他发布同时进行，请稍后重试");
+        }
 
         // 旧版本取消发布
         appAgentVersionMapper.update(null, new LambdaUpdateWrapper<AppAgentVersion>()
@@ -355,7 +363,9 @@ public class AppAgentServiceImpl implements AppAgentService {
     /** Agent 循环核心实现 */
     private AppAgentChatVO doChat(Long modelId, String systemPrompt, List<AppTool> tools,
                                   String datasetIdsJson, List<ChatMessage> history, Integer maxIterations) {
-        int maxIter = maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations;
+        int maxIter = Math.min(
+                maxIterations == null || maxIterations <= 0 ? DEFAULT_MAX_ITERATIONS : maxIterations,
+                HARD_MAX_ITERATIONS);
 
         ChatModel chatModel = modelRuntimeService.chatModelOf(modelId);
 

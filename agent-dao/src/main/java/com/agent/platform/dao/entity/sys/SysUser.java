@@ -3,6 +3,7 @@ package com.agent.platform.dao.entity.sys;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,8 @@ public class SysUser {
     /** 登录名（唯一） */
     private String username;
 
-    /** 密码（BCrypt 加密，后续接入 Security 后启用） */
+    /** 密码（BCrypt 加密）。WRITE_ONLY：允许创建/修改时传入，永不随接口响应序列化返回 */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private String nickname;

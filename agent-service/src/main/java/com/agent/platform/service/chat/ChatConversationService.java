@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  */
 public interface ChatConversationService {
 
-    public Page<ChatConversation> page(Long appId, long page, long size, Long userId);
+    public Page<ChatConversation> page(Long appId, String mode, long page, long size, Long userId);
 
     public ChatConversation getById(Long id, Long userId);
 

@@ -25,7 +25,6 @@ const messages = ref<ChatItem[]>([])
 const input = ref('')
 const sending = ref(false)
 const mode = ref<ChatMode>('direct')
-const traceVisible = ref(false)
 const messageListRef = ref<InstanceType<typeof MessageList> | null>(null)
 
 /** 当前会话（null 表示尚未创建的新会话） */
@@ -104,7 +103,6 @@ function newConversation() {
   conversationId.value = null
   conversationTitle.value = ''
   messages.value = []
-  traceVisible.value = false
 }
 
 /** 打开历史会话 */
@@ -132,7 +130,7 @@ async function openConversation(conv: ChatConversation) {
     }
     return base
   })
-  scrollToBottom()
+  scrollToBottom(true)
 }
 
 /** 切换模式 = 新建会话 */
@@ -192,8 +190,8 @@ async function removeConversation(conv: ChatConversation) {
   ElMessage.success('会话已删除')
 }
 
-function scrollToBottom() {
-  messageListRef.value?.scrollToBottom()
+function scrollToBottom(force = false) {
+  messageListRef.value?.scrollToBottom(force)
 }
 
 /** 发送前确保会话已创建（首条消息作为标题） */
@@ -233,12 +231,13 @@ async function send() {
   const assistant = reactive<ChatItem>({ role: 'assistant', content: '', loading: true })
   messages.value.push(assistant)
   sending.value = true
-  scrollToBottom()
+  scrollToBottom(true)
 
+  // 所有模式都创建 AbortController，保证"停止生成"按钮始终可用
+  abortCtrl = new AbortController()
   try {
     if (mode.value === 'direct') {
       // SSE 流式：后端持久化用户消息与完整回答
-      abortCtrl = new AbortController()
       const full = await conversationApi.streamMessage(
         conversationId.value!,
         { content: text, modelId: modelId.value },
@@ -252,7 +251,11 @@ async function send() {
       assistant.loading = false
     } else {
       // 工作流 / 智能体：非流式，返回节点执行轨迹或工具调用步骤
-      const result = await conversationApi.send(conversationId.value!, { content: text })
+      const result = await conversationApi.send(
+        conversationId.value!,
+        { content: text },
+        abortCtrl.signal
+      )
       assistant.content = result.content || '（无输出）'
       if (result.traceJson) {
         try {
@@ -262,7 +265,7 @@ async function send() {
           } else {
             assistant.trace = parsed as TraceItem[]
           }
-          traceVisible.value = true
+          assistant.traceOpen = true
         } catch {
           /* 忽略损坏的轨迹数据 */
         }
@@ -270,7 +273,8 @@ async function send() {
       assistant.loading = false
     }
   } catch (err) {
-    if ((err as Error)?.name === 'AbortError') {
+    const e = err as { name?: string; code?: string }
+    if (e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') {
       assistant.content = assistant.content || '（已停止）'
     } else {
       assistant.content = assistant.content || '请求失败，请检查模型配置或网络'
@@ -307,7 +311,7 @@ onMounted(async () => {
   <div class="chat-page">
     <!-- 头部 -->
     <div class="chat-header">
-      <el-button link @click="router.push('/app-agents')">
+      <el-button link @click="router.push('/app/agents')">
         <el-icon><ArrowLeft /></el-icon>返回
       </el-button>
       <div class="title">
@@ -363,7 +367,6 @@ onMounted(async () => {
       <!-- 消息区 -->
       <MessageList
         ref="messageListRef"
-        v-model:trace-visible="traceVisible"
         :messages="messages"
         :app-name="appName"
         :welcome-message="welcomeMessage"

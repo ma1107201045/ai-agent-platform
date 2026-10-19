@@ -55,8 +55,9 @@ async function loadStats() {
     /* ignore */
   }
 }
-async function load() {
-  loading.value = true
+async function load(silent = false) {
+  // 轮询刷新走静默路径：不触发 v-loading 遮罩，避免每 2.5 秒闪烁一次
+  if (!silent) loading.value = true
   try {
     const data = await evalApi.runPage({
       page: page.value,
@@ -70,7 +71,7 @@ async function load() {
     await loadStats()
     syncTimer()
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 function search() {
@@ -78,25 +79,36 @@ function search() {
   load()
 }
 
-/** 存在运行中任务时轮询刷新进度 */
+/** 存在运行中任务时轮询刷新进度（静默刷新；页面隐藏时暂停，恢复可见时立即刷新一次） */
 function syncTimer() {
   const hasRunning = (stats.value?.running ?? 0) > 0
   if (hasRunning && !timer) {
     timer = setInterval(() => {
+      if (document.hidden) return
       loadStats()
-      load()
+      load(true)
     }, 2500)
   } else if (!hasRunning && timer) {
     clearInterval(timer)
     timer = null
   }
 }
+
+function onVisibilityChange() {
+  if (!document.hidden && timer) {
+    loadStats()
+    load(true)
+  }
+}
+
 onMounted(() => {
   load()
   refreshOptions()
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 async function refreshOptions() {

@@ -11,6 +11,8 @@ export interface ChatItem {
   error?: boolean
   trace?: TraceItem[]
   agentSteps?: AgentStep[]
+  /** 本条消息的轨迹面板是否展开（每条消息独立，避免一条展开带动全部） */
+  traceOpen?: boolean
 }
 
 /** 对话模式：direct 直连模型 / workflow 运行应用工作流 / agent 智能体（工具调用） */
@@ -26,9 +28,6 @@ defineProps<{
 
 const emit = defineEmits<{ sendWith: [text: string] }>()
 
-/** 轨迹折叠面板展开状态（v-model） */
-const traceVisible = defineModel<boolean>('traceVisible', { default: false })
-
 const nodeStatusColor: Record<string, string> = {
   success: 'success',
   skipped: 'info',
@@ -37,7 +36,18 @@ const nodeStatusColor: Record<string, string> = {
 
 const listRef = ref<HTMLElement | null>(null)
 
-function scrollToBottom() {
+/** 流式输出时是否自动跟随到底部（用户上翻回看时暂停，滚回底部后恢复） */
+const autoFollow = ref(true)
+
+function onScroll() {
+  const el = listRef.value
+  if (!el) return
+  autoFollow.value = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+}
+
+/** 滚动到底部；force 用于发送新消息/打开会话等场景，否则仅在用户未上翻时跟随 */
+function scrollToBottom(force = false) {
+  if (!force && !autoFollow.value) return
   nextTick(() => {
     if (listRef.value) {
       listRef.value.scrollTop = listRef.value.scrollHeight
@@ -49,7 +59,7 @@ defineExpose({ scrollToBottom })
 </script>
 
 <template>
-  <div ref="listRef" class="message-list">
+  <div ref="listRef" class="message-list" @scroll.passive="onScroll">
     <div v-if="messages.length === 0" class="welcome-empty">
       <div class="welcome-orb orb-a"></div>
       <div class="welcome-orb orb-b"></div>
@@ -91,11 +101,12 @@ defineExpose({ scrollToBottom })
             <span v-else-if="msg.loading" class="typing"><i /><i /><i /></span>
             <span v-if="msg.loading && msg.content" class="cursor" />
           </div>
-          <!-- 工作流执行轨迹 -->
+          <!-- 工作流执行轨迹（每条消息独立展开状态） -->
           <el-collapse
             v-if="msg.trace && msg.trace.length"
-            v-model="traceVisible"
+            :model-value="msg.traceOpen ? ['trace'] : []"
             class="trace-collapse"
+            @update:model-value="(v: string[]) => (msg.traceOpen = v.includes('trace'))"
           >
             <el-collapse-item title="节点执行轨迹" name="trace">
               <div v-for="(t, i) in msg.trace" :key="i" class="trace-item">
@@ -117,11 +128,12 @@ defineExpose({ scrollToBottom })
               </div>
             </el-collapse-item>
           </el-collapse>
-          <!-- 智能体工具调用轨迹 -->
+          <!-- 智能体工具调用轨迹（每条消息独立展开状态） -->
           <el-collapse
             v-if="msg.agentSteps && msg.agentSteps.length"
-            v-model="traceVisible"
+            :model-value="msg.traceOpen ? ['trace'] : []"
             class="trace-collapse"
+            @update:model-value="(v: string[]) => (msg.traceOpen = v.includes('trace'))"
           >
             <el-collapse-item title="工具调用轨迹" name="trace">
               <div v-for="(s, i) in msg.agentSteps" :key="i" class="trace-item">

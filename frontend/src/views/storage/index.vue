@@ -22,7 +22,14 @@
       <!-- 左侧：数据表列表 -->
       <el-card shadow="never" class="table-list-card">
         <div class="table-list-head">
-          <el-input v-model="listKeyword" placeholder="搜索数据表" clearable class="list-search">
+          <el-input
+            v-model="listKeyword"
+            placeholder="搜索数据表"
+            clearable
+            class="list-search"
+            @keyup.enter="loadTables"
+            @clear="loadTables"
+          >
             <template #prefix
               ><el-icon><Search /></el-icon
             ></template>
@@ -294,11 +301,15 @@ async function onRowSaved() {
 }
 
 async function removeRow(row: DataRecordRow) {
-  await ElMessageBox.confirm('确定删除该行记录吗？', '删除确认', {
-    type: 'warning',
-    confirmButtonText: '删除',
-    cancelButtonText: '取消'
-  })
+  try {
+    await ElMessageBox.confirm('确定删除该行记录吗？', '删除确认', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return // 用户取消
+  }
   await dataStoreApi.removeRecord(row.id)
   ElMessage.success('记录已删除')
   await loadRecords()
@@ -319,11 +330,15 @@ async function onMoreCommand(cmd: string) {
 async function deleteTable() {
   const t = current.value
   if (!t) return
-  await ElMessageBox.confirm(
-    `删除数据表「${t.name}」将同时删除其全部 ${t.rowCount} 行记录，且无法恢复。是否继续？`,
-    '删除数据表',
-    { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
-  )
+  try {
+    await ElMessageBox.confirm(
+      `删除数据表「${t.name}」将同时删除其全部 ${t.rowCount} 行记录，且无法恢复。是否继续？`,
+      '删除数据表',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return // 用户取消
+  }
   await dataStoreApi.removeTable(t.id)
   ElMessage.success('数据表已删除')
   selectedId.value = null

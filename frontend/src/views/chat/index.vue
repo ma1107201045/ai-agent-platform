@@ -48,6 +48,7 @@ async function load() {
   try {
     const data = await conversationApi.page({
       appId: filterAppId.value ?? undefined,
+      mode: filterMode.value || undefined,
       page: page.value,
       size: size.value
     })
@@ -68,7 +69,7 @@ function appName(row: ChatConversation) {
 }
 
 function continueChat(row: ChatConversation) {
-  router.push(`/app-agents/${row.appId}/chat?conversationId=${row.id}`)
+  router.push(`/app/agents/${row.appId}/chat?conversationId=${row.id}`)
 }
 
 /* ---------- 重命名 / 删除 ---------- */
@@ -97,11 +98,15 @@ async function submitRename() {
 }
 
 async function remove(row: ChatConversation) {
-  await ElMessageBox.confirm(
-    `确认删除会话「${row.title || `#${row.id}`}」？该操作不可恢复。`,
-    '删除确认',
-    { confirmButtonText: '删除', cancelButtonText: '取消', type: 'error' }
-  )
+  try {
+    await ElMessageBox.confirm(
+      `确认删除会话「${row.title || `#${row.id}`}」？该操作不可恢复。`,
+      '删除确认',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'error' }
+    )
+  } catch {
+    return // 用户取消
+  }
   await conversationApi.remove(row.id)
   ElMessage.success('已删除')
   load()

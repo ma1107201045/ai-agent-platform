@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:9080}
 
 spring:
   application:
@@ -7,9 +7,9 @@ spring:
   datasource:
     driver-class-name: org.postgresql.Driver
     # stringtype=unspecified：让 String 字段可直接写入 vector/jsonb 等扩展类型
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/agent_platform?stringtype=unspecified}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/demo?stringtype=unspecified}
+    username: ${DB_USERNAME:demo}
+    password: ${DB_PASSWORD:199726ma.}
   servlet:
     multipart:
       max-file-size: 20MB
@@ -28,7 +28,7 @@ springdoc:
 
 jwt:
   # HS256 密钥，必须通过环境变量 JWT_SECRET 注入（>=32字节随机字符串），禁止提交真实密钥
-  secret: ${JWT_SECRET:}
+  secret: ${JWT_SECRET:1234564565555555555555555555555555555555555555555555555555555555555555555555555555}
   expire-hours: ${JWT_EXPIRE_HOURS:24}
 
 # 公开门户（免鉴权分享页）防护

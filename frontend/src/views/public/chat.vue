@@ -16,7 +16,12 @@ interface ChatItem {
   error?: boolean
   trace?: TraceItem[]
   agentSteps?: AgentStep[]
+  /** 本条消息的轨迹面板是否展开（每条消息独立） */
+  traceOpen?: boolean
 }
+
+/** 发送给后端的历史轮数上限（最近 20 条），避免上下文无限增长导致请求变慢或超 token */
+const MAX_HISTORY = 20
 
 const appInfo = ref<PublicAppInfo | null>(null)
 const loaded = ref(false)
@@ -24,7 +29,6 @@ const loadError = ref('')
 const messages = ref<ChatItem[]>([])
 const input = ref('')
 const sending = ref(false)
-const traceVisible = ref(false)
 const listRef = ref<HTMLElement | null>(null)
 
 const nodeStatusColor: Record<string, string> = {
@@ -61,6 +65,7 @@ async function send() {
   try {
     const history = messages.value
       .filter((m) => !m.loading && !m.error)
+      .slice(-MAX_HISTORY)
       .map((m) => ({ role: m.role, content: m.content }))
     const result: PublicChatResult = await publicApi.chat(appId, history)
     assistant.content = result.answer || '（无输出）'
@@ -70,7 +75,7 @@ async function send() {
       } else {
         assistant.trace = result.detail as TraceItem[]
       }
-      traceVisible.value = true
+      assistant.traceOpen = true
     }
   } catch (err) {
     assistant.content = (err as Error)?.message || '请求失败，请稍后重试'
@@ -134,8 +139,13 @@ onMounted(async () => {
                   <template v-if="msg.content">{{ msg.content }}</template>
                   <span v-else-if="msg.loading" class="typing"><i /><i /><i /></span>
                 </div>
-                <!-- 工作流轨迹 -->
-                <el-collapse v-if="msg.trace && msg.trace.length" v-model="traceVisible" class="trace-collapse">
+                <!-- 工作流轨迹（每条消息独立展开状态） -->
+                <el-collapse
+                  v-if="msg.trace && msg.trace.length"
+                  :model-value="msg.traceOpen ? ['trace'] : []"
+                  class="trace-collapse"
+                  @update:model-value="(v: string[]) => (msg.traceOpen = v.includes('trace'))"
+                >
                   <el-collapse-item title="执行轨迹" name="trace">
                     <div v-for="(t, i) in msg.trace" :key="i" class="trace-item">
                       <div class="trace-head">
@@ -151,8 +161,13 @@ onMounted(async () => {
                     </div>
                   </el-collapse-item>
                 </el-collapse>
-                <!-- 工具调用轨迹 -->
-                <el-collapse v-if="msg.agentSteps && msg.agentSteps.length" v-model="traceVisible" class="trace-collapse">
+                <!-- 工具调用轨迹（每条消息独立展开状态） -->
+                <el-collapse
+                  v-if="msg.agentSteps && msg.agentSteps.length"
+                  :model-value="msg.traceOpen ? ['trace'] : []"
+                  class="trace-collapse"
+                  @update:model-value="(v: string[]) => (msg.traceOpen = v.includes('trace'))"
+                >
                   <el-collapse-item title="工具调用" name="trace">
                     <div v-for="(s, i) in msg.agentSteps" :key="i" class="trace-item">
                       <div class="trace-head">

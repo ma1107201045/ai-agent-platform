@@ -18,44 +18,44 @@ public interface TrashMapper {
     /* ---------------- 列表 ---------------- */
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_agent " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedAgent();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedAgent(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM knowledge_dataset " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedDataset();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedDataset(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_template " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedTemplate();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedTemplate(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, title AS name, deleted_time AS deleted_time FROM sys_announcement " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedAnnouncement();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedAnnouncement(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM agent_team " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedTeam();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedTeam(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_tool " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedTool();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedTool(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_skill " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedSkill();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedSkill(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM app_prompt_template " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedPromptTemplate();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedPromptTemplate(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, title AS name, deleted_time AS deleted_time FROM chat_conversation " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedConversation();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedConversation(@Param("tenantId") Long tenantId);
 
     @Select("SELECT id, name AS name, deleted_time AS deleted_time FROM data_table " +
-            "WHERE deleted = 1 ORDER BY COALESCE(deleted_time, update_time) DESC")
-    List<Map<String, Object>> listDeletedDataTable();
+            "WHERE deleted = 1 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY COALESCE(deleted_time, update_time) DESC")
+    List<Map<String, Object>> listDeletedDataTable(@Param("tenantId") Long tenantId);
 
     /* ---------------- 恢复 ---------------- */
 

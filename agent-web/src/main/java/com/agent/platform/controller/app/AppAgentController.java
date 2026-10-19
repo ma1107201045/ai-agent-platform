@@ -2,6 +2,7 @@ package com.agent.platform.controller.app;
 
 import com.agent.platform.common.exception.BizException;
 import com.agent.platform.common.result.Result;
+import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.dto.app.AppAgentChatDTO;
 import com.agent.platform.dao.dto.app.AppAgentPublishDTO;
 import com.agent.platform.dao.dto.app.AppAgentRunDTO;
@@ -88,10 +89,12 @@ public class AppAgentController {
         return Result.ok();
     }
 
-    /** 发布（保存版本快照） */
+    /** 发布（保存版本快照），操作人取当前登录用户 */
     @PostMapping("/{id}/publish")
     public Result<AppAgentVersion> publish(@PathVariable Long id, @RequestBody AppAgentPublishDTO request) {
-        return Result.ok(appAgentService.publish(id, request.getWorkflowJson(), request.getPromptConfig(), 1L));
+        Long operatorId = UserContext.getUserId();
+        return Result.ok(appAgentService.publish(id, request.getWorkflowJson(), request.getPromptConfig(),
+                operatorId == null ? 1L : operatorId));
     }
 
     /** 获取当前发布版本 */
