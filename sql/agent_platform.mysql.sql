@@ -31,6 +31,8 @@ CREATE TABLE `agent_team`  (
   `run_count` int NOT NULL DEFAULT 0 COMMENT '累计运行次数',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '多智能体编排-团队' ROW_FORMAT = DYNAMIC;
@@ -139,7 +141,8 @@ CREATE TABLE `app_agent_version`  (
   `created_by` bigint NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_app`(`app_id` ASC) USING BTREE
+  INDEX `idx_app`(`app_id` ASC) USING BTREE,
+  UNIQUE INDEX `uk_app_version`(`app_id` ASC, `version` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '应用版本' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
@@ -224,6 +227,8 @@ CREATE TABLE `app_prompt_template`  (
   `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
   INDEX `idx_category`(`category` ASC) USING BTREE
@@ -339,6 +344,8 @@ CREATE TABLE `app_skill`  (
   `created_by` bigint NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_tenant_code`(`tenant_id` ASC, `code` ASC) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE,
@@ -435,6 +442,8 @@ CREATE TABLE `app_tool`  (
   `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'Agent工具注册表' ROW_FORMAT = DYNAMIC;
@@ -565,6 +574,8 @@ CREATE TABLE `chat_conversation`  (
   `status` tinyint NULL DEFAULT 1 COMMENT '状态: 0删除 1正常',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_app`(`user_id` ASC, `app_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '聊天会话' ROW_FORMAT = DYNAMIC;
@@ -687,6 +698,8 @@ CREATE TABLE `data_table`  (
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0正常 1回收站',
+  `deleted_time` datetime NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_tenant_name`(`tenant_id` ASC, `name` ASC) USING BTREE,
   INDEX `idx_tenant`(`tenant_id` ASC) USING BTREE
@@ -1089,9 +1102,10 @@ CREATE TABLE `model_provider`  (
 
 -- ----------------------------
 -- Records of model_provider
+-- 注意：api_key 为占位符，部署时请替换为真实密钥（原种子数据中的密钥已泄露，必须吊销轮换）
 -- ----------------------------
-INSERT INTO `model_provider` VALUES (2, 1, 'DashScope', 'openai-compatible', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'sk-34cd7fe56f554bd7a79b509b6310434b', 1, '2026-09-03 17:33:45', '2026-09-03 17:47:03');
-INSERT INTO `model_provider` VALUES (3, 1, '火山方舟', 'openai-compatible', 'https://ark.cn-beijing.volces.com/api/v3', 'ark-0ff6dcc7-a492-4c59-9f2a-b75795e788c0-25e3e', 1, '2026-09-04 17:16:16', '2026-09-04 17:26:56');
+INSERT INTO `model_provider` VALUES (2, 1, 'DashScope', 'openai-compatible', 'https://dashscope.aliyuncs.com/compatible-mode/v1', 'sk-REPLACE_WITH_YOUR_DASHSCOPE_KEY', 1, '2026-09-03 17:33:45', '2026-09-03 17:47:03');
+INSERT INTO `model_provider` VALUES (3, 1, '火山方舟', 'openai-compatible', 'https://ark.cn-beijing.volces.com/api/v3', 'ark-REPLACE_WITH_YOUR_VOLCENGINE_KEY', 1, '2026-09-04 17:16:16', '2026-09-04 17:26:56');
 
 -- ----------------------------
 -- Table structure for ops_alert_event
@@ -1385,6 +1399,7 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
+-- 初始管理员账号 admin/admin（bcrypt），仅用于本地开发；生产部署请立即修改密码并重新生成哈希
 INSERT INTO `sys_user` VALUES (1, 1, 'admin', '$2a$10$9q7nqAmKWk7KcW/peXz.Ru4OVkaJUjrrI4UElU1RRk.Z.V6rSrDgq', '管理员', NULL, NULL, 1, '2026-08-28 00:22:58', '2026-08-28 01:23:10');
 
 -- ----------------------------

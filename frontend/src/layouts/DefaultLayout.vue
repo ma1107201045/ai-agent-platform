@@ -38,8 +38,16 @@ const activeMenu = computed(() => {
   )
 })
 
-/** 菜单 key：切换折叠状态时强制重渲染，保证 Element Plus collapse 样式正确复位 */
-const menuKey = computed(() => (collapsed.value ? 'menu-collapsed' : 'menu'))
+/** 当前路由所属分组 key：手风琴模式下该分组保持展开 */
+const activeGroupKey = computed(() => {
+  const p = route.path
+  return menuGroups.find((g) => p.startsWith('/' + g.key))?.key ?? menuGroups[0]?.key
+})
+
+/** 菜单 key：折叠状态或激活分组变化时强制重渲染，保证展开状态与 collapse 样式正确复位 */
+const menuKey = computed(
+  () => `${collapsed.value ? 'menu-collapsed' : 'menu'}-${activeGroupKey.value}`
+)
 
 function onMenuSelect(index: string) {
   router.push(index)
@@ -104,7 +112,7 @@ if (import.meta.env.DEV) {
 
 <template>
   <el-container class="layout">
-    <!-- 侧边导航：一体式折叠菜单（分组展开/收起，整体折叠仅留图标） -->
+    <!-- 侧边导航：手风琴菜单（分组同一时间仅展开一个，整体折叠仅留图标） -->
     <div class="sidebar" :class="{ collapsed }">
       <div class="logo" @click="go(DEFAULT_HOME)">
         <div class="logo-badge">
@@ -117,12 +125,18 @@ if (import.meta.env.DEV) {
         <el-menu
           :key="menuKey"
           :default-active="activeMenu"
+          :default-openeds="[activeGroupKey]"
           :collapse="collapsed"
           :collapse-transition="false"
+          unique-opened
           class="sidebar-menu"
           @select="onMenuSelect"
         >
-          <el-menu-item-group v-for="g in menuGroups" :key="g.key" :title="g.title">
+          <el-sub-menu v-for="g in menuGroups" :key="g.key" :index="g.key">
+            <template #title>
+              <el-icon :size="18"><component :is="g.icon" /></el-icon>
+              <span class="group-label">{{ g.title }}</span>
+            </template>
             <el-menu-item v-for="item in g.items" :key="item.path" :index="item.path">
               <el-icon :size="18"><component :is="item.icon" /></el-icon>
               <template #title>
@@ -130,7 +144,7 @@ if (import.meta.env.DEV) {
                 <span v-if="item.planned" class="planned-badge">规划</span>
               </template>
             </el-menu-item>
-          </el-menu-item-group>
+          </el-sub-menu>
         </el-menu>
       </div>
 
@@ -308,18 +322,40 @@ if (import.meta.env.DEV) {
   border-right: none;
 }
 
-/* 分组标题 */
-.menu-scroll :deep(.el-menu-item-group__title) {
-  padding: 18px 16px 8px 20px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.2px;
-  line-height: 1;
+/* 手风琴分组标题（可点击展开/收起） */
+.menu-scroll :deep(.el-sub-menu__title) {
+  height: 40px;
+  margin-bottom: 2px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
   background: transparent;
 }
-.menu-scroll :deep(.el-menu-item-group__title:first-child) {
-  padding-top: 10px;
+.menu-scroll :deep(.el-sub-menu__title:hover) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.menu-scroll :deep(.el-sub-menu__title .el-icon) {
+  flex-shrink: 0;
+  margin-right: 12px;
+  color: inherit;
+}
+.menu-scroll :deep(.el-sub-menu__icon-arrow) {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
+.menu-scroll :deep(.el-sub-menu__title:hover .el-sub-menu__icon-arrow) {
+  color: #fff;
+}
+/* 子项命中当前路由时，分组标题一并高亮 */
+.menu-scroll :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: #fff;
+}
+
+/* 分组子项：收起分组的上下间距 */
+.menu-scroll :deep(.el-sub-menu .el-menu) {
+  background: transparent;
 }
 
 /* 菜单项 */
@@ -347,10 +383,7 @@ if (import.meta.env.DEV) {
   color: inherit;
 }
 
-/* 折叠状态隐藏分组标题 */
-.sidebar.collapsed .menu-scroll :deep(.el-menu-item-group__title) {
-  display: none;
-}
+/* 折叠状态：分组标题只留图标，箭头与文字隐藏（Element Plus 自动处理），子菜单走 hover 浮层 */
 
 /* ---------- 底部折叠按钮 ---------- */
 .sidebar-footer {

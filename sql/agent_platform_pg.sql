@@ -17,6 +17,8 @@ CREATE TABLE "agent_team" (
   "run_count" integer NOT NULL DEFAULT 0,
   "create_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted" smallint NULL DEFAULT 0,
+  "deleted_time" timestamp,
   PRIMARY KEY ("id")
 );
 COMMENT ON TABLE "agent_team" IS '多智能体编排-团队';
@@ -244,6 +246,8 @@ CREATE TABLE "app_prompt_template" (
   "status" smallint NULL DEFAULT 1,
   "create_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted" smallint NULL DEFAULT 0,
+  "deleted_time" timestamp,
   PRIMARY KEY ("id")
 );
 COMMENT ON TABLE "app_prompt_template" IS '提示词模板';
@@ -376,6 +380,8 @@ CREATE TABLE "app_skill" (
   "created_by" bigint,
   "create_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted" smallint NULL DEFAULT 0,
+  "deleted_time" timestamp,
   PRIMARY KEY ("id")
 );
 COMMENT ON TABLE "app_skill" IS '技能定义(可复用能力包)';
@@ -537,6 +543,8 @@ CREATE TABLE "app_tool" (
   "status" smallint NULL DEFAULT 1,
   "create_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted" smallint NULL DEFAULT 0,
+  "deleted_time" timestamp,
   PRIMARY KEY ("id")
 );
 COMMENT ON TABLE "app_tool" IS 'Agent工具注册表';
@@ -692,6 +700,8 @@ CREATE TABLE "chat_conversation" (
   "status" smallint NULL DEFAULT 1,
   "create_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted" smallint NULL DEFAULT 0,
+  "deleted_time" timestamp,
   PRIMARY KEY ("id")
 );
 COMMENT ON TABLE "chat_conversation" IS '聊天会话';
@@ -903,6 +913,8 @@ CREATE TABLE "data_table" (
   "status" smallint NOT NULL DEFAULT 1,
   "create_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   "update_time" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "deleted" smallint NULL DEFAULT 0,
+  "deleted_time" timestamp,
   PRIMARY KEY ("id")
 );
 COMMENT ON TABLE "data_table" IS '数据存储-自定义数据表';
