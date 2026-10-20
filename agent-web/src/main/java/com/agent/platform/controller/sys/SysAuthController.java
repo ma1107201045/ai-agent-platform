@@ -6,10 +6,9 @@ import com.agent.platform.dao.vo.sys.SysAuthLoginVO;
 import com.agent.platform.dao.vo.sys.UserProfileVO;
 import com.agent.platform.service.sys.SysAuthService;
 import com.agent.platform.service.sys.SysOperLogService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.agent.platform.support.PortalPublicGuard;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,12 +55,8 @@ public class SysAuthController {
 
     private String clientIp() {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
-            HttpServletRequest request = attrs.getRequest();
-            String forwarded = request.getHeader("X-Forwarded-For");
-            if (StringUtils.hasText(forwarded)) {
-                return forwarded.split(",")[0].trim();
-            }
-            return request.getRemoteAddr();
+            // 与门户限流共用同一 IP 识别策略（默认不信代理头，防伪造）
+            return PortalPublicGuard.resolveClientIp(attrs.getRequest());
         }
         return "unknown";
     }

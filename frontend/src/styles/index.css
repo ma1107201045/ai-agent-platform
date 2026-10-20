@@ -325,3 +325,15 @@ html.dark .el-table {
     box-shadow 0.2s ease,
     border-color 0.2s ease;
 }
+
+/* 带操作提示的错误 toast：支持换行展示 actionHint */
+.el-message.error-with-hint .el-message__content {
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* 回收站彻底删除确认框：影响预览逐行展示 */
+.el-message-box.trash-purge-confirm .el-message-box__message {
+  white-space: pre-line;
+  line-height: 1.6;
+}

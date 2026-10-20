@@ -2,6 +2,7 @@ package com.agent.platform.aspect;
 
 import com.agent.platform.common.security.UserContext;
 import com.agent.platform.service.sys.SysOperLogService;
+import com.agent.platform.support.PortalPublicGuard;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -189,11 +190,8 @@ public class OperationLogAspect {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded)) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        // 与门户限流共用同一 IP 识别策略（默认不信代理头，防伪造）
+        return PortalPublicGuard.resolveClientIp(request);
     }
 
     private HttpServletRequest currentRequest() {

@@ -125,4 +125,60 @@
 | 前端#16 | 公开对话页历史上限 20 条（slice(-20)） |
 | 前端#14 | chat/index.vue、storage/index.vue 的删除确认补 try/catch，取消不再产生未捕获 rejection |
 
-**未修复（需另行立项）**：权限/角色体系（B3）、apiKey 落库加密、SSRF 防护（B7）、SVG XSS（B8）、登录防爆破（B9）、REST 命名统一、批量操作接口、用户管理表单补全、画布历史栈性能（#17）等 P2 项。
+~~**未修复（需另行立项）**：权限/角色体系（B3）、apiKey 落库加密、SSRF 防护（B7）、SVG XSS（B8）、登录防爆破（B9）、REST 命名统一、批量操作接口、用户管理表单补全、画布历史栈性能（#17）等 P2 项。~~
+
+---
+
+## 七、修复进度（2026-10-19 第二批，P2）
+
+已修复并验证（`mvn clean compile` + `vue-tsc -b` + `vitest useFlowHistory` 5/5 均通过）：
+
+| 编号 | 修复内容 |
+|------|---------|
+| B3 | 轻量角色体系：`sys_user` 加 `role` 列（PG/MySQL 种子+迁移脚本）；JWT 携带 role 声明；新增 `@RequireAdmin` 注解由 AuthInterceptor 强制校验（403）；用户管理/回收站 purge+cleanup/供应商与模型写接口全部纳入管理员管控；前端按角色过滤菜单（供应商管理、团队与权限、操作日志仅管理员可见） |
+| B4 深化 | apiKey **落库加密**：新增 `CryptoUtil`（AES-GCM，`enc:v1:` 前缀，`PLATFORM_CRYPTO_SECRET` 环境变量注入，未配置时明文兼容+警告）；创建/更新供应商自动加密，运行时解密，接口响应仍脱敏 |
+| B7 | SSRF 防护：新增 `SsrfGuard`（拦截非 http/https、localhost、回环、内网 10/172.16/192.168、链路本地 169.254 云元数据、保留段）；HTTP 节点、工具调用、连接器连通性测试三处出口全部接入；HttpClient 禁止跟随重定向防 302 绕过 |
+| B8 | 素材上传黑名单（svg/html/htm/js/xml 等可执行脚本类型，前后端双重拦截）；内容下载改为白名单 inline（仅 png/jpg/gif/webp 等），其余强制 attachment + `X-Content-Type-Options: nosniff` |
+| B9 | 登录防爆破：按用户名内存计数，连续失败 5 次锁定 10 分钟，提示剩余锁定时间 |
+| B13 | 用户改名查重（排除自身），避免重复用户名 |
+| 前端#1 | 用户管理页重写：创建/编辑对话框含用户名、密码（编辑留空不改）、昵称、邮箱、角色、状态；列表加搜索、角色标签、启停开关（防连点+失败不回滚） |
+| 前端#13 | 登录页移除 admin/admin 预填 |
+| 前端#11 | 素材上传前端预校验（>20MB / 危险类型直接跳过并提示）；部分失败保留失败文件可重试，不再从头重传 |
+| 前端#17 | 画布历史栈 `ref`→`shallowRef`（50 份整树快照不再深度响应式化）；dirty 追踪移除 nodes/edges 的 deep watch，改由结构变更统一入口 `snapshot()` 显式标脏 |
+| 后端#13/前端#4 | 批量删除：会话 `POST /chat/conversations/batch-delete`（≤200，逐个校验归属）；数据行 `POST /data-store/records/batch-delete`（≤500）；前端对话记录/数据存储表格加多选+批量删除按钮 |
+| B12 | 顺带修复：data_table rowCount 读-改-写改为原子 SQL 自增/自减（`COALESCE`+`GREATEST`），并发下计数不再漂移 |
+
+**仍需用户手动处理**：吊销已泄露的 DashScope/火山方舟 API Key；生产环境配置 `PLATFORM_CRYPTO_SECRET`（配置后历史明文 key 仍可读，新写入自动加密）；老库执行对应迁移脚本（PG/MySQL 均已追加 sys_user.role 列）。
+
+**剩余未做（建议后续立项）**：~~PortalPublicGuard 的 X-Forwarded-For 信任策略（B10）、LLM 客户端超时/重试调优（B14）、N+1 查询优化（B15）、CORS/环境 profile（B16）~~（均已在第三批修复）；REST 命名统一（sys/system 混用等，涉及前后端路径联动，属破坏性变更）、错误响应 actionHint 字段、回收站影响预览接口。
+
+---
+
+## 八、修复进度（2026-10-20 第三批，P2 收尾）
+
+已修复并验证（`mvn clean compile` 通过，本批无前端改动）：
+
+| 编号 | 修复内容 |
+|------|---------|
+| B10 | IP 识别统一收口：`PortalPublicGuard.resolveClientIp` 默认只信 TCP 直连地址，忽略可伪造的 X-Forwarded-For/X-Real-IP；仅 `portal.public.trust-proxy=true`（确认处于可信反向代理之后）才读取代理头。登录日志（SysAuthController）与操作日志切面（OperationLogAspect）改为共用同一策略 |
+| B14 | LLM HTTP 客户端：连接超时从 120s 降为固定 10s；流式请求**移除整体超时**（长流式生成不再被 120s 误杀，依靠连接超时+调用方取消兜底）；非流式请求保留整体超时且网络 IO 异常自动重试一次（HTTP 错误状态不重试） |
+| B15 | N+1 消除：`chatModels/allModels/embeddingModels/rerankModels` 四个方法合并为 `listEnabledModels`，供应商改批量 IN 查询；`playgroundModels` 同样批量化；新增 `AppAgentService.getPublishedVersions`（两次 IN 查询代替 2N 次），`/batch/published` 接口接入；`parseIds` 非法 id 由静默忽略改为明确报错 |
+| B16 | CORS 显式配置：`/api/**` 仅放行 `cors.allowed-origins`（环境变量 `CORS_ALLOWED_ORIGINS`，默认仅 vite 本地端口），限定方法与请求头；`application.yml` 引入 profile（默认 dev），新增 `application-prod.yml`——生产环境 DB 密码/JWT/加密密钥/CORS 全部强制环境变量注入、关闭 Swagger；顺带移除 yml 中硬编码的本地数据库密码默认值 |
+
+**至此报告列出的全部安全/性能项均已处理**；~~仅剩 REST 命名统一、错误响应 actionHint、回收站影响预览三个体验/规范性立项项~~（均已在第四批修复）。
+
+---
+
+## 九、修复进度（2026-10-20 第四批，体验/规范性收尾）
+
+已修复并验证（`mvn clean compile` + `vue-tsc -b` 均通过）：
+
+| 编号 | 修复内容 |
+|------|---------|
+| 后端#11 | **错误响应 actionHint**：`BizException`/`Result` 新增 `actionHint` 字段（null 不序列化）；全局异常处理器将 LLM 上游错误按状态码映射为友好提示+操作引导（401→检查 API Key、429→查额度、400→上下文超限、404→模型下线），不再透传原始 JSON；"请选择对话模型/未编排工作流/未发布"等高频错误均带下一步指引；前端 `request.ts` 错误 toast 换行展示提示并延长显示时长 |
+| 后端#12 | **回收站影响预览**：新增 `GET /sys/trash/impact?type=&id=`，返回将被级联删除的子数据计数（版本/会话/消息/用量/文档/分片/成员等 13 个计数查询）；前端彻底删除确认框逐行列出"将同时删除：会话 N 条、消息 M 条……"，预览失败时退回通用提示不阻断 |
+| REST 命名 | `/api/system/trash` → `/api/sys/trash` 与其他系统接口对齐；旧路径保留为兼容别名（`@RequestMapping` 双路径），前端已切至规范路径 |
+| 后端#3 | **创建应用 DTO 收窄**：新增 `AppAgentSaveDTO`（仅 10 个可编辑字段 + 名称/长度校验），`tenantId/status/publishedVersionId/deleted` 不再接受客户端传入；`create` 租户归属强制取登录上下文 |
+| 顺带修复 | `purgeAgentMessages` 的 `DELETE ... USING` 为 PG 方言，MySQL 下会语法错误——改为 `IN (SELECT ...)` 双库通用写法 |
+
+**至此报告全部问题项均已处理完毕。** 仍需用户手动处理：吊销泄露 API Key、生产配置 `PLATFORM_CRYPTO_SECRET`/`CORS_ALLOWED_ORIGINS`/`JWT_SECRET`/`DB_PASSWORD`、老库执行迁移脚本。

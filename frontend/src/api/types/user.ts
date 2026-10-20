@@ -2,6 +2,8 @@ export interface SysUser {
   id: number
   tenantId: number
   username: string
+  /** 仅创建/重置密码时传入，接口永不返回 */
+  password?: string
   nickname?: string
   email?: string
   role?: string

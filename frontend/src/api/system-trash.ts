@@ -26,18 +26,22 @@ export interface CleanupResult {
   days: number
 }
 
-/** 回收站 API（/api/system/trash） */
+/** 回收站 API（/api/sys/trash） */
 export const trashApi = {
   list(type?: string) {
-    return request.get<never, TrashItem[]>('/system/trash', { params: type ? { type } : {} })
+    return request.get<never, TrashItem[]>('/sys/trash', { params: type ? { type } : {} })
   },
   restore(type: TrashType, id: number) {
-    return request.post<never, void>('/system/trash/restore', { type, id })
+    return request.post<never, void>('/sys/trash/restore', { type, id })
   },
   purge(type: TrashType, id: number) {
-    return request.post<never, void>('/system/trash/purge', { type, id })
+    return request.post<never, void>('/sys/trash/purge', { type, id })
+  },
+  /** 彻底删除前的影响预览：将被级联删除的子数据计数（label → 条数） */
+  impact(type: TrashType, id: number) {
+    return request.get<never, Record<string, number>>('/sys/trash/impact', { params: { type, id } })
   },
   cleanup(days = 30) {
-    return request.post<never, CleanupResult>('/system/trash/cleanup', { days })
+    return request.post<never, CleanupResult>('/sys/trash/cleanup', { days })
   }
 }

@@ -353,18 +353,60 @@ const uploadCategory = ref('')
 const pendingFiles = ref<File[]>([])
 const uploading = ref(false)
 
+/** 单文件上限 20MB（与后端 spring.servlet.multipart.max-file-size 一致） */
+const MAX_FILE_SIZE = 20 * 1024 * 1024
+/** 浏览器可执行脚本的类型，与后端黑名单一致 */
+const BLOCKED_EXTS = new Set(['svg', 'html', 'htm', 'xhtml', 'mhtml', 'js', 'mjs', 'xml'])
+
+function fileExt(name: string) {
+  const dot = name.lastIndexOf('.')
+  return dot < 0 ? '' : name.slice(dot + 1).toLowerCase()
+}
+
+/** 上传前校验：超限/危险类型直接剔除并提示，不再等传完才被后端拒绝 */
 function onFilesChange(_file: { raw?: File }, files: { raw?: File }[]) {
-  pendingFiles.value = files.map((f) => f.raw).filter((f): f is File => !!f)
+  const accepted: File[] = []
+  for (const f of files) {
+    const raw = f.raw
+    if (!raw) continue
+    if (raw.size > MAX_FILE_SIZE) {
+      ElMessage.warning(`「${raw.name}」超过 20MB，已跳过`)
+      continue
+    }
+    if (BLOCKED_EXTS.has(fileExt(raw.name))) {
+      ElMessage.warning(`「${raw.name}」类型不允许上传（XSS 风险），已跳过`)
+      continue
+    }
+    accepted.push(raw)
+  }
+  pendingFiles.value = accepted
 }
 
 async function doUpload() {
   if (!pendingFiles.value.length) return
   uploading.value = true
+  const failed: string[] = []
+  let succeeded = 0
   try {
     for (const file of pendingFiles.value) {
-      await assetsApi.upload(file, undefined, uploadCategory.value || undefined)
+      try {
+        await assetsApi.upload(file, undefined, uploadCategory.value || undefined)
+        succeeded++
+      } catch {
+        failed.push(file.name)
+      }
     }
-    ElMessage.success(`成功上传 ${pendingFiles.value.length} 个文件`)
+    // 部分失败：保留失败文件供重试，避免从头再来产生重复
+    if (failed.length) {
+      ElMessage.warning(
+        `成功 ${succeeded} 个，失败 ${failed.length} 个：${failed.join('、')}（已保留在列表中可重试）`
+      )
+      pendingFiles.value = pendingFiles.value.filter((f) => failed.includes(f.name))
+      page.value = 1
+      await reload()
+      return
+    }
+    ElMessage.success(`成功上传 ${succeeded} 个文件`)
     uploadDialogVisible.value = false
     pendingFiles.value = []
     uploadCategory.value = ''

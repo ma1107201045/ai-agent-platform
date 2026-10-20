@@ -129,6 +129,14 @@
               <el-button @click="loadRecords"
                 ><el-icon><Refresh /></el-icon
               ></el-button>
+              <el-button
+                v-if="selectedRows.length"
+                type="danger"
+                plain
+                :loading="batchRemoving"
+                @click="removeRowsBatch"
+                >删除选中（{{ selectedRows.length }}）</el-button
+              >
             </div>
           </div>
 
@@ -138,7 +146,9 @@
             class="records-table"
             empty-text="暂无数据记录，点击「新增行」或导入数据"
             size="default"
+            @selection-change="(rows: DataRecordRow[]) => (selectedRows = rows)"
           >
+            <el-table-column type="selection" width="44" align="center" />
             <el-table-column type="index" label="#" width="54" align="center" />
             <el-table-column
               v-for="c in cols"
@@ -314,6 +324,38 @@ async function removeRow(row: DataRecordRow) {
   ElMessage.success('记录已删除')
   await loadRecords()
   await loadTables()
+}
+
+// ---------- 批量删除 ----------
+const selectedRows = ref<DataRecordRow[]>([])
+const batchRemoving = ref(false)
+
+async function removeRowsBatch() {
+  const rows = selectedRows.value
+  if (!rows.length) return
+  try {
+    await ElMessageBox.confirm(
+      `确定删除选中的 ${rows.length} 行记录吗？该操作不可恢复。`,
+      '批量删除',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消'
+      }
+    )
+  } catch {
+    return // 用户取消
+  }
+  batchRemoving.value = true
+  try {
+    const { removed } = await dataStoreApi.batchRemoveRecords(rows.map((r) => r.id))
+    ElMessage.success(`已删除 ${removed} 行记录`)
+    selectedRows.value = []
+    await loadRecords()
+    await loadTables()
+  } finally {
+    batchRemoving.value = false
+  }
 }
 
 // ---------- 更多操作 ----------

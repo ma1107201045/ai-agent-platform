@@ -120,7 +120,50 @@ public class TrashServiceImpl implements TrashService {
     }
 
     /**
-     * 清理过期数据：删除超过 retentionDays 的回收站数据（按各资源类型分别执行）。
+     * 彻底删除前的"影响预览"：统计将被级联删除的子数据条数。
+     * 仅统计非零项；无级联子数据的类型返回空 Map。
+     */
+    @Override
+    public Map<String, Long> impact(String type, Long id) {
+        assertOwnedByCurrentTenant(type, id);
+        Map<String, Long> result = new LinkedHashMap<>();
+        switch (type) {
+            case TYPE_AGENT -> {
+                putIfPositive(result, "版本快照", trashMapper.countAgentVersions(id));
+                putIfPositive(result, "会话", trashMapper.countAgentConversations(id));
+                putIfPositive(result, "对话消息", trashMapper.countAgentMessages(id));
+                putIfPositive(result, "用量记录", trashMapper.countAgentUsage(id));
+            }
+            case TYPE_DATASET -> {
+                putIfPositive(result, "文档", trashMapper.countDatasetDocuments(id));
+                putIfPositive(result, "向量分片", trashMapper.countDatasetChunks(id));
+            }
+            case TYPE_TEAM -> {
+                putIfPositive(result, "成员配置", trashMapper.countTeamMembers(id));
+                putIfPositive(result, "运行记录", trashMapper.countTeamRuns(id));
+            }
+            case TYPE_SKILL -> putIfPositive(result, "技能版本", trashMapper.countSkillVersions(id));
+            case TYPE_PROMPT_TEMPLATE -> putIfPositive(result, "模板版本", trashMapper.countPromptVersions(id));
+            case TYPE_CONVERSATION -> {
+                putIfPositive(result, "对话消息", trashMapper.countConversationMessages(id));
+                putIfPositive(result, "用量记录", trashMapper.countConversationUsage(id));
+            }
+            case TYPE_DATA_TABLE -> putIfPositive(result, "数据记录", trashMapper.countDataRecords(id));
+            case TYPE_TEMPLATE, TYPE_ANNOUNCEMENT, TYPE_TOOL -> {
+                // 无级联子数据
+            }
+            default -> throw new BizException("不支持的资源类型: " + type);
+        }
+        return result;
+    }
+
+    private static void putIfPositive(Map<String, Long> map, String label, long count) {
+        if (count > 0) {
+            map.put(label, count);
+        }
+    }
+
+    /**
      *
      * @return removed 清理条数
      */

@@ -101,8 +101,8 @@ public interface TrashMapper {
     @Delete("DELETE FROM chat_usage WHERE app_id = #{id}")
     int purgeAgentUsage(@Param("id") Long id);
 
-    @Delete("DELETE FROM chat_message cm USING chat_conversation cc " +
-            "WHERE cm.conversation_id = cc.id AND cc.app_id = #{id}")
+    @Delete("DELETE FROM chat_message WHERE conversation_id IN " +
+            "(SELECT id FROM chat_conversation WHERE app_id = #{id})")
     int purgeAgentMessages(@Param("id") Long id);
 
     @Delete("DELETE FROM chat_conversation WHERE app_id = #{id}")
@@ -161,4 +161,46 @@ public interface TrashMapper {
 
     @Delete("DELETE FROM data_record WHERE table_id = #{id}")
     int purgeDataRecords(@Param("id") Long id);
+
+    /* ---------------- 影响预览（级联子数据计数，PG/MySQL 通用） ---------------- */
+
+    @Select("SELECT COUNT(*) FROM app_agent_version WHERE app_id = #{id}")
+    long countAgentVersions(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM chat_usage WHERE app_id = #{id}")
+    long countAgentUsage(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM chat_message WHERE conversation_id IN " +
+            "(SELECT id FROM chat_conversation WHERE app_id = #{id})")
+    long countAgentMessages(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM chat_conversation WHERE app_id = #{id}")
+    long countAgentConversations(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM knowledge_chunk WHERE dataset_id = #{id}")
+    long countDatasetChunks(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM knowledge_document WHERE dataset_id = #{id}")
+    long countDatasetDocuments(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM agent_team_member WHERE team_id = #{id}")
+    long countTeamMembers(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM agent_team_run WHERE team_id = #{id}")
+    long countTeamRuns(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM app_skill_version WHERE skill_id = #{id}")
+    long countSkillVersions(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM app_prompt_version WHERE template_id = #{id}")
+    long countPromptVersions(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM chat_message WHERE conversation_id = #{id}")
+    long countConversationMessages(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM chat_usage WHERE conversation_id = #{id}")
+    long countConversationUsage(@Param("id") Long id);
+
+    @Select("SELECT COUNT(*) FROM data_record WHERE table_id = #{id}")
+    long countDataRecords(@Param("id") Long id);
 }

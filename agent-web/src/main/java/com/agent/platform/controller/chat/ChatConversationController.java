@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -69,6 +70,13 @@ public class ChatConversationController {
     public Result<Void> delete(@PathVariable Long id) {
         conversationService.delete(id, UserContext.getUserId());
         return Result.ok();
+    }
+
+    /** 批量删除会话 {ids: [...]}，返回实际删除数量 */
+    @PostMapping("/batch-delete")
+    public Result<Map<String, Integer>> batchDelete(@RequestBody Map<String, List<Long>> body) {
+        int removed = conversationService.deleteBatch(body.get("ids"), UserContext.getUserId());
+        return Result.ok(Map.of("removed", removed));
     }
 
     /** 会话消息列表 */

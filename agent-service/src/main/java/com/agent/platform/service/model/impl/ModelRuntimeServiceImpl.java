@@ -1,6 +1,7 @@
 package com.agent.platform.service.model.impl;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.security.CryptoUtil;
 import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.mapper.model.ModelInfoMapper;
@@ -26,6 +27,8 @@ public class ModelRuntimeServiceImpl implements ModelRuntimeService {
     private final ModelInfoMapper modelInfoMapper;
 
     private final LLMFactory llmFactory;
+
+    private final CryptoUtil cryptoUtil;
 
     /**
      * 根据模型记录创建 ChatModel 实例（供应商须启用）
@@ -85,7 +88,7 @@ public class ModelRuntimeServiceImpl implements ModelRuntimeService {
         return ModelConfig.builder()
                 .provider(provider.getType())
                 .baseUrl(provider.getBaseUrl())
-                .apiKey(provider.getApiKey())
+                .apiKey(cryptoUtil.decrypt(provider.getApiKey()))
                 .modelName(info.getName())
                 .build();
     }

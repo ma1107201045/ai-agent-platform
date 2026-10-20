@@ -56,17 +56,27 @@ public class AssetController {
         return Result.ok();
     }
 
+    /** 可安全 inline 预览的图片 MIME 白名单（svg 可携带脚本，强制下载） */
+    private static final java.util.Set<String> INLINE_SAFE_IMAGE_TYPES = java.util.Set.of(
+            "image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/x-icon", "image/avif");
+
     /** 读取文件内容（下载/预览），鉴权后通过登录态携带的 Token 调用 */
     @GetMapping("/{id}/content")
     public ResponseEntity<byte[]> content(@PathVariable Long id) {
         AssetFile asset = assetService.getAsset(id);
         byte[] bytes = assetService.readContent(id);
         String mediaType = asset.getContentType() == null ? "application/octet-stream" : asset.getContentType();
-        String inlineType = "image".equals(asset.getCategory()) ? "inline" : "attachment";
+        // 防存储型 XSS：仅白名单图片允许 inline，其余（含历史 svg/html 素材）强制附件下载 + 安全 MIME
+        boolean safeInline = "image".equals(asset.getCategory()) && INLINE_SAFE_IMAGE_TYPES.contains(mediaType);
+        String disposition = safeInline ? "inline" : "attachment";
+        if (!safeInline && (mediaType.startsWith("image/") || mediaType.startsWith("text/"))) {
+            mediaType = "application/octet-stream";
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(mediaType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, inlineType + "; filename*=UTF-8''" + encode(asset.getName()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename*=UTF-8''" + encode(asset.getName()))
                 .header(HttpHeaders.CACHE_CONTROL, "private, max-age=3600")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(bytes);
     }
 

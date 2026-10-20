@@ -43,6 +43,12 @@ public interface TrashService {
     public void purge(String type, Long id);
 
     /**
+     * 彻底删除前的"影响预览"：返回将被级联删除的子数据计数（如 会话/消息/用量），
+     * 供前端确认框展示，让用户知道会丢什么。key 为子数据中文标签，value 为条数。
+     */
+    public Map<String, Long> impact(String type, Long id);
+
+    /**
      * 清理过期数据：删除超过 retentionDays 的回收站数据（按各资源类型分别执行）。
      *
      * @return removed 清理条数

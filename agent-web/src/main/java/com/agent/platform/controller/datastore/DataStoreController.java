@@ -90,6 +90,13 @@ public class DataStoreController {
         return Result.ok();
     }
 
+    /** 批量删除行记录 {ids: [...]}，返回实际删除行数 */
+    @PostMapping("/records/batch-delete")
+    public Result<Map<String, Integer>> batchDeleteRecords(@RequestBody Map<String, List<Long>> body) {
+        int removed = dataStoreService.deleteRecordBatch(body.get("ids"));
+        return Result.ok(Map.of("removed", removed));
+    }
+
     // ---------- 导入导出 ----------
 
     /** JSON 数组导入：[{列key: 值}, ...] */

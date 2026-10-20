@@ -112,6 +112,37 @@ async function remove(row: ChatConversation) {
   load()
 }
 
+/* ---------- 批量删除 ---------- */
+const selectedRows = ref<ChatConversation[]>([])
+const batchRemoving = ref(false)
+
+function onSelectionChange(rows: ChatConversation[]) {
+  selectedRows.value = rows
+}
+
+async function removeBatch() {
+  const rows = selectedRows.value
+  if (!rows.length) return
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${rows.length} 个会话？会话将进入回收站。`,
+      '批量删除',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'error' }
+    )
+  } catch {
+    return // 用户取消
+  }
+  batchRemoving.value = true
+  try {
+    const { removed } = await conversationApi.batchRemove(rows.map((r) => r.id))
+    ElMessage.success(`已删除 ${removed} 个会话`)
+    selectedRows.value = []
+    load()
+  } finally {
+    batchRemoving.value = false
+  }
+}
+
 /* ---------- 会话详情（消息时间线） ---------- */
 const detailVisible = ref(false)
 const detailTitle = ref('')
@@ -187,6 +218,16 @@ onMounted(() => {
         <el-option v-for="(label, key) in modeLabels" :key="key" :label="label" :value="key" />
       </el-select>
       <span class="conv-total">共 {{ total }} 条会话</span>
+      <el-button
+        v-if="selectedRows.length"
+        type="danger"
+        plain
+        size="small"
+        :loading="batchRemoving"
+        @click="removeBatch"
+      >
+        <el-icon :size="13"><Delete /></el-icon>&nbsp;删除选中（{{ selectedRows.length }}）
+      </el-button>
     </div>
 
     <!-- 会话表格 -->
@@ -195,7 +236,9 @@ onMounted(() => {
       :data="list"
       class="conv-table hover-card"
       @row-click="openDetail"
+      @selection-change="onSelectionChange"
     >
+      <el-table-column type="selection" width="44" />
       <el-table-column label="会话标题" min-width="240">
         <template #default="{ row }">
           <div class="conv-title">

@@ -21,6 +21,10 @@ export const conversationApi = {
   remove(id: number) {
     return request.delete<never, void>(`/chat/conversations/${id}`)
   },
+  /** 批量删除会话，返回实际删除数量 */
+  batchRemove(ids: number[]) {
+    return request.post<never, { removed: number }>('/chat/conversations/batch-delete', { ids })
+  },
   /** 会话消息列表 */
   messages(id: number) {
     return request.get<never, ChatMessageRecord[]>(`/chat/conversations/${id}/messages`)

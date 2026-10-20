@@ -145,6 +145,30 @@ public class ChatConversationServiceImpl implements ChatConversationService {
         conversationMapper.markDeleted(id);
     }
 
+    /** 批量删除：逐个走 delete 以复用归属校验，单个失败不中断其余 */
+    @Override
+    public int deleteBatch(List<Long> ids, Long userId) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        if (ids.size() > 200) {
+            throw new BizException("单次最多批量删除 200 个会话");
+        }
+        int removed = 0;
+        for (Long id : ids) {
+            if (id == null) {
+                continue;
+            }
+            try {
+                delete(id, userId);
+                removed++;
+            } catch (BizException ignored) {
+                // 会话不存在或不属于当前用户：跳过
+            }
+        }
+        return removed;
+    }
+
     @Override
     public List<ChatMessage> messages(Long conversationId, Long userId) {
         getById(conversationId, userId);
@@ -248,7 +272,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
         } else if ("agent".equals(conv.getMode())) {
             Long mid = modelId != null ? modelId : conv.getModelId();
             if (mid == null) {
-                throw new BizException("请选择对话模型");
+                throw new BizException("请选择对话模型", "请前往「模型管理」确认存在已启用的对话模型，并在会话或应用配置中选择");
             }
             List<com.agent.platform.llm.model.ChatMessage> llmHistory = toLlmMessages(history);
             llmHistory.add(com.agent.platform.llm.model.ChatMessage.user(content));
@@ -261,7 +285,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
         } else {
             Long mid = modelId != null ? modelId : conv.getModelId();
             if (mid == null) {
-                throw new BizException("请选择对话模型");
+                throw new BizException("请选择对话模型", "请前往「模型管理」确认存在已启用的对话模型，并在会话或应用配置中选择");
             }
             ChatModel model = modelRuntimeService.chatModelOf(mid);
             ChatResponse response = model.call(buildChatRequest(conv, history, content, mid));
@@ -287,11 +311,11 @@ public class ChatConversationServiceImpl implements ChatConversationService {
     public void streamSend(Long conversationId, Long userId, String content, Long modelId, Consumer<ChatChunk> onChunk) {
         ChatConversation conv = getById(conversationId, userId);
         if ("workflow".equals(conv.getMode())) {
-            throw new BizException("工作流模式不支持流式，请使用非流式发送");
+            throw new BizException("工作流模式不支持流式，请使用非流式发送", "工作流需一次性执行全部节点，请直接使用发送按钮（前端已自动切换为非流式）");
         }
         Long mid = modelId != null ? modelId : conv.getModelId();
         if (mid == null) {
-            throw new BizException("请选择对话模型");
+            throw new BizException("请选择对话模型", "请前往「模型管理」确认存在已启用的对话模型，并在会话或应用配置中选择");
         }
         List<ChatMessage> history = messages(conversationId, userId);
         tx().executeWithoutResult(s -> saveMessage(conversationId, "user", content, null, 0));
@@ -332,7 +356,7 @@ public class ChatConversationServiceImpl implements ChatConversationService {
     private RunResult runWorkflow(ChatConversation conv, String content) {
         String dsl = appAgentService.getRunWorkflow(conv.getAppId());
         if (dsl == null || dsl.isBlank()) {
-            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
+            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布", "打开应用编辑器，在画布中编排节点后点击保存或发布");
         }
         try {
             WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);

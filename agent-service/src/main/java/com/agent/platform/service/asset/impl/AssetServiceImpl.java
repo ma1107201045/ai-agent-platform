@@ -33,6 +33,10 @@ public class AssetServiceImpl implements AssetService {
     private static final Set<String> DOC_EXTS = Set.of(
             "txt", "md", "markdown", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv", "json", "html");
 
+    /** 禁止上传的扩展名：可携带脚本导致存储型 XSS（svg/html/htm 等可被浏览器 inline 执行） */
+    private static final Set<String> BLOCKED_EXTS = Set.of(
+            "svg", "html", "htm", "xhtml", "mhtml", "js", "mjs", "xml");
+
     private static final DateTimeFormatter DIR_FORMAT = DateTimeFormatter.ofPattern("yyyyMM");
 
     private final AssetFileMapper assetFileMapper;
@@ -52,7 +56,15 @@ public class AssetServiceImpl implements AssetService {
             original = "未命名文件";
         }
         String ext = extensionOf(original);
+        if (BLOCKED_EXTS.contains(ext)) {
+            throw new BizException("出于安全考虑，不允许上传 ." + ext
+                    + " 文件（可在浏览器中执行脚本，存在 XSS 风险）。如需分享请压缩为 zip 后上传");
+        }
         String contentType = file.getContentType();
+        if (contentType != null && (contentType.contains("svg") || contentType.equalsIgnoreCase("text/html"))) {
+            throw new BizException("出于安全考虑，不允许上传 " + contentType
+                    + " 类型文件（存在 XSS 风险）。如需分享请压缩为 zip 后上传");
+        }
         String realCategory = normalizeCategory(category, contentType, ext);
         String uuid = UUID.randomUUID().toString().replace("-", "");
         String relPath = LocalDate.now().format(DIR_FORMAT) + "/" + uuid + (ext.isBlank() ? "" : "." + ext);

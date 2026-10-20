@@ -1,6 +1,7 @@
 package com.agent.platform.orchestrator.node;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.security.SsrfGuard;
 import com.agent.platform.orchestrator.NodeType;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -92,10 +93,16 @@ public class HttpNodeHandler implements NodeHandler {
             throw new BizException("HTTP 节点「" + ctx.label() + "」未配置请求地址");
         }
         url = ctx.render(url);
+        // SSRF 防护：阻断内网/回环/云元数据地址
+        SsrfGuard.validateUrl(url);
         String method = ctx.cfgStr("method", "GET").toUpperCase();
         int timeout = Math.clamp(ctx.cfgInt("timeoutSeconds", DEFAULT_TIMEOUT_SECONDS), 1, MAX_TIMEOUT_SECONDS);
 
-        HttpClient client = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
+        // 不跟随重定向，避免 302 跳转到内网地址绕过校验
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(CONNECT_TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(timeout));

@@ -1,6 +1,7 @@
 package com.agent.platform.service.model.impl;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.security.CryptoUtil;
 import com.agent.platform.dao.entity.model.ModelInfo;
 import com.agent.platform.dao.entity.model.ModelProvider;
 import com.agent.platform.dao.mapper.model.ModelInfoMapper;
@@ -18,6 +19,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import com.agent.platform.service.model.ModelService;
 
 /**
@@ -31,6 +35,8 @@ public class ModelServiceImpl implements ModelService {
 
     private final ModelInfoMapper modelInfoMapper;
 
+    private final CryptoUtil cryptoUtil;
+
     // ---------- 供应商 ----------
 
     @Override
@@ -42,7 +48,7 @@ public class ModelServiceImpl implements ModelService {
                                 .or().like(ModelProvider::getBaseUrl, keyword))
                 .orderByDesc(ModelProvider::getId);
         Page<ModelProvider> result = providerMapper.selectPage(new Page<>(page, size), qw);
-        result.getRecords().forEach(ModelServiceImpl::maskApiKey);
+        result.getRecords().forEach(this::maskApiKey);
         return result;
     }
 
@@ -65,6 +71,7 @@ public class ModelServiceImpl implements ModelService {
         if (provider.getTenantId() == null) {
             provider.setTenantId(1L);
         }
+        provider.setApiKey(cryptoUtil.encrypt(provider.getApiKey()));
         providerMapper.insert(provider);
         return maskApiKey(provider);
     }
@@ -72,18 +79,20 @@ public class ModelServiceImpl implements ModelService {
     @Override
     public void updateProvider(ModelProvider provider) {
         getProvider(provider.getId());
-        // 前端回传的是脱敏掩码（含 ****）或空值时，不修改已存储的密钥
+        // 前端回传的是脱敏掩码（含 ****）或空值时，不修改已存储的密钥；真实新密钥加密后落库
         if (!StringUtils.hasText(provider.getApiKey()) || provider.getApiKey().contains("****")) {
             provider.setApiKey(null);
+        } else {
+            provider.setApiKey(cryptoUtil.encrypt(provider.getApiKey()));
         }
         provider.setUpdateTime(LocalDateTime.now());
         providerMapper.updateById(provider);
     }
 
-    /** apiKey 脱敏：保留前 3 后 4 位，中间以 **** 替代，避免密钥随接口明文返回前端 */
-    private static ModelProvider maskApiKey(ModelProvider provider) {
+    /** apiKey 脱敏：先解密（若为密文）再保留前 3 后 4 位，中间以 **** 替代，避免密钥随接口明文返回前端 */
+    private ModelProvider maskApiKey(ModelProvider provider) {
         if (provider != null) {
-            provider.setApiKey(mask(provider.getApiKey()));
+            provider.setApiKey(mask(cryptoUtil.decrypt(provider.getApiKey())));
         }
         return provider;
     }
@@ -149,19 +158,7 @@ public class ModelServiceImpl implements ModelService {
      */
     @Override
     public List<ModelInfoVO> chatModels() {
-        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
-                .eq(ModelInfo::getModelType, "llm")
-                .eq(ModelInfo::getStatus, 1)
-                .orderByAsc(ModelInfo::getId));
-        List<ModelInfoVO> result = new ArrayList<>();
-        for (ModelInfo info : infos) {
-            ModelProvider provider = providerMapper.selectById(info.getProviderId());
-            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
-                continue;
-            }
-            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
-        }
-        return result;
+        return listEnabledModels("llm");
     }
 
     /**
@@ -169,18 +166,7 @@ public class ModelServiceImpl implements ModelService {
      */
     @Override
     public List<ModelInfoVO> allModels() {
-        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
-                .eq(ModelInfo::getStatus, 1)
-                .orderByAsc(ModelInfo::getId));
-        List<ModelInfoVO> result = new ArrayList<>();
-        for (ModelInfo info : infos) {
-            ModelProvider provider = providerMapper.selectById(info.getProviderId());
-            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
-                continue;
-            }
-            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
-        }
-        return result;
+        return listEnabledModels(null);
     }
 
     /**
@@ -197,19 +183,7 @@ public class ModelServiceImpl implements ModelService {
      */
     @Override
     public List<ModelInfoVO> embeddingModels() {
-        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
-                .eq(ModelInfo::getModelType, "embedding")
-                .eq(ModelInfo::getStatus, 1)
-                .orderByAsc(ModelInfo::getId));
-        List<ModelInfoVO> result = new ArrayList<>();
-        for (ModelInfo info : infos) {
-            ModelProvider provider = providerMapper.selectById(info.getProviderId());
-            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
-                continue;
-            }
-            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
-        }
-        return result;
+        return listEnabledModels("embedding");
     }
 
     /**
@@ -217,19 +191,47 @@ public class ModelServiceImpl implements ModelService {
      */
     @Override
     public List<ModelInfoVO> rerankModels() {
-        List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
-                .eq(ModelInfo::getModelType, "rerank")
+        return listEnabledModels("rerank");
+    }
+
+    /**
+     * 启用模型列表：一次性批量查询供应商（避免逐条 selectById 的 N+1），
+     * 仅返回供应商启用 + 模型启用的条目。
+     *
+     * @param modelType 模型类型过滤，null 表示不限
+     */
+    private List<ModelInfoVO> listEnabledModels(String modelType) {
+        LambdaQueryWrapper<ModelInfo> qw = new LambdaQueryWrapper<ModelInfo>()
                 .eq(ModelInfo::getStatus, 1)
-                .orderByAsc(ModelInfo::getId));
+                .orderByAsc(ModelInfo::getId);
+        if (modelType != null) {
+            qw.eq(ModelInfo::getModelType, modelType);
+        }
+        List<ModelInfo> infos = modelInfoMapper.selectList(qw);
+        if (infos.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ModelProvider> providers = enabledProvidersById(
+                infos.stream().map(ModelInfo::getProviderId).collect(Collectors.toSet()));
         List<ModelInfoVO> result = new ArrayList<>();
         for (ModelInfo info : infos) {
-            ModelProvider provider = providerMapper.selectById(info.getProviderId());
-            if (provider == null || provider.getStatus() == null || provider.getStatus() != 1) {
-                continue;
+            ModelProvider provider = providers.get(info.getProviderId());
+            if (provider != null) {
+                result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
             }
-            result.add(new ModelInfoVO(info.getId(), provider.getName(), info.getName(), info.getContextWindow()));
         }
         return result;
+    }
+
+    /** 按 id 集合批量加载供应商，仅保留启用状态的，返回 id → 供应商 映射 */
+    private Map<Long, ModelProvider> enabledProvidersById(Set<Long> providerIds) {
+        if (providerIds == null || providerIds.isEmpty()) {
+            return Map.of();
+        }
+        List<ModelProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<ModelProvider>()
+                .in(ModelProvider::getId, providerIds)
+                .eq(ModelProvider::getStatus, 1));
+        return providers.stream().collect(Collectors.toMap(ModelProvider::getId, p -> p));
     }
 
     // ---------- 模型广场 ----------
@@ -245,9 +247,17 @@ public class ModelServiceImpl implements ModelService {
         List<ModelInfo> infos = modelInfoMapper.selectList(new LambdaQueryWrapper<ModelInfo>()
                 .orderByAsc(ModelInfo::getProviderId)
                 .orderByAsc(ModelInfo::getId));
+        if (infos.isEmpty()) {
+            return List.of();
+        }
+        // 批量加载供应商（含禁用，由前端标注状态），避免 N+1
+        Set<Long> providerIds = infos.stream().map(ModelInfo::getProviderId).collect(Collectors.toSet());
+        Map<Long, ModelProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<ModelProvider>()
+                        .in(ModelProvider::getId, providerIds))
+                .stream().collect(Collectors.toMap(ModelProvider::getId, p -> p));
         List<ModelPlaygroundVO> result = new ArrayList<>();
         for (ModelInfo info : infos) {
-            ModelProvider provider = providerMapper.selectById(info.getProviderId());
+            ModelProvider provider = providers.get(info.getProviderId());
             if (provider == null) {
                 continue;
             }

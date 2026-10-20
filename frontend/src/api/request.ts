@@ -9,6 +9,13 @@ export interface ApiResult<T = unknown> {
   code: number
   message: string
   data: T
+  /** 错误时可选的"下一步操作提示"，由后端给出，前端在报错 toast 中一并展示 */
+  actionHint?: string
+}
+
+/** 拼接错误消息与操作提示（hint 存在时换行追加） */
+function withHint(message: string, hint?: string): string {
+  return hint ? `${message}\n${hint}` : message
 }
 
 /**
@@ -65,7 +72,15 @@ request.interceptors.response.use(
   (response) => {
     const res = response.data as ApiResult
     if (res.code !== 0) {
-      if (!response.config.silent) ElMessage.error(res.message || '请求失败')
+      if (!response.config.silent) {
+        ElMessage({
+          type: 'error',
+          message: withHint(res.message || '请求失败', res.actionHint),
+          duration: res.actionHint ? 6000 : 3000,
+          showClose: !!res.actionHint,
+          customClass: 'error-with-hint'
+        })
+      }
       return Promise.reject(new Error(res.message))
     }
     return res.data as never
@@ -77,8 +92,16 @@ request.interceptors.response.use(
       return Promise.reject(error)
     }
     if (!error.config?.silent) {
-      const message = error.response?.data?.message || error.message || '网络异常，请稍后重试'
-      ElMessage.error(message)
+      const data = error.response?.data as ApiResult | undefined
+      const hint = data?.actionHint
+      const message = data?.message || error.message || '网络异常，请稍后重试'
+      ElMessage({
+        type: 'error',
+        message: withHint(message, hint),
+        duration: hint ? 6000 : 3000,
+        showClose: !!hint,
+        customClass: 'error-with-hint'
+      })
     }
     return Promise.reject(error)
   }

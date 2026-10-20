@@ -39,6 +39,9 @@ public interface DataStoreService {
 
     public void deleteRecord(Long id);
 
+    /** 批量删除行记录（单次 ≤500），返回实际删除行数 */
+    public int deleteRecordBatch(List<Long> ids);
+
     /** JSON 数组导入（[{列key: 值}, ...]） */
     public int importJson(Long tableId, List<Map<String, Object>> rows);
 

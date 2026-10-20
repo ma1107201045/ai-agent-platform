@@ -24,6 +24,9 @@ public interface ChatConversationService {
 
     public void delete(Long id, Long userId);
 
+    /** 批量删除会话（逐个校验归属），返回实际删除数量 */
+    public int deleteBatch(List<Long> ids, Long userId);
+
     public List<ChatMessage> messages(Long conversationId, Long userId);
 
     /** 应用会话统计：会话数 + 消息数（用于对外访问/运营数据展示） */

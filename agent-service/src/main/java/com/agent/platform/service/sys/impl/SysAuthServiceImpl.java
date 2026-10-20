@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import com.agent.platform.service.sys.SysAuthService;
 
 /**
@@ -32,21 +34,58 @@ public class SysAuthServiceImpl implements SysAuthService {
 
     private final PasswordEncoder passwordEncoder;
 
+    // ---------- 登录防爆破（内存计数，按用户名）：连续失败 MAX_FAILS 次锁定 LOCK_MINUTES 分钟 ----------
+
+    private static final int MAX_FAILS = 5;
+    private static final long LOCK_MILLIS = 10 * 60 * 1000L;
+
+    private static final class FailRecord {
+        int count;
+        long lockUntil;
+    }
+
+    private final Map<String, FailRecord> failRecords = new ConcurrentHashMap<>();
+
     /** 登录，成功返回 Token + 用户信息 */
     @Override
     public SysAuthLoginVO login(String username, String password) {
+        checkLoginLocked(username);
         SysUser user = userMapper.selectOne(
                 new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
         if (user == null || !matches(password, user.getPassword())) {
+            onLoginFailed(username);
             throw new BizException("用户名或密码错误");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
             throw new BizException("账号已被禁用");
         }
+        failRecords.remove(username);
         upgradeLegacyPassword(user, password);
         recordLoginTrace(user);
         String token = jwtUtil.createToken(user.getId(), user.getTenantId(), user.getUsername(), user.getRole());
         return new SysAuthLoginVO(token, toProfile(user));
+    }
+
+    private void checkLoginLocked(String username) {
+        FailRecord rec = failRecords.get(username);
+        if (rec != null && rec.lockUntil > System.currentTimeMillis()) {
+            long minutes = (rec.lockUntil - System.currentTimeMillis()) / 60_000L + 1;
+            throw new BizException("登录失败次数过多，账号已临时锁定，请约 " + minutes + " 分钟后再试");
+        }
+    }
+
+    private void onLoginFailed(String username) {
+        FailRecord rec = failRecords.computeIfAbsent(username, k -> new FailRecord());
+        synchronized (rec) {
+            if (rec.lockUntil > System.currentTimeMillis()) {
+                return; // 已锁定
+            }
+            rec.count++;
+            if (rec.count >= MAX_FAILS) {
+                rec.lockUntil = System.currentTimeMillis() + LOCK_MILLIS;
+                rec.count = 0;
+            }
+        }
     }
 
     /** 登录成功记录安全扩展表中的登录次数与时间 */

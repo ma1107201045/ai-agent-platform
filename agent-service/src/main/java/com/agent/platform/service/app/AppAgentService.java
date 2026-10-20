@@ -62,6 +62,12 @@ public interface AppAgentService {
     public AppAgentVersion getPublishedVersion(Long appId);
 
     /**
+     * 批量获取已发布版本：单次 IN 查询，避免逐应用查询的 N+1；
+     * 未发布或版本缺失的应用不出现在返回 Map 中
+     */
+    public java.util.Map<Long, AppAgentVersion> getPublishedVersions(java.util.Collection<Long> appIds);
+
+    /**
      * 版本列表（按版本号倒序）
      */
     public List<AppAgentVersion> listVersions(Long appId);

@@ -58,34 +58,47 @@ async function restore(row: TrashItem) {
 }
 
 async function purge(row: TrashItem) {
-  const cascadeTypes = [
-    'agent',
-    'dataset',
-    'team',
-    'skill',
-    'prompt_template',
-    'conversation',
-    'data_table'
-  ]
-  const cascadeNote = cascadeTypes.includes(row.type)
-    ? '\n\n彻底删除后会连同其关联数据（版本/成员/会话/消息/分段等）一并清理，不可恢复。'
+  // 先取影响预览：明确告诉用户将级联删除哪些数据、各多少条
+  let impactLines = ''
+  try {
+    const impact = await trashApi.impact(row.type as TrashType, row.id)
+    const entries = Object.entries(impact)
+    if (entries.length) {
+      impactLines =
+        '\n\n将同时彻底删除以下关联数据：\n' +
+        entries.map(([label, count]) => `· ${label} ${count} 条`).join('\n')
+    }
+  } catch {
+    // 预览失败不阻断主流程，退回通用提示
+  }
+  const note = impactLines
+    ? `${impactLines}\n\n以上数据删除后不可恢复。`
     : '\n\n彻底删除后不可恢复。'
-  await ElMessageBox.confirm(`确定彻底删除「${row.name}」吗？${cascadeNote}`, '彻底删除', {
-    type: 'warning',
-    confirmButtonText: '彻底删除',
-    cancelButtonText: '取消'
-  })
+  try {
+    await ElMessageBox.confirm(`确定彻底删除「${row.name}」吗？${note}`, '彻底删除', {
+      type: 'warning',
+      confirmButtonText: '彻底删除',
+      cancelButtonText: '取消',
+      customClass: 'trash-purge-confirm'
+    })
+  } catch {
+    return // 用户取消
+  }
   await trashApi.purge(row.type as TrashType, row.id)
   ElMessage.success('已彻底删除')
   load()
 }
 
 async function cleanup() {
-  await ElMessageBox.confirm(
-    '将清理回收站中删除超过 30 天的所有数据（含关联数据），且不可恢复。是否继续？',
-    '清理过期数据',
-    { type: 'warning', confirmButtonText: '清理', cancelButtonText: '取消' }
-  )
+  try {
+    await ElMessageBox.confirm(
+      '将清理回收站中删除超过 30 天的所有数据（含关联数据），且不可恢复。是否继续？',
+      '清理过期数据',
+      { type: 'warning', confirmButtonText: '清理', cancelButtonText: '取消' }
+    )
+  } catch {
+    return // 用户取消
+  }
   const res = await trashApi.cleanup(30)
   ElMessage.success(`已清理 ${res.removed} 条超过 ${res.days} 天的数据`)
   load()

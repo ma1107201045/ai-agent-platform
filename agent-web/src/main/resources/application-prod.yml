@@ -1,0 +1,33 @@
+# 生产环境配置覆盖（SPRING_PROFILES_ACTIVE=prod 时生效）。
+# 所有敏感项均强制从环境变量注入，无默认值——缺失时启动即失败，避免弱默认上线。
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+jwt:
+  # 生产必须注入 >=32 字节随机字符串
+  secret: ${JWT_SECRET}
+
+platform:
+  crypto:
+    # 生产必须启用敏感字段落库加密（>=16 字符随机串）
+    secret: ${PLATFORM_CRYPTO_SECRET}
+
+cors:
+  # 生产必须显式指定前端域名，禁止通配符
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+springdoc:
+  swagger-ui:
+    # 生产关闭在线接口文档
+    enabled: false
+  api-docs:
+    enabled: false
+
+logging:
+  level:
+    com.agent.platform: warn
+    root: info

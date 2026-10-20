@@ -12,8 +12,8 @@ const userStore = useUserStore()
 
 const loading = ref(false)
 const form = reactive({
-  username: 'admin',
-  password: 'admin'
+  username: '',
+  password: ''
 })
 
 async function handleLogin() {

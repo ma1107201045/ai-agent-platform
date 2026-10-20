@@ -1,6 +1,7 @@
 package com.agent.platform.service.app.impl;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppTool;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
@@ -29,9 +30,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.agent.platform.service.app.AppSkillService;
 import com.agent.platform.service.app.AppToolService;
 import com.agent.platform.service.app.AppAgentService;
@@ -110,9 +116,9 @@ public class AppAgentServiceImpl implements AppAgentService {
         if (app.getType() == null) {
             app.setType("chatflow");
         }
-        if (app.getTenantId() == null) {
-            app.setTenantId(1L);
-        }
+        // 租户归属始终取自登录上下文，不信任客户端传入（防冒充他人租户）
+        Long tenantId = UserContext.getTenantId();
+        app.setTenantId(tenantId == null ? 1L : tenantId);
         appAgentMapper.insert(app);
         return app;
     }
@@ -200,13 +206,46 @@ public class AppAgentServiceImpl implements AppAgentService {
     public AppAgentVersion getPublishedVersion(Long appId) {
         AppAgent app = getById(appId);
         if (app.getPublishedVersionId() == null) {
-            throw new BizException("应用尚未发布: " + appId);
+            throw new BizException("应用尚未发布: " + appId, "请先在应用编辑器中点击「发布」生成线上版本");
         }
         AppAgentVersion version = appAgentVersionMapper.selectById(app.getPublishedVersionId());
         if (version == null) {
             throw new BizException("应用发布版本不存在");
         }
         return version;
+    }
+
+    /**
+     * 批量获取已发布版本：两次 IN 查询（应用 + 版本）代替逐应用 2N 次查询。
+     * 未发布或版本缺失的应用静默跳过（与批量接口语义一致）。
+     */
+    @Override
+    public Map<Long, AppAgentVersion> getPublishedVersions(Collection<Long> appIds) {
+        if (appIds == null || appIds.isEmpty()) {
+            return Map.of();
+        }
+        List<AppAgent> apps = appAgentMapper.selectList(
+                new LambdaQueryWrapper<AppAgent>().in(AppAgent::getId, appIds));
+        List<Long> versionIds = apps.stream()
+                .map(AppAgent::getPublishedVersionId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (versionIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, AppAgentVersion> versionById = appAgentVersionMapper.selectList(
+                        new LambdaQueryWrapper<AppAgentVersion>().in(AppAgentVersion::getId, versionIds))
+                .stream().collect(Collectors.toMap(AppAgentVersion::getId, v -> v));
+        Map<Long, AppAgentVersion> result = new HashMap<>();
+        for (AppAgent app : apps) {
+            AppAgentVersion version = app.getPublishedVersionId() == null
+                    ? null : versionById.get(app.getPublishedVersionId());
+            if (version != null) {
+                result.put(app.getId(), version);
+            }
+        }
+        return result;
     }
 
     /**

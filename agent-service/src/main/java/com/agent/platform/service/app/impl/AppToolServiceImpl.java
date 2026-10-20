@@ -1,6 +1,7 @@
 package com.agent.platform.service.app.impl;
 
 import com.agent.platform.common.exception.BizException;
+import com.agent.platform.common.security.SsrfGuard;
 import com.agent.platform.common.script.SafeMvel;
 import com.agent.platform.dao.entity.app.AppTool;
 import com.agent.platform.dao.mapper.app.AppToolMapper;
@@ -188,6 +189,8 @@ public class AppToolServiceImpl implements AppToolService {
                 }
                 query = "?" + qs;
             }
+            // SSRF 防护：阻断内网/回环/云元数据地址
+            SsrfGuard.validateUrl(url);
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url + query))
                     .timeout(Duration.ofSeconds(30));
@@ -216,6 +219,7 @@ public class AppToolServiceImpl implements AppToolService {
             }
             HttpResponse<String> resp = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(10))
+                    .followRedirects(HttpClient.Redirect.NEVER)
                     .build()
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() >= 400) {

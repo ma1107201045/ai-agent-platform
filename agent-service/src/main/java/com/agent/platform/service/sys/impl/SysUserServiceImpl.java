@@ -54,6 +54,9 @@ public class SysUserServiceImpl implements SysUserService {
         if (user.getTenantId() == null) {
             user.setTenantId(1L); // 默认租户
         }
+        if (!"admin".equals(user.getRole()) && !"user".equals(user.getRole())) {
+            user.setRole("user"); // 非法角色一律降级为普通用户
+        }
         if (user.getPassword() != null && !user.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
@@ -63,7 +66,19 @@ public class SysUserServiceImpl implements SysUserService {
 
     @Override
     public void update(SysUser user) {
-        getById(user.getId());
+        SysUser existing = getById(user.getId());
+        // 改名时校验唯一性，避免造出重复用户名导致两人都无法登录
+        if (user.getUsername() != null && !user.getUsername().equals(existing.getUsername())) {
+            Long count = userMapper.selectCount(new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUsername, user.getUsername())
+                    .ne(SysUser::getId, user.getId()));
+            if (count > 0) {
+                throw new BizException("用户名已存在: " + user.getUsername());
+            }
+        }
+        if (user.getRole() != null && !"admin".equals(user.getRole()) && !"user".equals(user.getRole())) {
+            throw new BizException("非法角色: " + user.getRole());
+        }
         if (user.getPassword() != null && !user.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         } else {

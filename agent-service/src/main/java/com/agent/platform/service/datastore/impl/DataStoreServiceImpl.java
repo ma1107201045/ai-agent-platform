@@ -8,6 +8,7 @@ import com.agent.platform.dao.mapper.datastore.DataTableMapper;
 import com.agent.platform.dao.dto.datastore.DataColumnDefDTO;
 import com.agent.platform.dao.vo.datastore.DataRecordVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -178,9 +179,11 @@ public class DataStoreServiceImpl implements DataStoreService {
         record.setCreateTime(now);
         record.setUpdateTime(now);
         recordMapper.insert(record);
-        table.setRowCount(table.getRowCount() == null ? 1 : table.getRowCount() + 1);
-        table.setUpdateTime(now);
-        tableMapper.updateById(table);
+        // 原子自增，避免并发读-改-写导致 rowCount 漂移
+        tableMapper.update(null, new UpdateWrapper<DataTable>()
+                .setSql("row_count = COALESCE(row_count, 0) + 1")
+                .set("update_time", now)
+                .eq("id", tableId));
         return toView(record);
     }
 
@@ -201,12 +204,40 @@ public class DataStoreServiceImpl implements DataStoreService {
     public void deleteRecord(Long id) {
         DataRecord record = requireRecord(id);
         recordMapper.deleteById(id);
-        DataTable table = tableMapper.selectById(record.getTableId());
-        if (table != null) {
-            table.setRowCount(Math.max(0, (table.getRowCount() == null ? 0 : table.getRowCount()) - 1));
-            table.setUpdateTime(LocalDateTime.now());
-            tableMapper.updateById(table);
+        // 原子扣减，避免并发读-改-写导致 rowCount 漂移
+        tableMapper.update(null, new UpdateWrapper<DataTable>()
+                .setSql("row_count = GREATEST(COALESCE(row_count, 0) - 1, 0)")
+                .set("update_time", LocalDateTime.now())
+                .eq("id", record.getTableId()));
+    }
+
+    /** 批量删除数据行：按表聚合后一次性扣减 rowCount，返回实际删除行数 */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public int deleteRecordBatch(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
         }
+        if (ids.size() > 500) {
+            throw new BizException("单次最多批量删除 500 行");
+        }
+        List<DataRecord> records = recordMapper.selectBatchIds(ids);
+        if (records.isEmpty()) {
+            return 0;
+        }
+        recordMapper.deleteBatchIds(records.stream().map(DataRecord::getId).toList());
+        Map<Long, Long> countByTable = new HashMap<>();
+        for (DataRecord r : records) {
+            countByTable.merge(r.getTableId(), 1L, Long::sum);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (Map.Entry<Long, Long> e : countByTable.entrySet()) {
+            tableMapper.update(null, new UpdateWrapper<DataTable>()
+                    .setSql("row_count = GREATEST(COALESCE(row_count, 0) - " + e.getValue() + ", 0)")
+                    .set("update_time", now)
+                    .eq("id", e.getKey()));
+        }
+        return records.size();
     }
 
     // ---------- 导入导出 ----------

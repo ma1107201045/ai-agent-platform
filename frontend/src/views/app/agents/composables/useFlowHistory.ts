@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, shallowRef, type Ref } from 'vue'
 import type { FlowGraphEdge, FlowGraphNode } from '@/utils/flow'
 
 interface FlowState {
@@ -17,7 +17,9 @@ export function useFlowHistory(
   onRestored?: () => void
 ) {
   const MAX_HISTORY = 50
-  const historyStack = ref<FlowState[]>([])
+  // shallowRef：历史栈快照是整棵画布树的深拷贝，最多 50 份，
+  // 用 ref 会把每份快照都深度响应式化（大画布下拖动/打字卡顿、内存膨胀），快照只需原样存取
+  const historyStack = shallowRef<FlowState[]>([])
   const historyIndex = ref(-1)
   let restoring = false
 

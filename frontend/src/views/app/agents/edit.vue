@@ -77,11 +77,27 @@ const selectedEdgeId = ref<string | null>(null)
 let editBaseline = ''
 
 // ---------- 组合逻辑 ----------
-const { historyStack, historyIndex, snapshot, undo, redo } = useFlowHistory(nodes, edges, () => {
+const {
+  historyStack,
+  historyIndex,
+  snapshot: rawSnapshot,
+  undo,
+  redo
+} = useFlowHistory(nodes, edges, () => {
   selectedNodeId.value = null
   selectedEdgeId.value = null
   editBaseline = ''
 })
+
+/**
+ * 画布结构变更统一入口：入历史栈 + 标脏。
+ * 所有结构修改（增删节点/连线、拖动结束、布局、粘贴）都经过这里，
+ * 因此 dirty 追踪不再需要对 nodes/edges 做 deep watch（大画布下深度遍历开销大）。
+ */
+function snapshot() {
+  rawSnapshot()
+  if (hydrated.value) dirty.value = true
+}
 const { branchLabelOf, branchStyleOf, syncBranchEdges } = useBranchEdges(nodes, edges)
 const { copySelected, pasteClipboard } = useFlowClipboard({
   edges,
@@ -357,16 +373,10 @@ const shortcutNote =
 const dirty = ref(false)
 const hydrated = ref(false)
 
+// 注意：nodes/edges 不在此监听——结构变更统一走 snapshot() 标脏，
+// 对整棵画布树做 deep watch 在大画布下会造成拖动/打字卡顿
 watch(
-  [
-    nodes,
-    edges,
-    boundToolIds,
-    boundDatasetIds,
-    boundSkillIds,
-    welcomeMessage,
-    openingQuestionsText
-  ],
+  [boundToolIds, boundDatasetIds, boundSkillIds, welcomeMessage, openingQuestionsText],
   () => {
     if (hydrated.value) dirty.value = true
   },

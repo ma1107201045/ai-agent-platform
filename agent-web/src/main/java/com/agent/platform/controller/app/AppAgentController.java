@@ -6,6 +6,7 @@ import com.agent.platform.common.security.UserContext;
 import com.agent.platform.dao.dto.app.AppAgentChatDTO;
 import com.agent.platform.dao.dto.app.AppAgentPublishDTO;
 import com.agent.platform.dao.dto.app.AppAgentRunDTO;
+import com.agent.platform.dao.dto.app.AppAgentSaveDTO;
 import com.agent.platform.dao.entity.app.AppAgent;
 import com.agent.platform.dao.entity.app.AppAgentVersion;
 import com.agent.platform.dao.vo.app.AppAgentChatVO;
@@ -19,6 +20,7 @@ import com.agent.platform.service.app.AppAgentService;
 import com.agent.platform.service.chat.ChatConversationService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -72,12 +74,13 @@ public class AppAgentController {
     }
 
     @PostMapping
-    public Result<AppAgent> create(@RequestBody AppAgent app) {
-        return Result.ok(appAgentService.create(app));
+    public Result<AppAgent> create(@Valid @RequestBody AppAgentSaveDTO request) {
+        return Result.ok(appAgentService.create(request.toEntity()));
     }
 
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody AppAgent app) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody AppAgentSaveDTO request) {
+        AppAgent app = request.toEntity();
         app.setId(id);
         appAgentService.update(app);
         return Result.ok();
@@ -122,23 +125,15 @@ public class AppAgentController {
         return Result.ok(conversationService.statsBatch(idList));
     }
 
-    /** 批量获取发布版本：ids 逗号分隔，返回 Map<appId, version> */
+    /** 批量获取发布版本：ids 逗号分隔，返回 Map<appId, version>（未发布的应用不出现） */
     @GetMapping("/batch/published")
     public Result<Map<Long, AppAgentVersion>> batchPublished(@RequestParam String ids) {
-        Map<Long, AppAgentVersion> map = new HashMap<>();
-        for (Long id : parseIds(ids)) {
-            try {
-                map.put(id, appAgentService.getPublishedVersion(id));
-            } catch (Exception ignored) {
-                // 未发布的应用跳过
-            }
-        }
-        return Result.ok(map);
+        return Result.ok(appAgentService.getPublishedVersions(parseIds(ids)));
     }
 
     private List<Long> parseIds(String ids) {
         List<Long> list = new ArrayList<>();
-        if (ids == null) {
+        if (ids == null || ids.isBlank()) {
             return list;
         }
         for (String s : ids.split(",")) {
@@ -148,8 +143,9 @@ public class AppAgentController {
             }
             try {
                 list.add(Long.valueOf(t));
-            } catch (NumberFormatException ignored) {
-                // 忽略非法 id
+            } catch (NumberFormatException e) {
+                // 非法 id 直接报错，不再静默忽略（避免调用方误以为查询完整）
+                throw new BizException("非法的应用 id: " + t);
             }
         }
         return list;
@@ -160,7 +156,7 @@ public class AppAgentController {
     public Result<RunResult> run(@PathVariable Long id, @RequestBody AppAgentRunDTO request) {
         String dsl = appAgentService.getRunWorkflow(id);
         if (dsl == null || dsl.isBlank()) {
-            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
+            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布", "打开应用编辑器，在画布中编排节点后点击保存或发布");
         }
         try {
             WorkflowGraph graph = objectMapper.readValue(dsl, WorkflowGraph.class);
@@ -189,7 +185,7 @@ public class AppAgentController {
     public SseEmitter runStream(@PathVariable Long id, @RequestBody AppAgentRunDTO request) {
         String dsl = appAgentService.getRunWorkflow(id);
         if (dsl == null || dsl.isBlank()) {
-            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布");
+            throw new BizException("应用尚未编排工作流，请先在画布中保存草稿或发布", "打开应用编辑器，在画布中编排节点后点击保存或发布");
         }
         final WorkflowGraph graph;
         try {
@@ -295,7 +291,7 @@ public class AppAgentController {
     @PostMapping("/{id}/agent/chat")
     public Result<AppAgentChatVO> agentChat(@PathVariable Long id, @RequestBody AppAgentChatDTO request) {
         if (request.getModelId() == null) {
-            throw new BizException("请选择对话模型");
+            throw new BizException("请选择对话模型", "请前往「模型管理」确认存在已启用的对话模型，并在会话或应用配置中选择");
         }
         return Result.ok(appAgentService.chat(id, request.getModelId(), request.getSystemPrompt(),
                 request.getMessages(), request.getMaxIterations()));

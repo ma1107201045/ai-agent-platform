@@ -17,10 +17,10 @@ import java.util.Map;
 /**
  * 回收站接口
  *
- * <p>URL：/api/system/trash</p>
+ * <p>URL：/api/sys/trash（规范路径）；/api/system/trash 为兼容旧前端的别名，后续版本移除</p>
  */
 @RestController
-@RequestMapping("/api/system/trash")
+@RequestMapping({"/api/sys/trash", "/api/system/trash"})
 @RequiredArgsConstructor
 public class TrashController {
 
@@ -30,6 +30,12 @@ public class TrashController {
     @GetMapping
     public Result<List<Map<String, Object>>> list(@RequestParam(required = false) String type) {
         return Result.ok(trashService.list(type));
+    }
+
+    /** 彻底删除前的影响预览：返回将被级联删除的子数据计数（供确认框展示） */
+    @GetMapping("/impact")
+    public Result<Map<String, Long>> impact(@RequestParam String type, @RequestParam Long id) {
+        return Result.ok(trashService.impact(type, id));
     }
 
     /** 恢复 {type,id} */

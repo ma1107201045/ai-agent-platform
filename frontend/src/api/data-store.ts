@@ -44,6 +44,10 @@ export const dataStoreApi = {
   removeRecord(recordId: number) {
     return request.delete<never, void>(`/data-store/records/${recordId}`)
   },
+  /** 批量删除行记录，返回实际删除行数 */
+  batchRemoveRecords(ids: number[]) {
+    return request.post<never, { removed: number }>('/data-store/records/batch-delete', { ids })
+  },
 
   // ---------- 导入 ----------
   /** JSON 数组导入：[{列key: 值}, ...]，返回导入行数 */
