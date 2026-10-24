@@ -1,12 +1,11 @@
 package com.agent.platform.config.plugins.inner.other;
 
+import java.util.function.Consumer;
+import java.util.List;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
-
-import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * 共享遍历机制；实体表过滤与条件生成仍由各拦截器负责。每个拦截器单独持有实例。

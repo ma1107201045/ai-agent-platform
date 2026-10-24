@@ -1,14 +1,13 @@
 package com.agent.platform.config.plugins.inner.other;
 
+import java.util.function.Consumer;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.update.Update;
-
-import java.util.function.Consumer;
 
 /** DML 共用的 AST 结构操作，不决定租户或逻辑删除策略。 */
 public final class DmlSqlSupport {
