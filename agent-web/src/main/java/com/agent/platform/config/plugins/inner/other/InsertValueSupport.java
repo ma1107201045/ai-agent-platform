@@ -1,4 +1,4 @@
-package com.agent.platform.config.plugins.inner;
+package com.agent.platform.config.plugins.inner.other;
 
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -16,11 +16,11 @@ import java.util.function.Supplier;
 /**
  * 给 INSERT 的每行或每个 SELECT 分支追加一个值，不改变原有 JDBC 参数顺序。
  */
-final class InsertValueSupport {
+public final class InsertValueSupport {
     private InsertValueSupport() {
     }
 
-    static void append(SelectBody body, int columnCount, Supplier<Expression> value) {
+    public static void append(SelectBody body, int columnCount, Supplier<Expression> value) {
         switch (body) {
             case PlainSelect select -> select.getSelectItems().add(new SelectExpressionItem(value.get()));
             case SetOperationList operations ->

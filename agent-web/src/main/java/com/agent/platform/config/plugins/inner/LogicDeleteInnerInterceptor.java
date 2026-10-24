@@ -1,6 +1,9 @@
 package com.agent.platform.config.plugins.inner;
 
 import com.agent.platform.config.plugins.handler.LogicDeleteHandler;
+import com.agent.platform.config.plugins.inner.other.CteScope;
+import com.agent.platform.config.plugins.inner.other.InsertValueSupport;
+import com.agent.platform.config.plugins.inner.other.QueryJoinSupport;
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.inner.BaseMultiTableInnerInterceptor;
@@ -13,9 +16,6 @@ import net.sf.jsqlparser.expression.TimeKeyExpression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.expression.RowConstructor;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
@@ -31,11 +31,9 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.LateralSubSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
 import org.apache.ibatis.executor.Executor;
@@ -51,7 +49,6 @@ import java.util.Objects;
 import java.util.Locale;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.List;
 
 /**
  * 与租户插件同级，复用公共基类的别名、JOIN、子查询和 UNION 遍历逻辑。
@@ -168,10 +165,11 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     protected void processPlainSelect(PlainSelect select, String whereSegment) {
+        QueryJoinSupport.validate(select.getJoins());
         // 标记当前查询作用域；递归子查询会独立计算，不共享可变上下文。
         boolean singleTable = !MULTI_TABLE_SCOPE.equals(whereSegment) && select.getFromItem() instanceof Table
                 && (select.getJoins() == null || select.getJoins().isEmpty());
-        boolean innerOnly = select.getJoins() != null && !select.getJoins().isEmpty() && select.getJoins().stream().allMatch(join -> join.isInner() || join.isSimple());
+        boolean innerOnly = QueryJoinSupport.innerOnly(select.getJoins());
         Deque<Expression> stack = innerJoinPredicates.get();
         if (stack == null) {
             stack = new ArrayDeque<>();

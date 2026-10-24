@@ -106,10 +106,41 @@ class LogicDeleteBoundaryTest {
         String inner = "SELECT a.id FROM app_agent a INNER JOIN app_tool t ON t.id = a.id "
                 + "WHERE a.deleted = 0 AND t.deleted = 0";
         assertEquals(inner, plugin.parserSingle(inner, null));
+        String implicitInner = inner.replace("INNER JOIN", "JOIN");
+        assertEquals(implicitInner, plugin.parserSingle(implicitInner, null));
         String left = plugin.parserSingle("SELECT a.id FROM app_agent a LEFT JOIN app_tool t "
                 + "ON t.id = a.id AND a.deleted = 0", null);
         assertTrue(left.contains("WHERE a.deleted = 0"), left);
         assertTrue(left.contains("t.deleted = 0"), left);
+    }
+
+    @Test
+    void rejectsUnsupportedJoinFormsRatherThanLeakingUnfilteredRows() {
+        for (String join : new String[]{"FULL OUTER JOIN app_tool t ON t.id = a.id",
+                "NATURAL JOIN app_tool", "CROSS JOIN app_tool"}) {
+            assertThrows(UnsupportedOperationException.class,
+                    () -> plugin.parserSingle("SELECT * FROM app_agent a " + join, null));
+        }
+    }
+
+    @Test
+    void scopesAreCleanedAfterFailureAndRecursiveReferencesAreNotEntities() {
+        var failing = new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
+            @Override
+            public boolean ignoreTable(String tableName) {
+                if ("fail_scope".equals(tableName)) {
+                    throw new IllegalStateException("test failure");
+                }
+                return LogicDeleteHandler.super.ignoreTable(tableName);
+            }
+        });
+        assertThrows(IllegalStateException.class, () -> failing.parserSingle(
+                "WITH app_agent AS (SELECT id FROM app_tool) SELECT id FROM fail_scope", null));
+        assertEquals("SELECT * FROM app_agent WHERE deleted = 0", failing.parserSingle("SELECT * FROM app_agent", null));
+        String recursive = plugin.parserSingle("WITH RECURSIVE app_agent AS "
+                + "(SELECT id FROM app_tool UNION ALL SELECT id FROM app_agent WHERE id < 0) SELECT id FROM app_agent", null);
+        assertTrue(recursive.contains("app_tool WHERE deleted = 0"), recursive);
+        assertTrue(recursive.contains("FROM app_agent WHERE id < 0) SELECT id FROM app_agent"), recursive);
     }
 
     @Test

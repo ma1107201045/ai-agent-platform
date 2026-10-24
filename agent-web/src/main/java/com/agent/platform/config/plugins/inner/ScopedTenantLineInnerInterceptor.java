@@ -1,5 +1,8 @@
 package com.agent.platform.config.plugins.inner;
 
+import com.agent.platform.config.plugins.inner.other.CteScope;
+import com.agent.platform.config.plugins.inner.other.InsertValueSupport;
+import com.agent.platform.config.plugins.inner.other.QueryJoinSupport;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import net.sf.jsqlparser.expression.Expression;
@@ -17,7 +20,7 @@ import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
 
 /**
- * 保留原生租户行为，补齐 CTE 引用及嵌套 WITH 的作用域识别。
+ * 扩展原生租户插件，补齐 CTE 作用域与 INSERT SELECT、UPDATE 来源查询的租户过滤。
  */
 public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor {
     private final CteScope ctes = new CteScope();
@@ -35,6 +38,16 @@ public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor
     protected void processSelect(Select select, int index, String sql, Object obj) {
         ctes.process(select.getWithItemsList(), body -> processSelectBody(body, null),
                 () -> processSelectBody(select.getSelectBody(), null));
+    }
+
+    @Override
+    protected void processPlainSelect(PlainSelect select, String whereSegment) {
+        QueryJoinSupport.validate(select.getJoins());
+        if (select.getJoins() != null) {
+            select.getJoins().forEach(join -> join.getOnExpressions().forEach(on -> processWhereSubSelect(on, null)));
+        }
+        super.processPlainSelect(select, whereSegment);
+        processWhereSubSelect(select.getHaving(), null);
     }
 
     @Override

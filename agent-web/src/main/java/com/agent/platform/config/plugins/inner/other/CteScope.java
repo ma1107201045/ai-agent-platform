@@ -1,4 +1,4 @@
-package com.agent.platform.config.plugins.inner;
+package com.agent.platform.config.plugins.inner.other;
 
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.SelectBody;
@@ -15,10 +15,10 @@ import java.util.function.Consumer;
 /**
  * 每个拦截器独立持有的 CTE 可见域；退出作用域时始终清理线程状态。
  */
-final class CteScope {
+public final class CteScope {
     private final ThreadLocal<Deque<Set<String>>> scopes = new ThreadLocal<>();
 
-    void process(List<WithItem> items, Consumer<SelectBody> processBody, Runnable main) {
+    public void process(List<WithItem> items, Consumer<SelectBody> processBody, Runnable main) {
         Set<String> visible = new HashSet<>(current());
         if (items != null) {
             if (items.stream().anyMatch(WithItem::isRecursive)) {
@@ -40,7 +40,7 @@ final class CteScope {
         run(visible, main);
     }
 
-    boolean isCte(Table table) {
+    public boolean isCte(Table table) {
         return (table.getSchemaName() == null || table.getSchemaName().isEmpty()) && current().contains(key(table.getName()));
     }
 
