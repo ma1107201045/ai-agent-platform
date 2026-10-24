@@ -12,7 +12,10 @@
 - INSERT 显式列清单缺少 `deleted` 时自动补充 `0`，支持单条、批量 VALUES 和 INSERT SELECT
   （包括 UNION 各分支）。已经指定删除字段时保留原值，不影响参数顺序。
   INSERT SELECT 始终过滤来源查询，包括已经显式指定 `deleted` 或目标没有逻辑删除字段的情况。
-  无列清单的 INSERT 不补列；UPSERT 更新分支不自动改写。
+  逻辑删除插件单独使用时无列清单不补列；完整拦截链对租户表要求显式列清单。
+- PostgreSQL `ON CONFLICT DO UPDATE` 的更新分支同时追加目标租户和未删除条件，
+  不能更新其他租户或已删除的冲突记录；原有 WHERE 与子查询仍保留并过滤。
+  分支内逻辑删除同样补充删除时间。`DO NOTHING` 保持原有语义。
 - 删除字段、正常值和删除值来自已注册实体的 `TableInfo`，与 `@TableLogic` 及 MyBatis-Plus
   全局配置一致，不再维护固定表清单。支持字符串标记和 `NULL` 正常值（生成 `IS NULL`）。
   未注册 MyBatis-Plus 实体元数据的表默认不启用逻辑删除；可通过 handler 扩展。
@@ -30,7 +33,11 @@
 `ScopedTenantLineInnerInterceptor` 扩展原生租户插件，使用同样的 CTE 作用域识别，
 并补齐 INSERT SELECT、UPDATE FROM 和子查询的来源租户过滤。目标显式包含 `tenant_id`
 时也过滤来源；未包含时补当前租户常量，支持 VALUES、UNION 和 CTE。
-显式提供的目标租户 ID 仍保留原值，不负责校验写入归属；无上下文时仍沿用项目租户 1 的默认策略。
+显式写入或修改 `tenant_id` 时必须等于当前租户。字面量直接校验，MyBatis 参数在执行前
+通过 BoundSql/ParameterMapping 读取，兼容实体、Map 和 foreach 额外参数，不改变 JDBC 绑定顺序。
+INSERT SELECT 直接投影的租户列统一替换为当前租户常量；其他无法验证的租户表达式会拒绝。
+更新时应省略无需修改的租户字段（包括冗余的 `tenant_id = EXCLUDED.tenant_id`）。
+无上下文时仍沿用项目租户 1 的默认策略。
 
 回收站等需要查询已删除记录、恢复或物理删除的 Mapper/方法使用：
 
@@ -45,6 +52,10 @@ DELETE 的 USING/JOIN/RETURNING/LIMIT 等非标准单表形式会明确报错，
 防止转换时丢失语义。此类需求应编写显式 UPDATE；确需物理删除时单独豁免。
 FULL/NATURAL/CROSS JOIN 不在公共解析基类的可靠处理范围内，两个插件都会明确报错，
 避免静默漏过滤或改变外连接语义。CROSS JOIN 可等价改写成 INNER JOIN ... ON 1 = 1。
+物理 DELETE 的 WHERE 子查询也执行租户与逻辑删除过滤；DELETE USING/JOIN 暂不支持自动隔离。
+来源子查询遍历覆盖 WHERE、SET、ON、HAVING、ORDER BY、GROUP BY、DISTINCT ON、
+LIMIT/OFFSET、窗口定义及 INSERT/UPDATE/物理 DELETE 的 RETURNING。
+MySQL `ON DUPLICATE KEY UPDATE` 无法安全追加目标行过滤条件，对受保护表明确拒绝。
 插件依赖项目当前的 MyBatis-Plus 3.5.5 / JSqlParser 4.6，升级时应运行回归测试：
 
 ```shell

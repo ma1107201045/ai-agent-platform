@@ -21,8 +21,10 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.session.RowBounds;
+
 import java.io.StringReader;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,11 +36,12 @@ class LogicDeleteInnerInterceptorTest {
         for (var candidate : scanner.findCandidateComponents("com.agent.platform.dao.entity")) {
             var assistant = new MapperBuilderAssistant(new MybatisConfiguration(), candidate.getBeanClassName());
             assistant.setCurrentNamespace(candidate.getBeanClassName());
-            TableInfoHelper.initTableInfo(assistant, Class.forName(candidate.getBeanClassName()));
+            TableInfoHelper.initTableInfo(assistant, Class.forName(Objects.requireNonNull(candidate.getBeanClassName())));
         }
     }
-    private final LogicDeleteInnerInterceptor interceptor =
-            new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {});
+
+    private final LogicDeleteInnerInterceptor interceptor = new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
+    });
 
     @Test
     void filtersSelectAndPreservesOrPrecedenceAndParameters() {
@@ -55,8 +58,7 @@ class LogicDeleteInnerInterceptorTest {
 
     @Test
     void filtersNestedQueriesUnionAndCte() {
-        String sql = interceptor.parserSingle("WITH x AS (SELECT * FROM app_agent) "
-                + "SELECT * FROM x UNION ALL SELECT * FROM app_agent WHERE id IN (SELECT id FROM app_tool)", null);
+        String sql = interceptor.parserSingle("WITH x AS (SELECT * FROM app_agent) " + "SELECT * FROM x UNION ALL SELECT * FROM app_agent WHERE id IN (SELECT id FROM app_tool)", null);
         assertEquals(2, sql.split("app_agent WHERE deleted = 0|AND deleted = 0", -1).length - 1, sql);
         assertTrue(sql.contains("app_tool WHERE deleted = 0"), sql);
         assertFalse(sql.contains("x.deleted"), sql);
@@ -77,10 +79,8 @@ class LogicDeleteInnerInterceptorTest {
 
     @Test
     void doesNotDuplicateExistingNativeQueryPredicate() {
-        assertEquals("SELECT * FROM app_agent WHERE deleted = 0 AND id = ?",
-                interceptor.parserSingle("SELECT * FROM app_agent WHERE deleted = 0 AND id = ?", null));
-        assertEquals("SELECT * FROM app_agent a WHERE (0 = a.deleted AND a.id = ?)",
-                interceptor.parserSingle("SELECT * FROM app_agent a WHERE (0 = a.deleted AND a.id = ?)", null));
+        assertEquals("SELECT * FROM app_agent WHERE deleted = 0 AND id = ?", interceptor.parserSingle("SELECT * FROM app_agent WHERE deleted = 0 AND id = ?", null));
+        assertEquals("SELECT * FROM app_agent a WHERE (0 = a.deleted AND a.id = ?)", interceptor.parserSingle("SELECT * FROM app_agent a WHERE (0 = a.deleted AND a.id = ?)", null));
     }
 
     @Test
@@ -93,12 +93,10 @@ class LogicDeleteInnerInterceptorTest {
 
     @Test
     void doesNotConfuseOtherAliasesSubqueriesOrParametersWithExistingPredicate() {
-        String join = interceptor.parserSingle("SELECT * FROM app_agent a LEFT JOIN app_tool t "
-                + "ON t.id = a.id AND a.deleted = 0", null);
+        String join = interceptor.parserSingle("SELECT * FROM app_agent a LEFT JOIN app_tool t " + "ON t.id = a.id AND a.deleted = 0", null);
         assertTrue(join.contains("AND t.deleted = 0"), join);
         assertTrue(join.contains("WHERE a.deleted = 0"), join);
-        String nested = interceptor.parserSingle("SELECT * FROM app_agent a WHERE EXISTS "
-                + "(SELECT 1 FROM app_agent a WHERE a.deleted = 0)", null);
+        String nested = interceptor.parserSingle("SELECT * FROM app_agent a WHERE EXISTS " + "(SELECT 1 FROM app_agent a WHERE a.deleted = 0)", null);
         assertTrue(nested.endsWith(") AND a.deleted = 0"), nested);
         String parameter = interceptor.parserSingle("SELECT * FROM app_agent WHERE deleted = ?", null);
         assertTrue(parameter.contains("deleted = ? AND deleted = 0"), parameter);
@@ -108,24 +106,20 @@ class LogicDeleteInnerInterceptorTest {
 
     @Test
     void preservesExistingJoinOnPredicateWithoutRepeatingIt() {
-        String sql = "SELECT a.id FROM app_agent a LEFT JOIN app_tool t "
-                + "ON t.id = a.id AND t.deleted = 0 WHERE a.deleted = 0";
+        String sql = "SELECT a.id FROM app_agent a LEFT JOIN app_tool t " + "ON t.id = a.id AND t.deleted = 0 WHERE a.deleted = 0";
         assertEquals(sql, interceptor.parserSingle(sql, null));
     }
 
     @Test
     void repeatedInterceptionIsIdempotentAcrossQueryScopes() {
-        String sql = "WITH x AS (SELECT * FROM app_agent WHERE deleted = 0) "
-                + "SELECT a.id FROM app_agent a LEFT JOIN app_tool t ON t.id = a.id "
-                + "WHERE a.id IN (SELECT id FROM app_agent)";
+        String sql = "WITH x AS (SELECT * FROM app_agent WHERE deleted = 0) " + "SELECT a.id FROM app_agent a LEFT JOIN app_tool t ON t.id = a.id " + "WHERE a.id IN (SELECT id FROM app_agent)";
         String once = interceptor.parserSingle(sql, null);
         assertEquals(once, interceptor.parserSingle(once, null));
     }
 
     @Test
     void convertedDeleteRetainsExistingPredicateOnlyOnce() {
-        assertEquals("UPDATE app_agent SET deleted = 1, deleted_time = CURRENT_TIMESTAMP WHERE id = ? AND deleted = 0",
-                interceptor.parserMulti("DELETE FROM app_agent WHERE id = ? AND deleted = 0", null));
+        assertEquals("UPDATE app_agent SET deleted = 1, deleted_time = CURRENT_TIMESTAMP WHERE id = ? AND deleted = 0", interceptor.parserMulti("DELETE FROM app_agent WHERE id = ? AND deleted = 0", null));
     }
 
     @Test
@@ -148,39 +142,28 @@ class LogicDeleteInnerInterceptorTest {
 
     @Test
     void leavesOtherTablesAloneAndInitializesInsertedRows() {
-        assertEquals("DELETE FROM chat_message WHERE id = ?",
-                interceptor.parserMulti("DELETE FROM chat_message WHERE id = ?", null));
-        assertEquals("INSERT INTO app_agent (id, name, deleted) VALUES (?, ?, 0)",
-                interceptor.parserSingle("INSERT INTO app_agent (id, name) VALUES (?, ?)", null));
+        assertEquals("DELETE FROM chat_message WHERE id = ?", interceptor.parserMulti("DELETE FROM chat_message WHERE id = ?", null));
+        assertEquals("INSERT INTO app_agent (id, name, deleted) VALUES (?, ?, 0)", interceptor.parserSingle("INSERT INTO app_agent (id, name) VALUES (?, ?)", null));
     }
 
     @Test
     void initializesEveryBatchRow() {
-        assertEquals("INSERT INTO app_agent (id, name, deleted) VALUES (?, ?, 0), (?, ?, 0)",
-                interceptor.parserMulti("INSERT INTO app_agent (id, name) VALUES (?, ?), (?, ?)", null));
-        assertEquals("INSERT INTO app_agent (id, deleted) VALUES (?, 0), (?, 0)",
-                interceptor.parserMulti("INSERT INTO app_agent (id) VALUES (?), (?)", null));
-        assertEquals("INSERT INTO app_agent (id, deleted) VALUES (?, 0)",
-                interceptor.parserMulti("INSERT INTO app_agent (id) VALUES (?)", null));
+        assertEquals("INSERT INTO app_agent (id, name, deleted) VALUES (?, ?, 0), (?, ?, 0)", interceptor.parserMulti("INSERT INTO app_agent (id, name) VALUES (?, ?), (?, ?)", null));
+        assertEquals("INSERT INTO app_agent (id, deleted) VALUES (?, 0), (?, 0)", interceptor.parserMulti("INSERT INTO app_agent (id) VALUES (?), (?)", null));
+        assertEquals("INSERT INTO app_agent (id, deleted) VALUES (?, 0)", interceptor.parserMulti("INSERT INTO app_agent (id) VALUES (?)", null));
     }
 
     @Test
     void preservesExplicitValuesIgnoredTablesAndInsertsWithoutColumnList() {
-        assertEquals("INSERT INTO app_agent (id, deleted) VALUES (?, 1)",
-                interceptor.parserMulti("INSERT INTO app_agent (id, deleted) VALUES (?, 1)", null));
-        assertEquals("INSERT INTO app_agent (id, \"deleted\") VALUES (?, ?)",
-                interceptor.parserMulti("INSERT INTO app_agent (id, \"deleted\") VALUES (?, ?)", null));
-        assertEquals("INSERT INTO chat_message (id) VALUES (?)",
-                interceptor.parserMulti("INSERT INTO chat_message (id) VALUES (?)", null));
-        assertEquals("INSERT INTO app_agent VALUES (?, ?)",
-                interceptor.parserMulti("INSERT INTO app_agent VALUES (?, ?)", null));
+        assertEquals("INSERT INTO app_agent (id, deleted) VALUES (?, 1)", interceptor.parserMulti("INSERT INTO app_agent (id, deleted) VALUES (?, 1)", null));
+        assertEquals("INSERT INTO app_agent (id, \"deleted\") VALUES (?, ?)", interceptor.parserMulti("INSERT INTO app_agent (id, \"deleted\") VALUES (?, ?)", null));
+        assertEquals("INSERT INTO chat_message (id) VALUES (?)", interceptor.parserMulti("INSERT INTO chat_message (id) VALUES (?)", null));
+        assertEquals("INSERT INTO app_agent VALUES (?, ?)", interceptor.parserMulti("INSERT INTO app_agent VALUES (?, ?)", null));
     }
 
     @Test
     void initializesInsertSelectAndFiltersUnionSources() {
-        assertEquals("INSERT INTO app_agent (id, deleted) SELECT id, 0 FROM app_template WHERE deleted = 0 UNION ALL SELECT id, 0 FROM app_tool WHERE deleted = 0",
-                interceptor.parserMulti("INSERT INTO app_agent (id) SELECT id FROM app_template "
-                        + "UNION ALL SELECT id FROM app_tool", null));
+        assertEquals("INSERT INTO app_agent (id, deleted) SELECT id, 0 FROM app_template WHERE deleted = 0 UNION ALL SELECT id, 0 FROM app_tool WHERE deleted = 0", interceptor.parserMulti("INSERT INTO app_agent (id) SELECT id FROM app_template " + "UNION ALL SELECT id FROM app_tool", null));
     }
 
     @Test
@@ -195,8 +178,7 @@ class LogicDeleteInnerInterceptorTest {
 
     @Test
     void rejectsDeleteClausesThatCannotBeConvertedWithoutChangingMeaning() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> interceptor.parserSingle("DELETE FROM app_agent WHERE id = ? RETURNING id", null));
+        assertThrows(UnsupportedOperationException.class, () -> interceptor.parserSingle("DELETE FROM app_agent WHERE id = ? RETURNING id", null));
     }
 
     @Test

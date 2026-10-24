@@ -10,7 +10,7 @@ import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.inner.BaseMultiTableInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
+import com.agent.platform.config.plugins.inner.other.SubqueryExpressionVisitor;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.TimeKeyExpression;
@@ -90,6 +90,9 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     }
 
     private void processInsertBody(Insert insert) {
+        if (insert.getReturningExpressionList() != null) {
+            insert.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
+        }
         if (insert.getSelect() != null) {
             processSelect(insert.getSelect(), 0, null, null);
         }
@@ -103,7 +106,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
             update.setTable(insert.getTable());
             update.getUpdateSets().addAll(conflict.getUpdateSets());
             update.setWhere(conflict.getWhereExpression());
-            processUpdateBody(update);
+            processUpdateBody(update, true);
             conflict.setWhereExpression(update.getWhere());
             conflict.getUpdateSets().clear();
             conflict.getUpdateSets().addAll(update.getUpdateSets());
@@ -127,12 +130,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     protected void processSelectBody(SelectBody body, String whereSegment) {
         if (body instanceof ValuesStatement values) {
             if (values.getExpressions() != null) {
-                values.getExpressions().accept(new ExpressionVisitorAdapter() {
-                    @Override
-                    public void visit(SubSelect subSelect) {
-                        processSubSelect(subSelect);
-                    }
-                });
+                values.getExpressions().accept(new SubqueryExpressionVisitor(this::processSubSelect));
             }
             return;
         }
@@ -146,12 +144,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     @Override
     protected void processWhereSubSelect(Expression expression, String whereSegment) {
         if (expression != null) {
-            expression.accept(new ExpressionVisitorAdapter() {
-                @Override
-                public void visit(SubSelect subSelect) {
-                    processSubSelect(subSelect);
-                }
-            });
+            expression.accept(new SubqueryExpressionVisitor(this::processSubSelect));
         }
     }
 
@@ -213,6 +206,13 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     }
 
     private void processUpdateBody(Update update) {
+        processUpdateBody(update, false);
+    }
+
+    private void processUpdateBody(Update update, boolean forceQualified) {
+        if (update.getReturningExpressionList() != null) {
+            update.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
+        }
         Table table = update.getTable();
         if (update.getUpdateSets() != null) {
             update.getUpdateSets().forEach(set -> set.getExpressions().forEach(expression -> processWhereSubSelect(expression, null)));
@@ -238,7 +238,8 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
         if (handler.ignoreTable(table.getName())) {
             return;
         }
-        boolean singleTable = update.getFromItem() == null && (update.getJoins() == null || update.getJoins().isEmpty()) && (update.getStartJoins() == null || update.getStartJoins().isEmpty());
+        // ON CONFLICT 同时存在目标表与 EXCLUDED，过滤列必须限定到目标表。
+        boolean singleTable = !forceQualified && update.getFromItem() == null && (update.getJoins() == null || update.getJoins().isEmpty()) && (update.getStartJoins() == null || update.getStartJoins().isEmpty());
         Expression condition = tableCondition(table, update.getWhere(), singleTable, false);
         if (condition != null) {
             update.setWhere(appendCondition(update.getWhere(), condition));
@@ -277,8 +278,12 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         // 启用逻辑删除的表已转换为 UPDATE；物理删除仍须过滤 WHERE 中的来源子查询。
-        ctes.process(delete.getWithItemsList(), body -> processSelectBody(body, null),
-                () -> processWhereSubSelect(delete.getWhere(), null));
+        ctes.process(delete.getWithItemsList(), body -> processSelectBody(body, null), () -> {
+            processWhereSubSelect(delete.getWhere(), null);
+            if (delete.getReturningExpressionList() != null) {
+                delete.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
+            }
+        });
     }
 
     @Override

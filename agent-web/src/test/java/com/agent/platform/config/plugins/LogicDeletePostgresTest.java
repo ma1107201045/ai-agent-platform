@@ -26,28 +26,35 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** 使用专用测试库；每项测试只创建事务内临时表，不修改永久表。 */
+/**
+ * 使用专用测试库；每项测试只创建事务内临时表，不修改永久表。
+ */
 @EnabledIfEnvironmentVariable(named = "LOGIC_DELETE_TEST_JDBC_URL", matches = ".+")
 class LogicDeletePostgresTest {
     @TableName("test_logic_agent")
     public static class Agent {
-        @TableId public Long id;
+        @TableId
+        public Long id;
         public Long tenantId;
         public String name;
-        @TableLogic public Integer deleted;
+        @TableLogic
+        public Integer deleted;
         public LocalDateTime deletedTime;
     }
 
     @TableName("test_logic_tool")
     public static class Tool {
-        @TableId public Long id;
+        @TableId
+        public Long id;
         public Long tenantId;
         public String name;
-        @TableLogic public Integer deleted;
+        @TableLogic
+        public Integer deleted;
         public LocalDateTime deletedTime;
     }
 
-    public interface ToolMapper extends BaseMapper<Tool> {}
+    public interface ToolMapper extends BaseMapper<Tool> {
+    }
 
     public interface AgentMapper extends BaseMapper<Agent> {
         @Select("WITH test_logic_agent AS (SELECT id FROM test_logic_tool) SELECT id FROM test_logic_agent ORDER BY id")
@@ -62,12 +69,10 @@ class LogicDeletePostgresTest {
         @Insert("INSERT INTO test_logic_agent (id, name, tenant_id) SELECT id + 100, name, tenant_id FROM test_logic_tool")
         int copyWithExplicitTenant();
 
-        @Insert("INSERT INTO test_logic_agent (id, name) SELECT id + 100, name FROM test_logic_tool WHERE id = 1 "
-                + "UNION ALL SELECT id + 200, name FROM test_logic_tool WHERE id = 6")
+        @Insert("INSERT INTO test_logic_agent (id, name) SELECT id + 100, name FROM test_logic_tool WHERE id = 1 " + "UNION ALL SELECT id + 200, name FROM test_logic_tool WHERE id = 6")
         int copyUnion();
 
-        @Select("SELECT a.id AS id, t.id AS tool_id FROM test_logic_agent a LEFT JOIN test_logic_tool t "
-                + "ON a.id = t.id ORDER BY a.id")
+        @Select("SELECT a.id AS id, t.id AS tool_id FROM test_logic_agent a LEFT JOIN test_logic_tool t " + "ON a.id = t.id ORDER BY a.id")
         List<Map<String, Object>> leftJoin();
 
         @InterceptorIgnore(others = {"logicDelete@true"})
@@ -81,23 +86,19 @@ class LogicDeletePostgresTest {
         @Delete("DELETE FROM test_logic_agent WHERE id = #{id}")
         int remove(@Param("id") long id);
 
-        @Insert("INSERT INTO test_logic_agent (id, tenant_id, name) VALUES (#{id}, #{tenant}, 'upserted') "
-                + "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name")
+        @Insert("INSERT INTO test_logic_agent (id, tenant_id, name) VALUES (#{id}, #{tenant}, 'upserted') " + "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name")
         int upsert(@Param("id") long id, @Param("tenant") long tenant);
 
-        @Insert("INSERT INTO test_logic_agent (id, name) VALUES (#{id}, 'new') ON CONFLICT (id) "
-                + "DO UPDATE SET deleted = 1")
+        @Insert("INSERT INTO test_logic_agent (id, name) VALUES (#{id}, 'new') ON CONFLICT (id) " + "DO UPDATE SET deleted = 1")
         int upsertDelete(@Param("id") long id);
 
-        @Insert("<script>INSERT INTO test_logic_agent (id, tenant_id) VALUES "
-                + "<foreach collection='rows' item='row' separator=','>(#{row.id}, #{row.tenantId})</foreach></script>")
+        @Insert("<script>INSERT INTO test_logic_agent (id, tenant_id) VALUES " + "<foreach collection='rows' item='row' separator=','>(#{row.id}, #{row.tenantId})</foreach></script>")
         int batch(@Param("rows") List<Agent> rows);
 
         @Delete("DELETE FROM test_logic_physical WHERE id IN (SELECT id FROM test_logic_tool)")
         int deletePhysicalFromSubquery();
 
-        @Select("SELECT a.id FROM test_logic_agent a ORDER BY "
-                + "(SELECT t.name FROM test_logic_tool t WHERE t.id = a.id), a.id")
+        @Select("SELECT a.id FROM test_logic_agent a ORDER BY " + "(SELECT t.name FROM test_logic_tool t WHERE t.id = a.id), a.id")
         List<Long> orderedBySubquery();
     }
 
@@ -109,9 +110,7 @@ class LogicDeletePostgresTest {
         UserContext.set(new UserContext.LoginUser(1L, 1L, "test"));
         var config = new MybatisConfiguration();
         config.setMapUnderscoreToCamelCase(true);
-        config.setEnvironment(new Environment("logic-delete-test", new JdbcTransactionFactory(),
-                new UnpooledDataSource("org.postgresql.Driver", System.getenv("LOGIC_DELETE_TEST_JDBC_URL"),
-                        "postgres", System.getenv("LOGIC_DELETE_TEST_DB_PASSWORD"))));
+        config.setEnvironment(new Environment("logic-delete-test", new JdbcTransactionFactory(), new UnpooledDataSource("org.postgresql.Driver", System.getenv("LOGIC_DELETE_TEST_JDBC_URL"), "postgres", System.getenv("LOGIC_DELETE_TEST_DB_PASSWORD"))));
         config.addInterceptor(new MybatisPlusConfig().mybatisPlusInterceptor());
         config.addMapper(AgentMapper.class);
         config.addMapper(ToolMapper.class);
@@ -119,13 +118,10 @@ class LogicDeletePostgresTest {
         mapper = session.getMapper(AgentMapper.class);
         try (var statement = session.getConnection().createStatement()) {
             for (String table : List.of("test_logic_agent", "test_logic_tool")) {
-                statement.execute("CREATE TEMP TABLE " + table + " (id bigint PRIMARY KEY, tenant_id bigint NOT NULL, "
-                        + "name text, deleted integer NOT NULL DEFAULT 0, deleted_time timestamp)");
+                statement.execute("CREATE TEMP TABLE " + table + " (id bigint PRIMARY KEY, tenant_id bigint NOT NULL, " + "name text, deleted integer NOT NULL DEFAULT 0, deleted_time timestamp)");
             }
-            statement.execute("INSERT INTO test_logic_agent (id, tenant_id, name, deleted) VALUES "
-                    + "(1,1,'one',0),(2,1,'two',0),(3,1,'three',0),(4,1,'four',1),(5,2,'five',0)");
-            statement.execute("INSERT INTO test_logic_tool (id, tenant_id, name, deleted) VALUES "
-                    + "(1,1,'tool-one',0),(2,1,'tool-two',1),(3,2,'tool-three',0),(6,1,'tool-six',0)");
+            statement.execute("INSERT INTO test_logic_agent (id, tenant_id, name, deleted) VALUES " + "(1,1,'one',0),(2,1,'two',0),(3,1,'three',0),(4,1,'four',1),(5,2,'five',0)");
+            statement.execute("INSERT INTO test_logic_tool (id, tenant_id, name, deleted) VALUES " + "(1,1,'tool-one',0),(2,1,'tool-two',1),(3,2,'tool-three',0),(6,1,'tool-six',0)");
             statement.execute("CREATE TEMP TABLE test_logic_physical (id bigint PRIMARY KEY, tenant_id bigint NOT NULL)");
             statement.execute("INSERT INTO test_logic_physical VALUES (1,1),(2,1),(3,1),(6,2)");
         }
@@ -212,11 +208,18 @@ class LogicDeletePostgresTest {
 
     @Test
     void explicitTenantParametersAreValidatedForNativeInsertAndUpdate() throws Exception {
-        Agent valid = new Agent(); valid.id = 100L; valid.tenantId = 1L; valid.name = "valid";
+        Agent valid = new Agent();
+        valid.id = 100L;
+        valid.tenantId = 1L;
+        valid.name = "valid";
         assertEquals(1, mapper.insert(valid));
-        Agent invalid = new Agent(); invalid.id = 101L; invalid.tenantId = 2L;
+        Agent invalid = new Agent();
+        invalid.id = 101L;
+        invalid.tenantId = 2L;
         assertThrows(RuntimeException.class, () -> mapper.insert(invalid));
-        Agent move = new Agent(); move.id = 1L; move.tenantId = 2L;
+        Agent move = new Agent();
+        move.id = 1L;
+        move.tenantId = 2L;
         assertThrows(RuntimeException.class, () -> mapper.updateById(move));
         assertEquals(1, rawLong("SELECT tenant_id FROM test_logic_agent WHERE id = 1"));
         assertEquals(0, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 101"));
@@ -224,10 +227,16 @@ class LogicDeletePostgresTest {
 
     @Test
     void validatesForeachAdditionalParametersWithoutShiftingBindings() throws Exception {
-        Agent a = new Agent(); a.id = 100L; a.tenantId = 1L;
-        Agent b = new Agent(); b.id = 101L; b.tenantId = 1L;
+        Agent a = new Agent();
+        a.id = 100L;
+        a.tenantId = 1L;
+        Agent b = new Agent();
+        b.id = 101L;
+        b.tenantId = 1L;
         assertEquals(2, mapper.batch(List.of(a, b)));
-        Agent bad = new Agent(); bad.id = 102L; bad.tenantId = 2L;
+        Agent bad = new Agent();
+        bad.id = 102L;
+        bad.tenantId = 2L;
         assertThrows(RuntimeException.class, () -> mapper.batch(List.of(bad)));
         assertEquals(2, rawLong("SELECT count(*) FROM test_logic_agent WHERE id >= 100"));
     }

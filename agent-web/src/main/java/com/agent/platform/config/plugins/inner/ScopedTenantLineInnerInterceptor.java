@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
+import com.agent.platform.config.plugins.inner.other.SubqueryExpressionVisitor;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.JdbcParameter;
@@ -81,12 +81,7 @@ public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor
     protected void processSelectBody(SelectBody body, String whereSegment) {
         if (body instanceof ValuesStatement values) {
             if (values.getExpressions() != null) {
-                values.getExpressions().accept(new ExpressionVisitorAdapter() {
-                    @Override
-                    public void visit(SubSelect select) {
-                        processSubSelect(select);
-                    }
-                });
+                values.getExpressions().accept(new SubqueryExpressionVisitor(this::processSubSelect));
             }
             return;
         }
@@ -101,12 +96,7 @@ public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor
     @Override
     protected void processWhereSubSelect(Expression expression, String whereSegment) {
         if (expression != null) {
-            expression.accept(new ExpressionVisitorAdapter() {
-                @Override
-                public void visit(SubSelect select) {
-                    processSubSelect(select);
-                }
-            });
+            expression.accept(new SubqueryExpressionVisitor(this::processSubSelect));
         }
     }
 
@@ -140,6 +130,9 @@ public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor
     }
 
     private void processInsertBody(Insert insert, int index, String sql, Object obj) {
+        if (insert.getReturningExpressionList() != null) {
+            insert.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
+        }
         // 即使目标已包含 tenant_id，来源查询仍须执行租户过滤。
         if (insert.getSelect() != null) {
             processSelect(insert.getSelect(), index, sql, obj);
@@ -191,6 +184,9 @@ public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor
     }
 
     private void processUpdateBody(Update update) {
+        if (update.getReturningExpressionList() != null) {
+            update.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
+        }
         if (!getTenantLineHandler().ignoreTable(update.getTable().getName())) {
             update.getUpdateSets().forEach(set -> {
                 for (int i = 0; i < set.getColumns().size(); i++) {
@@ -239,6 +235,9 @@ public class ScopedTenantLineInnerInterceptor extends TenantLineInnerInterceptor
                 throw new UnsupportedOperationException("暂不支持自动隔离 DELETE USING/JOIN，请改用 WHERE 子查询");
             }
             processWhereSubSelect(delete.getWhere(), null);
+            if (delete.getReturningExpressionList() != null) {
+                delete.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
+            }
             super.processDelete(delete, index, sql, obj);
         });
     }

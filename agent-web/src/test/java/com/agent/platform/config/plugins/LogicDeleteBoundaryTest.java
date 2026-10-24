@@ -20,19 +20,25 @@ import java.util.concurrent.Executors;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LogicDeleteBoundaryTest {
-    private final LogicDeleteInnerInterceptor plugin = new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {});
+    private final LogicDeleteInnerInterceptor plugin = new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
+    });
 
     @TableName("custom_logic")
     static class CustomEntity {
-        @TableId Long id;
-        @TableLogic(value = "N", delval = "Y") String removed;
-        @TableField("removed_at") LocalDateTime deletedTime;
+        @TableId
+        Long id;
+        @TableLogic(value = "N", delval = "Y")
+        String removed;
+        @TableField("removed_at")
+        LocalDateTime deletedTime;
     }
 
     @TableName("nullable_logic")
     static class NullableEntity {
-        @TableId Long id;
-        @TableLogic(value = "null", delval = "now()") LocalDateTime removed;
+        @TableId
+        Long id;
+        @TableLogic(value = "null", delval = "now()")
+        LocalDateTime removed;
     }
 
     @BeforeAll
@@ -182,6 +188,16 @@ class LogicDeleteBoundaryTest {
                 + "GROUP BY (SELECT count(*) FROM app_tool) ORDER BY (SELECT count(*) FROM app_template)", null);
         assertTrue(sql.contains("app_tool WHERE deleted = 0"), sql);
         assertTrue(sql.contains("app_template WHERE deleted = 0"), sql);
+    }
+
+    @Test
+    void filtersWindowAndReturningSubqueries() {
+        String window = plugin.parserSingle("SELECT row_number() OVER w FROM app_agent "
+                + "WINDOW w AS (ORDER BY (SELECT count(*) FROM app_tool))", null);
+        assertTrue(window.contains("app_tool WHERE deleted = 0"), window);
+        String returning = plugin.parserSingle("DELETE FROM asset_file WHERE id = ? "
+                + "RETURNING (SELECT count(*) FROM app_tool)", null);
+        assertTrue(returning.contains("app_tool WHERE deleted = 0"), returning);
     }
 
     @Test

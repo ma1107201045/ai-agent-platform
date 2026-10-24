@@ -40,5 +40,21 @@ public final class SelectExpressionSupport {
         }
         if (select.getOffset() != null) visitor.accept(select.getOffset().getOffset());
         if (select.getTop() != null) visitor.accept(select.getTop().getExpression());
+        if (select.getWindowDefinitions() != null) {
+            select.getWindowDefinitions().forEach(window -> {
+                if (window.getPartitionExpressionList() != null)
+                    window.getPartitionExpressionList().getExpressions().forEach(visitor);
+                if (window.getOrderByElements() != null)
+                    window.getOrderByElements().forEach(order -> visitor.accept(order.getExpression()));
+                var frame = window.getWindowElement();
+                if (frame != null) {
+                    if (frame.getOffset() != null) visitor.accept(frame.getOffset().getExpression());
+                    if (frame.getRange() != null) {
+                        if (frame.getRange().getStart() != null) visitor.accept(frame.getRange().getStart().getExpression());
+                        if (frame.getRange().getEnd() != null) visitor.accept(frame.getRange().getEnd().getExpression());
+                    }
+                }
+            });
+        }
     }
 }
