@@ -4,6 +4,7 @@ import com.agent.platform.config.plugins.handler.LogicDeleteHandler;
 import com.agent.platform.config.plugins.inner.other.CteScope;
 import com.agent.platform.config.plugins.inner.other.InsertValueSupport;
 import com.agent.platform.config.plugins.inner.other.QueryJoinSupport;
+import com.agent.platform.config.plugins.inner.other.SelectExpressionSupport;
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.inner.BaseMultiTableInnerInterceptor;
@@ -93,6 +94,20 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
             processSelect(insert.getSelect(), 0, null, null);
         }
         String tableName = insert.getTable().getName();
+        var conflict = insert.getConflictAction();
+        if (insert.isUseDuplicate() && !handler.ignoreTable(tableName)) {
+            throw new UnsupportedOperationException("逻辑删除表不支持 ON DUPLICATE KEY UPDATE，请使用显式更新");
+        }
+        if (conflict != null && !conflict.getUpdateSets().isEmpty()) {
+            Update update = new Update();
+            update.setTable(insert.getTable());
+            update.getUpdateSets().addAll(conflict.getUpdateSets());
+            update.setWhere(conflict.getWhereExpression());
+            processUpdateBody(update);
+            conflict.setWhereExpression(update.getWhere());
+            conflict.getUpdateSets().clear();
+            conflict.getUpdateSets().addAll(update.getUpdateSets());
+        }
         if (handler.ignoreTable(tableName) || insert.getColumns() == null || insert.getColumns().isEmpty() || insert.getColumns().stream().anyMatch(column -> sameIdentifier(column.getColumnName(), handler.getLogicDeleteColumn(tableName)))) {
             return;
         }
@@ -183,6 +198,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
             }
             super.processPlainSelect(select, singleTable ? SINGLE_TABLE_SCOPE : null);
             processWhereSubSelect(select.getHaving(), null);
+            SelectExpressionSupport.visit(select, expression -> processWhereSubSelect(expression, null));
         } finally {
             stack.pop();
             if (stack.isEmpty()) {
@@ -260,7 +276,9 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
-        // 启用逻辑删除的表已在 processParser 中转换为 UPDATE，其余表保留物理删除。
+        // 启用逻辑删除的表已转换为 UPDATE；物理删除仍须过滤 WHERE 中的来源子查询。
+        ctes.process(delete.getWithItemsList(), body -> processSelectBody(body, null),
+                () -> processWhereSubSelect(delete.getWhere(), null));
     }
 
     @Override
