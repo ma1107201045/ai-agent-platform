@@ -13,6 +13,7 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Set;
 
@@ -21,6 +22,9 @@ import java.util.Set;
  */
 @Configuration
 public class MybatisPlusConfig {
+
+    @Value("${platform.mybatis.default-schema:public}")
+    private String defaultSchema = "public";
 
     /**
      * 未登录/免鉴权场景（如公开对话门户、系统任务）的兜底租户。
@@ -69,7 +73,10 @@ public class MybatisPlusConfig {
 
         // 在租户隔离之后、分页之前处理，使分页总数与数据查询使用相同的删除过滤条件。
         interceptor.addInnerInterceptor(new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
-
+            @Override
+            public String getDefaultSchema() {
+                return defaultSchema;
+            }
         }));
 
         PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);

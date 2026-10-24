@@ -10,7 +10,6 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 
-import java.util.Locale;
 
 /**
  * 使用已注册实体的 MyBatis-Plus 元数据，与 @TableLogic 及全局逻辑删除配置保持一致。
@@ -38,12 +37,15 @@ public interface LogicDeleteHandler {
     }
 
     default TableInfo getTableInfo(String tableName) {
-        String name = normalizeTableName(tableName);
-        return TableInfoHelper.getTableInfos().stream().filter(table -> normalizeTableName(table.getTableName()).equals(name)).findFirst().orElse(null);
+        TableIdentity name = TableIdentity.of(tableName, getDefaultSchema());
+        return TableInfoHelper.getTableInfos().stream()
+                .filter(table -> TableIdentity.of(table.getTableName(), getDefaultSchema()).equals(name))
+                .findFirst().orElse(null);
     }
 
-    default String normalizeTableName(String name) {
-        return name.contains("\"") ? name.replace("\"", "") : name.replace("`", "").toLowerCase(Locale.ROOT);
+    /** 必须与数据库连接的默认 schema/search_path 首个业务 schema 一致。 */
+    default String getDefaultSchema() {
+        return "public";
     }
 
     default String getLogicDeleteColumn(String tableName) {

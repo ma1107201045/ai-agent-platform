@@ -1,16 +1,16 @@
 package com.agent.platform.config.plugins.inner;
 
 import com.agent.platform.config.plugins.handler.LogicDeleteHandler;
-import com.agent.platform.config.plugins.inner.other.CteScope;
+import com.agent.platform.config.plugins.inner.other.ScopedSelectSupport;
 import com.agent.platform.config.plugins.inner.other.InsertValueSupport;
 import com.agent.platform.config.plugins.inner.other.QueryJoinSupport;
-import com.agent.platform.config.plugins.inner.other.SelectExpressionSupport;
+import com.agent.platform.config.plugins.inner.other.WriteSqlSupport;
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.inner.BaseMultiTableInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import net.sf.jsqlparser.expression.Expression;
-import com.agent.platform.config.plugins.inner.other.SubqueryExpressionVisitor;
+import com.agent.platform.config.plugins.inner.other.DmlSqlSupport;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.TimeKeyExpression;
@@ -23,25 +23,19 @@ import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.SelectBody;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.LateralSubSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.update.Update;
-import net.sf.jsqlparser.statement.values.ValuesStatement;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
@@ -60,8 +54,10 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     private static final String SINGLE_TABLE_SCOPE = "logicDelete:singleTable";
     private static final String MULTI_TABLE_SCOPE = "logicDelete:multiTable";
     private final LogicDeleteHandler handler;
-    private final CteScope ctes = new CteScope();
+    private final ScopedSelectSupport queries = new ScopedSelectSupport(body -> processSelectBody(body, null));
     private final ThreadLocal<Deque<Expression>> innerJoinPredicates = new ThreadLocal<>();
+    private final WriteSqlSupport writes = new WriteSqlSupport("__agentLogicDeleteWriteProcessed");
+
 
     public LogicDeleteInnerInterceptor(LogicDeleteHandler handler) {
         this.handler = Objects.requireNonNull(handler, "logicDeleteHandler");
@@ -76,41 +72,37 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     public void beforePrepare(StatementHandler sh, Connection connection, Integer transactionTimeout) {
-        PluginUtils.MPStatementHandler mpSh = PluginUtils.mpStatementHandler(sh);
-        MappedStatement ms = mpSh.mappedStatement();
-        if ((ms.getSqlCommandType() == SqlCommandType.INSERT || ms.getSqlCommandType() == SqlCommandType.UPDATE || ms.getSqlCommandType() == SqlCommandType.DELETE) && !InterceptorIgnoreHelper.willIgnoreOthersByKey(ms.getId(), "logicDelete")) {
-            PluginUtils.MPBoundSql boundSql = mpSh.mPBoundSql();
-            boundSql.sql(parserMulti(boundSql.sql(), null));
-        }
+        processWrite(sh);
+    }
+
+    @Override
+    public void beforeGetBoundSql(StatementHandler sh) {
+        processWrite(sh);
+    }
+
+    private void processWrite(StatementHandler handler) {
+        writes.process(handler, id -> InterceptorIgnoreHelper.willIgnoreOthersByKey(id, "logicDelete"),
+                () -> null, statement -> {
+                    var sql = statement.mPBoundSql();
+                    sql.sql(parserMulti(sql.sql(), null));
+                });
     }
 
     @Override
     protected void processInsert(Insert insert, int index, String sql, Object obj) {
-        ctes.process(insert.getWithItemsList(), body -> processSelectBody(body, null), () -> processInsertBody(insert));
+        queries.withCtes(insert.getWithItemsList(), () -> processInsertBody(insert));
     }
 
     private void processInsertBody(Insert insert) {
-        if (insert.getReturningExpressionList() != null) {
-            insert.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
-        }
+        queries.items(insert.getReturningExpressionList());
         if (insert.getSelect() != null) {
-            processSelect(insert.getSelect(), 0, null, null);
+            queries.select(insert.getSelect());
         }
-        String tableName = insert.getTable().getName();
-        var conflict = insert.getConflictAction();
+        String tableName = insert.getTable().getFullyQualifiedName();
         if (insert.isUseDuplicate() && !handler.ignoreTable(tableName)) {
             throw new UnsupportedOperationException("逻辑删除表不支持 ON DUPLICATE KEY UPDATE，请使用显式更新");
         }
-        if (conflict != null && !conflict.getUpdateSets().isEmpty()) {
-            Update update = new Update();
-            update.setTable(insert.getTable());
-            update.getUpdateSets().addAll(conflict.getUpdateSets());
-            update.setWhere(conflict.getWhereExpression());
-            processUpdateBody(update, true);
-            conflict.setWhereExpression(update.getWhere());
-            conflict.getUpdateSets().clear();
-            conflict.getUpdateSets().addAll(update.getUpdateSets());
-        }
+        DmlSqlSupport.conflict(insert, update -> processUpdateBody(update, true));
         if (handler.ignoreTable(tableName) || insert.getColumns() == null || insert.getColumns().isEmpty() || insert.getColumns().stream().anyMatch(column -> sameIdentifier(column.getColumnName(), handler.getLogicDeleteColumn(tableName)))) {
             return;
         }
@@ -123,57 +115,36 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
-        ctes.process(select.getWithItemsList(), body -> processSelectBody(body, null), () -> processSelectBody(select.getSelectBody(), null));
+        queries.select(select);
     }
 
     @Override
     protected void processSelectBody(SelectBody body, String whereSegment) {
-        if (body instanceof ValuesStatement values) {
-            if (values.getExpressions() != null) {
-                values.getExpressions().accept(new SubqueryExpressionVisitor(this::processSubSelect));
-            }
-            return;
-        }
-        super.processSelectBody(body, whereSegment);
-    }
-
-    private void processSubSelect(SubSelect select) {
-        ctes.process(select.getWithItemsList(), body -> processSelectBody(body, null), () -> processSelectBody(select.getSelectBody(), null));
+        if (!queries.values(body)) super.processSelectBody(body, whereSegment);
     }
 
     @Override
     protected void processWhereSubSelect(Expression expression, String whereSegment) {
-        if (expression != null) {
-            expression.accept(new SubqueryExpressionVisitor(this::processSubSelect));
-        }
+        queries.expression(expression);
     }
 
     @Override
     protected void processOtherFromItem(FromItem item, String whereSegment) {
-        if (item instanceof SubSelect select) {
-            processSubSelect(select);
-        } else if (item instanceof LateralSubSelect lateral) {
-            processSubSelect(lateral.getSubSelect());
-        } else {
-            super.processOtherFromItem(item, whereSegment);
-        }
+        if (!queries.from(item)) super.processOtherFromItem(item, whereSegment);
     }
 
     @Override
     protected void processSelectItem(SelectItem item, String whereSegment) {
-        if (item instanceof SelectExpressionItem expression) {
-            processWhereSubSelect(expression.getExpression(), whereSegment);
-        }
+        queries.item(item);
     }
 
     @Override
     protected void processFunction(Function function, String whereSegment) {
-        processWhereSubSelect(function, whereSegment);
+        queries.expression(function);
     }
 
     @Override
     protected void processPlainSelect(PlainSelect select, String whereSegment) {
-        QueryJoinSupport.validate(select.getJoins());
         // 标记当前查询作用域；递归子查询会独立计算，不共享可变上下文。
         boolean singleTable = !MULTI_TABLE_SCOPE.equals(whereSegment) && select.getFromItem() instanceof Table
                 && (select.getJoins() == null || select.getJoins().isEmpty());
@@ -186,12 +157,8 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
         // 仅纯内连接可复用 WHERE 约束；外连接不能将 ON 的过滤当作保留侧约束。
         stack.push(innerOnly && select.getWhere() != null ? select.getWhere() : new NullValue());
         try {
-            if (select.getJoins() != null) {
-                select.getJoins().forEach(join -> join.getOnExpressions().forEach(on -> processWhereSubSelect(on, null)));
-            }
-            super.processPlainSelect(select, singleTable ? SINGLE_TABLE_SCOPE : null);
-            processWhereSubSelect(select.getHaving(), null);
-            SelectExpressionSupport.visit(select, expression -> processWhereSubSelect(expression, null));
+            queries.plainSelect(select,
+                    () -> super.processPlainSelect(select, singleTable ? SINGLE_TABLE_SCOPE : null));
         } finally {
             stack.pop();
             if (stack.isEmpty()) {
@@ -202,7 +169,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     protected void processUpdate(Update update, int index, String sql, Object obj) {
-        ctes.process(update.getWithItemsList(), body -> processSelectBody(body, null), () -> processUpdateBody(update));
+        queries.withCtes(update.getWithItemsList(), () -> processUpdateBody(update));
     }
 
     private void processUpdateBody(Update update) {
@@ -210,49 +177,23 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     }
 
     private void processUpdateBody(Update update, boolean forceQualified) {
-        if (update.getReturningExpressionList() != null) {
-            update.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
-        }
         Table table = update.getTable();
-        if (update.getUpdateSets() != null) {
-            update.getUpdateSets().forEach(set -> set.getExpressions().forEach(expression -> processWhereSubSelect(expression, null)));
-        }
-        processWhereSubSelect(update.getWhere(), null);
-        // 用临时 SELECT 复用公共基类的 FROM/JOIN 处理；只回写 WHERE，JOIN 节点直接共享。
-        if (update.getFromItem() != null) {
-            PlainSelect source = new PlainSelect();
-            source.setFromItem(update.getFromItem());
-            source.setJoins(update.getJoins());
-            source.setWhere(update.getWhere());
-            processPlainSelect(source, MULTI_TABLE_SCOPE);
-            update.setWhere(source.getWhere());
-        }
-        if (update.getStartJoins() != null && !update.getStartJoins().isEmpty()) {
-            PlainSelect joined = new PlainSelect();
-            joined.setFromItem(table);
-            joined.setJoins(update.getStartJoins());
-            joined.setWhere(update.getWhere());
-            processPlainSelect(joined, null);
-            update.setWhere(joined.getWhere());
-        }
-        if (handler.ignoreTable(table.getName())) {
+        DmlSqlSupport.updateSources(update, queries, select -> processPlainSelect(select, MULTI_TABLE_SCOPE));
+        if (handler.ignoreTable(table.getFullyQualifiedName())) {
             return;
         }
         // ON CONFLICT 同时存在目标表与 EXCLUDED，过滤列必须限定到目标表。
         boolean singleTable = !forceQualified && update.getFromItem() == null && (update.getJoins() == null || update.getJoins().isEmpty()) && (update.getStartJoins() == null || update.getStartJoins().isEmpty());
         Expression condition = tableCondition(table, update.getWhere(), singleTable, false);
         if (condition != null) {
-            update.setWhere(appendCondition(update.getWhere(), condition));
+            update.setWhere(DmlSqlSupport.and(update.getWhere(), condition));
         }
         fillDeletedTime(update);
     }
 
-    private Expression appendCondition(Expression where, Expression condition) {
-        return where == null ? condition : new AndExpression(where instanceof OrExpression ? new Parenthesis(where) : where, condition);
-    }
 
     private void fillDeletedTime(Update update) {
-        String tableName = update.getTable().getName();
+        String tableName = update.getTable().getFullyQualifiedName();
         String timeColumn = handler.getDeletedTimeColumn(tableName);
         if (timeColumn == null) {
             return;
@@ -277,12 +218,10 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
-        // 启用逻辑删除的表已转换为 UPDATE；物理删除仍须过滤 WHERE 中的来源子查询。
-        ctes.process(delete.getWithItemsList(), body -> processSelectBody(body, null), () -> {
-            processWhereSubSelect(delete.getWhere(), null);
-            if (delete.getReturningExpressionList() != null) {
-                delete.getReturningExpressionList().forEach(item -> processSelectItem(item, null));
-            }
+        // 逻辑删除已转换成 UPDATE；物理删除仍处理来源与 RETURNING 子查询。
+        queries.withCtes(delete.getWithItemsList(), () -> {
+            queries.expression(delete.getWhere());
+            queries.items(delete.getReturningExpressionList());
         });
     }
 
@@ -292,7 +231,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     }
 
     private Expression tableCondition(Table table, Expression where, boolean singleTable, boolean checkCte) {
-        if ((checkCte && ctes.isCte(table)) || handler.ignoreTable(table.getName())) {
+        if ((checkCte && queries.isCte(table)) || handler.ignoreTable(table.getFullyQualifiedName())) {
             return null;
         }
         if (guaranteesNotDeleted(where, table, singleTable)) {
@@ -302,13 +241,13 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
         if (checkCte && stack != null && !stack.isEmpty() && guaranteesNotDeleted(stack.peek(), table, false)) {
             return null;
         }
-        String column = handler.getLogicDeleteColumn(table.getName());
+        String column = handler.getLogicDeleteColumn(table.getFullyQualifiedName());
         if (table.getAlias() != null) {
             column = table.getAlias().getName() + "." + column;
         } else if (!singleTable) {
             column = table.getFullyQualifiedName() + "." + column;
         }
-        Expression value = handler.getNotDeletedValue(table.getName());
+        Expression value = handler.getNotDeletedValue(table.getFullyQualifiedName());
         if (value instanceof NullValue) {
             IsNullExpression isNull = new IsNullExpression();
             isNull.setLeftExpression(new Column(column));
@@ -334,14 +273,14 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
         if (expression instanceof EqualsTo equals) {
             return matchesNotDeleted(equals.getLeftExpression(), equals.getRightExpression(), table, allowUnqualified) || matchesNotDeleted(equals.getRightExpression(), equals.getLeftExpression(), table, allowUnqualified);
         }
-        if (expression instanceof IsNullExpression isNull && !isNull.isNot() && handler.getNotDeletedValue(table.getName()) instanceof NullValue) {
+        if (expression instanceof IsNullExpression isNull && !isNull.isNot() && handler.getNotDeletedValue(table.getFullyQualifiedName()) instanceof NullValue) {
             return matchesColumn(isNull.getLeftExpression(), table, allowUnqualified);
         }
         return false;
     }
 
     private boolean matchesNotDeleted(Expression candidate, Expression value, Table table, boolean allowUnqualified) {
-        return sameValue(value, handler.getNotDeletedValue(table.getName())) && matchesColumn(candidate, table, allowUnqualified);
+        return sameValue(value, handler.getNotDeletedValue(table.getFullyQualifiedName())) && matchesColumn(candidate, table, allowUnqualified);
     }
 
     private boolean sameValue(Expression value, Expression expected) {
@@ -349,7 +288,7 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
     }
 
     private boolean matchesColumn(Expression candidate, Table table, boolean allowUnqualified) {
-        if (!(candidate instanceof Column column) || !sameIdentifier(column.getColumnName(), handler.getLogicDeleteColumn(table.getName()))) {
+        if (!(candidate instanceof Column column) || !sameIdentifier(column.getColumnName(), handler.getLogicDeleteColumn(table.getFullyQualifiedName()))) {
             return false;
         }
         String qualifier = column.getTable() == null ? null : column.getTable().getFullyQualifiedName();
@@ -374,23 +313,21 @@ public class LogicDeleteInnerInterceptor extends BaseMultiTableInnerInterceptor 
 
     @Override
     protected String processParser(Statement statement, int index, String sql, Object obj) {
-        if (statement instanceof Delete delete && !handler.ignoreTable(delete.getTable().getName())) {
+        if (statement instanceof Delete delete && !handler.ignoreTable(delete.getTable().getFullyQualifiedName())) {
             // 只转换标准单表 DELETE。复杂方言显式报错，避免丢失 USING/JOIN/RETURNING 等语义。
             String expected = "DELETE FROM " + delete.getTable() + (delete.getWhere() == null ? "" : " WHERE " + delete.getWhere());
             if (!expected.equalsIgnoreCase(delete.toString())) {
                 throw new UnsupportedOperationException("逻辑删除仅支持标准单表 DELETE，请改用显式 UPDATE：" + sql);
             }
-            String tableName = delete.getTable().getName();
-            String update = "UPDATE " + delete.getTable() + " SET " + handler.getLogicDeleteColumn(tableName) + " = " + handler.getDeletedValue(tableName);
-            if (handler.getDeletedTimeColumn(tableName) != null) {
-                update += ", " + handler.getDeletedTimeColumn(tableName) + " = CURRENT_TIMESTAMP";
-            }
-            update += delete.getWhere() == null ? "" : " WHERE " + delete.getWhere();
-            try {
-                statement = CCJSqlParserUtil.parse(update);
-            } catch (net.sf.jsqlparser.JSQLParserException e) {
-                throw new IllegalArgumentException("逻辑删除 SQL 转换失败", e);
-            }
+            String tableName = delete.getTable().getFullyQualifiedName();
+            // 直接构建 UPDATE AST，保留原 WHERE 节点及 JDBC 参数索引，避免拼接后再次解析。
+            Update update = new Update();
+            update.setTable(delete.getTable());
+            update.setWhere(delete.getWhere());
+            update.addUpdateSet(new Column(handler.getLogicDeleteColumn(tableName)), handler.getDeletedValue(tableName));
+            String timeColumn = handler.getDeletedTimeColumn(tableName);
+            if (timeColumn != null) update.addUpdateSet(new Column(timeColumn), new TimeKeyExpression("CURRENT_TIMESTAMP"));
+            statement = update;
         }
         return super.processParser(statement, index, sql, obj);
     }

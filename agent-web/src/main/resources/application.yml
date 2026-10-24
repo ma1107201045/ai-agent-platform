@@ -36,6 +36,9 @@ jwt:
   expire-hours: ${JWT_EXPIRE_HOURS:24}
 
 platform:
+  mybatis:
+    # 与数据库连接的默认 schema/search_path 保持一致，避免同名表元数据串用。
+    default-schema: ${MYBATIS_DEFAULT_SCHEMA:public}
   crypto:
     # 敏感字段（如模型供应商 apiKey）落库加密密钥，通过环境变量 PLATFORM_CRYPTO_SECRET 注入（>=16字符）
     # 未配置时敏感字段明文存储（仅适合本地开发）；配置后新写入数据自动加密，历史明文仍可读取

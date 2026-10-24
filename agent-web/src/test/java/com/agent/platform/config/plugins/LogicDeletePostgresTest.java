@@ -13,11 +13,15 @@ import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
@@ -103,6 +107,7 @@ class LogicDeletePostgresTest {
     }
 
     private SqlSession session;
+    private SqlSessionFactory factory;
     private AgentMapper mapper;
 
     @BeforeEach
@@ -114,8 +119,13 @@ class LogicDeletePostgresTest {
         config.addInterceptor(new MybatisPlusConfig().mybatisPlusInterceptor());
         config.addMapper(AgentMapper.class);
         config.addMapper(ToolMapper.class);
-        session = new MybatisSqlSessionFactoryBuilder().build(config).openSession(false);
+        factory = new MybatisSqlSessionFactoryBuilder().build(config);
+        session = factory.openSession(false);
         mapper = session.getMapper(AgentMapper.class);
+        createFixtures();
+    }
+
+    private void createFixtures() throws Exception {
         try (var statement = session.getConnection().createStatement()) {
             for (String table : List.of("test_logic_agent", "test_logic_tool")) {
                 statement.execute("CREATE TEMP TABLE " + table + " (id bigint PRIMARY KEY, tenant_id bigint NOT NULL, " + "name text, deleted integer NOT NULL DEFAULT 0, deleted_time timestamp)");
@@ -125,6 +135,71 @@ class LogicDeletePostgresTest {
             statement.execute("CREATE TEMP TABLE test_logic_physical (id bigint PRIMARY KEY, tenant_id bigint NOT NULL)");
             statement.execute("INSERT INTO test_logic_physical VALUES (1,1),(2,1),(3,1),(6,2)");
         }
+    }
+
+    private void useExecutor(ExecutorType type) throws Exception {
+        session.rollback(true);
+        session.close();
+        session = factory.openSession(type, false);
+        mapper = session.getMapper(AgentMapper.class);
+        createFixtures();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ExecutorType.class, names = {"BATCH", "REUSE"})
+    void validatesEveryReusedInsert(ExecutorType type) throws Exception {
+        useExecutor(type);
+        Agent first = new Agent(); first.id = 100L; first.tenantId = 1L;
+        Agent invalid = new Agent(); invalid.id = 101L; invalid.tenantId = 2L;
+        Agent last = new Agent(); last.id = 102L; last.tenantId = 1L;
+        mapper.insert(first);
+        assertThrows(RuntimeException.class, () -> mapper.insert(invalid));
+        mapper.insert(last);
+        session.flushStatements();
+        assertEquals(2, rawLong("SELECT count(*) FROM test_logic_agent WHERE id >= 100 AND tenant_id = 1"));
+        assertEquals(0, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 101"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ExecutorType.class, names = {"BATCH", "REUSE"})
+    void validatesEveryReusedUpdateAndUpsert(ExecutorType type) throws Exception {
+        useExecutor(type);
+        Agent first = new Agent(); first.id = 1L; first.tenantId = 1L; first.name = "valid";
+        Agent invalid = new Agent(); invalid.id = 2L; invalid.tenantId = 2L; invalid.name = "invalid";
+        mapper.updateById(first);
+        assertThrows(RuntimeException.class, () -> mapper.updateById(invalid));
+        mapper.upsert(100L, 1L);
+        assertThrows(RuntimeException.class, () -> mapper.upsert(101L, 2L));
+        session.flushStatements();
+        assertEquals(1, rawLong("SELECT tenant_id FROM test_logic_agent WHERE id = 2"));
+        assertEquals(0, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 101"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ExecutorType.class, names = {"BATCH", "REUSE"})
+    void tenantSwitchUsesCorrectSqlReuseKey(ExecutorType type) throws Exception {
+        useExecutor(type);
+        Agent updateFirst = new Agent(); updateFirst.id = 1L; updateFirst.name = "tenant-one";
+        Agent updateSecond = new Agent(); updateSecond.id = 5L; updateSecond.name = "tenant-two";
+        mapper.updateById(updateFirst);
+        UserContext.set(new UserContext.LoginUser(2L, 2L, "second"));
+        mapper.updateById(updateSecond);
+        session.flushStatements();
+        assertEquals(2, rawLong("SELECT count(*) FROM test_logic_agent WHERE (id=1 AND name='tenant-one') OR (id=5 AND name='tenant-two')"));
+        UserContext.set(new UserContext.LoginUser(1L, 1L, "first"));
+        Agent first = new Agent(); first.id = 100L;
+        Agent second = new Agent(); second.id = 101L;
+        mapper.insert(first);
+        UserContext.set(new UserContext.LoginUser(2L, 2L, "second"));
+        mapper.insert(second);
+        session.flushStatements();
+        assertEquals(1, rawLong("SELECT tenant_id FROM test_logic_agent WHERE id = 100"));
+        assertEquals(2, rawLong("SELECT tenant_id FROM test_logic_agent WHERE id = 101"));
+        UserContext.set(new UserContext.LoginUser(1L, 1L, "first"));
+        mapper.remove(1L);
+        mapper.remove(2L);
+        session.flushStatements();
+        assertEquals(2, rawLong("SELECT count(*) FROM test_logic_agent WHERE id IN (1,2) AND deleted = 1 AND deleted_time IS NOT NULL"));
     }
 
     @AfterEach

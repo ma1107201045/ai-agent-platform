@@ -39,6 +39,16 @@ INSERT SELECT 直接投影的租户列统一替换为当前租户常量；其他
 更新时应省略无需修改的租户字段（包括冗余的 `tenant_id = EXCLUDED.tenant_id`）。
 无上下文时仍沿用项目租户 1 的默认策略。
 
+写入 SQL 在 `beforeGetBoundSql` 阶段完成校验与改写，早于 BATCH/REUSE 的语句复用判断，
+每次调用都会使用实际参数。`beforePrepare` 仅作 SIMPLE 执行器的兜底，同一 BoundSql 使用内部
+处理标记避免重复改写。租户切换会生成不同的 SQL 复用键，防止沿用上一租户的常量条件。
+
+逻辑删除元数据使用完整的 `schema.table` 匹配，不会把不同 schema 的同名表混用。
+未引用标识符按 PostgreSQL 规则转小写；双引号保留大小写、内部的点及转义双引号。
+默认 schema 为 `public`，可用 `platform.mybatis.default-schema` / `MYBATIS_DEFAULT_SCHEMA`
+设置，必须与连接的默认 schema/search_path 保持一致；多 schema 场景建议 SQL 和实体都明确限定。
+运行中通过 SQL 动态改变 search_path 不会自动更新该配置。
+
 回收站等需要查询已删除记录、恢复或物理删除的 Mapper/方法使用：
 
 ```java
@@ -59,10 +69,12 @@ MySQL `ON DUPLICATE KEY UPDATE` 无法安全追加目标行过滤条件，对受
 插件依赖项目当前的 MyBatis-Plus 3.5.5 / JSqlParser 4.6，升级时应运行回归测试：
 
 ```shell
-mvn -pl agent-web -am test -Dtest=LogicDeleteInnerInterceptorTest,LogicDeleteBoundaryTest -Dsurefire.failIfNoSpecifiedTests=false
+mvn -pl agent-web -am test -Dtest=LogicDeleteInnerInterceptorTest,LogicDeleteBoundaryTest,LogicDeleteSchemaTest -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
 PostgreSQL 集成测试通过完整 MyBatis 拦截链执行真实 SQL，验证实际返回行、修改行数和删除时间。
 使用专用测试库，设置 `LOGIC_DELETE_TEST_JDBC_URL` 和 `LOGIC_DELETE_TEST_DB_PASSWORD`
-（用户 `postgres`），再将 `LogicDeletePostgresTest` 加入 `-Dtest`。未设置连接地址时跳过该类。
+（用户 `postgres`），再将 `LogicDeletePostgresTest,LogicDeleteSchemaPostgresTest` 加入 `-Dtest`。
+未设置连接地址时跳过实库测试。覆盖 SIMPLE/BATCH/REUSE、逐条参数校验、租户切换、
+跨 schema 同名表、引号名称及 schema 表的增删改查。
 每项测试仅使用事务内临时表，结束后回滚并关闭连接；无需修改项目业务库配置。
