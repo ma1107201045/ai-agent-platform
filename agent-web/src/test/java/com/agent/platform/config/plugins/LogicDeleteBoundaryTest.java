@@ -175,4 +175,24 @@ class LogicDeleteBoundaryTest {
             assertTrue(physical.get().endsWith("WHERE deleted = 0"));
         }
     }
+
+    @Test
+    void filtersOrderByAndGroupBySubqueries() {
+        String sql = plugin.parserSingle("SELECT count(*) FROM app_agent "
+                + "GROUP BY (SELECT count(*) FROM app_tool) ORDER BY (SELECT count(*) FROM app_template)", null);
+        assertTrue(sql.contains("app_tool WHERE deleted = 0"), sql);
+        assertTrue(sql.contains("app_template WHERE deleted = 0"), sql);
+    }
+
+    @Test
+    void unsafeTenantAssignmentsAndUnsupportedUpsertsFailClosed() {
+        var tenant = (TenantLineInnerInterceptor) new MybatisPlusConfig().mybatisPlusInterceptor().getInterceptors().get(0);
+        assertThrows(IllegalArgumentException.class, () -> tenant.parserSingle("UPDATE app_agent SET tenant_id = 2 WHERE id = 1", null));
+        assertThrows(IllegalArgumentException.class, () -> tenant.parserSingle("INSERT INTO app_agent (id,tenant_id) VALUES (1,2)", null));
+        assertThrows(UnsupportedOperationException.class, () -> tenant.parserSingle("INSERT INTO app_agent VALUES (1,2)", null));
+        assertThrows(UnsupportedOperationException.class, () -> tenant.parserSingle(
+                "INSERT INTO app_agent (id) VALUES (1) ON DUPLICATE KEY UPDATE name = 'changed'", null));
+        assertThrows(IllegalArgumentException.class, () -> tenant.parserSingle(
+                "INSERT INTO app_agent (id) VALUES (1) ON CONFLICT (id) DO UPDATE SET tenant_id = 2", null));
+    }
 }

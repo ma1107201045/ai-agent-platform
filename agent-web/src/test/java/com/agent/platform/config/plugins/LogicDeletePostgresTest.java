@@ -80,6 +80,25 @@ class LogicDeletePostgresTest {
 
         @Delete("DELETE FROM test_logic_agent WHERE id = #{id}")
         int remove(@Param("id") long id);
+
+        @Insert("INSERT INTO test_logic_agent (id, tenant_id, name) VALUES (#{id}, #{tenant}, 'upserted') "
+                + "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name")
+        int upsert(@Param("id") long id, @Param("tenant") long tenant);
+
+        @Insert("INSERT INTO test_logic_agent (id, name) VALUES (#{id}, 'new') ON CONFLICT (id) "
+                + "DO UPDATE SET deleted = 1")
+        int upsertDelete(@Param("id") long id);
+
+        @Insert("<script>INSERT INTO test_logic_agent (id, tenant_id) VALUES "
+                + "<foreach collection='rows' item='row' separator=','>(#{row.id}, #{row.tenantId})</foreach></script>")
+        int batch(@Param("rows") List<Agent> rows);
+
+        @Delete("DELETE FROM test_logic_physical WHERE id IN (SELECT id FROM test_logic_tool)")
+        int deletePhysicalFromSubquery();
+
+        @Select("SELECT a.id FROM test_logic_agent a ORDER BY "
+                + "(SELECT t.name FROM test_logic_tool t WHERE t.id = a.id), a.id")
+        List<Long> orderedBySubquery();
     }
 
     private SqlSession session;
@@ -107,6 +126,8 @@ class LogicDeletePostgresTest {
                     + "(1,1,'one',0),(2,1,'two',0),(3,1,'three',0),(4,1,'four',1),(5,2,'five',0)");
             statement.execute("INSERT INTO test_logic_tool (id, tenant_id, name, deleted) VALUES "
                     + "(1,1,'tool-one',0),(2,1,'tool-two',1),(3,2,'tool-three',0),(6,1,'tool-six',0)");
+            statement.execute("CREATE TEMP TABLE test_logic_physical (id bigint PRIMARY KEY, tenant_id bigint NOT NULL)");
+            statement.execute("INSERT INTO test_logic_physical VALUES (1,1),(2,1),(3,1),(6,2)");
         }
     }
 
@@ -187,6 +208,56 @@ class LogicDeletePostgresTest {
         assertEquals(0, mapper.purge(5L));
         assertEquals(0, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 4"));
         assertEquals(1, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 5"));
+    }
+
+    @Test
+    void explicitTenantParametersAreValidatedForNativeInsertAndUpdate() throws Exception {
+        Agent valid = new Agent(); valid.id = 100L; valid.tenantId = 1L; valid.name = "valid";
+        assertEquals(1, mapper.insert(valid));
+        Agent invalid = new Agent(); invalid.id = 101L; invalid.tenantId = 2L;
+        assertThrows(RuntimeException.class, () -> mapper.insert(invalid));
+        Agent move = new Agent(); move.id = 1L; move.tenantId = 2L;
+        assertThrows(RuntimeException.class, () -> mapper.updateById(move));
+        assertEquals(1, rawLong("SELECT tenant_id FROM test_logic_agent WHERE id = 1"));
+        assertEquals(0, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 101"));
+    }
+
+    @Test
+    void validatesForeachAdditionalParametersWithoutShiftingBindings() throws Exception {
+        Agent a = new Agent(); a.id = 100L; a.tenantId = 1L;
+        Agent b = new Agent(); b.id = 101L; b.tenantId = 1L;
+        assertEquals(2, mapper.batch(List.of(a, b)));
+        Agent bad = new Agent(); bad.id = 102L; bad.tenantId = 2L;
+        assertThrows(RuntimeException.class, () -> mapper.batch(List.of(bad)));
+        assertEquals(2, rawLong("SELECT count(*) FROM test_logic_agent WHERE id >= 100"));
+    }
+
+    @Test
+    void upsertUpdatesOnlyActiveRowsOfCurrentTenant() {
+        assertEquals(1, mapper.upsert(100L, 1L));
+        assertEquals(1, mapper.upsert(1L, 1L));
+        assertEquals("upserted", mapper.selectById(1L).name);
+        assertEquals(0, mapper.upsert(4L, 1L));
+        assertEquals(0, mapper.upsert(5L, 1L));
+        assertThrows(RuntimeException.class, () -> mapper.upsert(101L, 2L));
+    }
+
+    @Test
+    void upsertLogicalDeletionAlsoFillsTime() throws Exception {
+        assertEquals(1, mapper.upsertDelete(1L));
+        assertEquals(1, rawLong("SELECT count(*) FROM test_logic_agent WHERE id = 1 AND deleted = 1 AND deleted_time IS NOT NULL"));
+    }
+
+    @Test
+    void physicalDeleteFiltersBothItsTargetAndSourceSubquery() throws Exception {
+        assertEquals(1, mapper.deletePhysicalFromSubquery());
+        assertEquals(3, rawLong("SELECT count(*) FROM test_logic_physical"));
+        assertEquals(1, rawLong("SELECT count(*) FROM test_logic_physical WHERE id = 6"));
+    }
+
+    @Test
+    void orderBySubqueryCannotObserveDeletedOrOtherTenantRows() {
+        assertEquals(List.of(1L, 2L, 3L), mapper.orderedBySubquery());
     }
 
     private long rawLong(String sql) throws Exception {
