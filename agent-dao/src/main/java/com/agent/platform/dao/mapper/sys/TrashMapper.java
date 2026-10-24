@@ -1,5 +1,7 @@
 package com.agent.platform.dao.mapper.sys;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
+
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -13,6 +15,7 @@ import java.util.Map;
  * 回收站查询与操作（面向已逻辑删除的数据，绕过逻辑删除过滤条件）
  */
 @Mapper
+@InterceptorIgnore(others = {"logicDelete@true"})
 public interface TrashMapper {
 
     /* ---------------- 列表 ---------------- */

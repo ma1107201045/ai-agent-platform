@@ -1,6 +1,9 @@
 package com.agent.platform.config;
 
 import com.agent.platform.common.security.UserContext;
+import com.agent.platform.config.plugins.handler.LogicDeleteHandler;
+import com.agent.platform.config.plugins.inner.LogicDeleteInnerInterceptor;
+import com.agent.platform.config.plugins.inner.ScopedTenantLineInnerInterceptor;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
@@ -50,16 +53,11 @@ public class MybatisPlusConfig {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
 
         // 租户隔离：自动为 SQL 追加 tenant_id 条件（SELECT/UPDATE/DELETE/INSERT）
-        TenantLineInnerInterceptor tenant = new TenantLineInnerInterceptor(new TenantLineHandler() {
+        TenantLineInnerInterceptor tenant = new ScopedTenantLineInnerInterceptor(new TenantLineHandler() {
             @Override
             public Expression getTenantId() {
                 Long tenantId = UserContext.getTenantId();
                 return new LongValue(tenantId == null ? DEFAULT_TENANT_ID : tenantId);
-            }
-
-            @Override
-            public String getTenantIdColumn() {
-                return "tenant_id";
             }
 
             @Override
@@ -68,6 +66,11 @@ public class MybatisPlusConfig {
             }
         });
         interceptor.addInnerInterceptor(tenant);
+
+        // 在租户隔离之后、分页之前处理，使分页总数与数据查询使用相同的删除过滤条件。
+        interceptor.addInnerInterceptor(new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
+
+        }));
 
         PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
         pagination.setMaxLimit(500L);
