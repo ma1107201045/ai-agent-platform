@@ -14,26 +14,26 @@ import java.util.Map;
  */
 public interface AppScheduleService {
 
-    public static final String TRIGGER_INTERVAL = "interval";
+    static final String TRIGGER_INTERVAL = "interval";
 
-    public static final String TRIGGER_DAILY = "daily";
+    static final String TRIGGER_DAILY = "daily";
 
-    public static final String TRIGGER_WEEKLY = "weekly";
+    static final String TRIGGER_WEEKLY = "weekly";
 
-    public Page<AppSchedule> page(long page, long size, String keyword, Integer enabled);
+    Page<AppSchedule> page(long page, long size, String keyword, Integer enabled);
 
-    public AppSchedule getById(Long id);
+    AppSchedule getById(Long id);
 
-    public Page<AppScheduleLog> logPage(Long scheduleId, long page, long size);
+    Page<AppScheduleLog> logPage(Long scheduleId, long page, long size);
 
-    public AppSchedule create(AppSchedule schedule);
+    AppSchedule create(AppSchedule schedule);
 
-    public void update(Long id, AppSchedule schedule);
+    void update(Long id, AppSchedule schedule);
 
-    public void setEnabled(Long id, boolean enabled);
+    void setEnabled(Long id, boolean enabled);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 立即执行一次（手动） */
-    public Map<String, String> runNow(Long id);
+    Map<String, String> runNow(Long id);
 }

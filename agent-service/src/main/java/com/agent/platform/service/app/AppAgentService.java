@@ -37,55 +37,55 @@ public interface AppAgentService {
     /**
      * 分页查询应用，支持名称模糊搜索与类型过滤
      */
-    public Page<AppAgent> page(long page, long size, String keyword, String type);
+    Page<AppAgent> page(long page, long size, String keyword, String type);
 
-    public AppAgent getById(Long id);
+    AppAgent getById(Long id);
 
-    public AppAgent create(AppAgent app);
+    AppAgent create(AppAgent app);
 
     /**
      * 更新应用：仅允许更新业务字段，防止 status / publishedVersionId 等敏感字段被覆盖
      */
-    public void update(AppAgent app);
+    void update(AppAgent app);
 
     /**
      * 删除应用：软删除移入回收站，保留版本、会话与消息等子数据，
      * 恢复后可完整还原；彻底删除由回收站级联清理
      */
-    public void delete(Long id);
+    void delete(Long id);
 
     /**
      * 发布：创建新版本快照，旧发布版本置为未发布
      */
-    public AppAgentVersion publish(Long appId, String workflowJson, String promptConfig, Long operatorId);
+    AppAgentVersion publish(Long appId, String workflowJson, String promptConfig, Long operatorId);
 
-    public AppAgentVersion getPublishedVersion(Long appId);
+    AppAgentVersion getPublishedVersion(Long appId);
 
     /**
      * 批量获取已发布版本：单次 IN 查询，避免逐应用查询的 N+1；
      * 未发布或版本缺失的应用不出现在返回 Map 中
      */
-    public java.util.Map<Long, AppAgentVersion> getPublishedVersions(java.util.Collection<Long> appIds);
+    java.util.Map<Long, AppAgentVersion> getPublishedVersions(java.util.Collection<Long> appIds);
 
     /**
      * 版本列表（按版本号倒序）
      */
-    public List<AppAgentVersion> listVersions(Long appId);
+    List<AppAgentVersion> listVersions(Long appId);
 
     /**
      * 回滚到指定版本：将版本快照恢复到应用草稿（不自动发布，用户确认后再发布）
      */
-    public AppAgentVersion rollback(Long appId, Long versionId);
+    AppAgentVersion rollback(Long appId, Long versionId);
 
     /**
      * 获取已发布版本的工作流 DSL（公开访问只用线上版本，不用草稿）
      */
-    public String getPublishedWorkflow(Long appId);
+    String getPublishedWorkflow(Long appId);
 
     /**
      * 获取运行用 DSL：草稿优先，否则取已发布版本
      */
-    public String getRunWorkflow(Long appId);
+    String getRunWorkflow(Long appId);
 
     /**
      * 执行 Agent 循环（应用级入口：工具与知识库来源为应用绑定配置）
@@ -96,7 +96,7 @@ public interface AppAgentService {
      * @param history       历史消息（不含 system）
      * @param maxIterations 最大循环轮数
      */
-    public AppAgentChatVO chat(Long appId, Long modelId, String systemPrompt,
+    AppAgentChatVO chat(Long appId, Long modelId, String systemPrompt,
                                List<ChatMessage> history, Integer maxIterations);
 
     /**
@@ -110,11 +110,11 @@ public interface AppAgentService {
      * @param history        历史消息（不含 system）
      * @param maxIterations  最大循环轮数
      */
-    public AppAgentChatVO chat(Long modelId, String systemPrompt, List<AppTool> tools,
+    AppAgentChatVO chat(Long modelId, String systemPrompt, List<AppTool> tools,
                                String datasetIdsJson, List<ChatMessage> history, Integer maxIterations);
 
     /**
      * 解析工具 ID JSON 数组并加载启用的工具（应用绑定或节点级配置均可）
      */
-    public List<AppTool> loadTools(String toolIdsJson);
+    List<AppTool> loadTools(String toolIdsJson);
 }

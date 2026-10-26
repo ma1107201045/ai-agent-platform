@@ -11,16 +11,16 @@ import java.util.Map;
  */
 public interface ModelGatewayService {
 
-    public Page<ModelGatewayRoute> page(long page, long size, String keyword, Integer enabled);
+    Page<ModelGatewayRoute> page(long page, long size, String keyword, Integer enabled);
 
-    public ModelGatewayRoute get(Long id);
+    ModelGatewayRoute get(Long id);
 
-    public ModelGatewayRoute create(ModelGatewayRoute route, List<Map<String, Object>> targets);
+    ModelGatewayRoute create(ModelGatewayRoute route, List<Map<String, Object>> targets);
 
-    public ModelGatewayRoute update(Long id, ModelGatewayRoute req, List<Map<String, Object>> targets);
+    ModelGatewayRoute update(Long id, ModelGatewayRoute req, List<Map<String, Object>> targets);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 路由决策模拟：按策略选择一个目标模型 */
-    public Map<String, Object> simulate(Long id);
+    Map<String, Object> simulate(Long id);
 }

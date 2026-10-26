@@ -20,31 +20,45 @@ public class DataTable {
 
     private Long tenantId;
 
-    /** 数据表名（展示用，租户内唯一） */
+    /**
+     * 数据表名（展示用，租户内唯一）
+     */
     private String name;
 
-    /** 显示名称 / 别名 */
+    /**
+     * 显示名称 / 别名
+     */
     private String label;
 
     private String description;
 
-    /** 列定义（JSON 数组：[{"key","label","type","options?"}]） */
+    /**
+     * 列定义（JSON 数组：[{"key","label","type","options?"}]）
+     */
     private String columnsJson;
 
-    /** 行记录数 */
+    /**
+     * 行记录数
+     */
     private Integer rowCount;
 
-    /** 状态：0禁用 1启用 */
+    /**
+     * 状态：0禁用 1启用
+     */
     private Integer status;
 
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
 
-    /** 逻辑删除：0正常 1回收站 */
+    /**
+     * 逻辑删除：0正常 1回收站
+     */
     @TableLogic
     private Integer deleted;
 
-    /** 删除时间 */
+    /**
+     * 删除时间
+     */
     private LocalDateTime deletedTime;
 }

@@ -10,25 +10,25 @@ import java.util.Map;
  */
 public interface OpsAlertService {
 
-    public Page<OpsAlertRule> rulePage(long page, long size, String keyword);
+    Page<OpsAlertRule> rulePage(long page, long size, String keyword);
 
-    public OpsAlertRule createRule(OpsAlertRule rule);
+    OpsAlertRule createRule(OpsAlertRule rule);
 
-    public OpsAlertRule updateRule(Long id, OpsAlertRule rule);
+    OpsAlertRule updateRule(Long id, OpsAlertRule rule);
 
-    public void toggleRule(Long id, Integer enabled);
+    void toggleRule(Long id, Integer enabled);
 
-    public void removeRule(Long id);
+    void removeRule(Long id);
 
-    public Page<OpsAlertEvent> eventPage(long page, long size, String status, Long ruleId, String keyword);
+    Page<OpsAlertEvent> eventPage(long page, long size, String status, Long ruleId, String keyword);
 
     /** 事件统计（未处理数等） */
-    public Map<String, Object> eventStats();
+    Map<String, Object> eventStats();
 
     /** 手动触发一次测试事件，走完整事件链路 */
-    public OpsAlertEvent fireTest(Long ruleId);
+    OpsAlertEvent fireTest(Long ruleId);
 
-    public void updateEventStatus(Long id, String status);
+    void updateEventStatus(Long id, String status);
 
-    public void removeEvent(Long id);
+    void removeEvent(Long id);
 }

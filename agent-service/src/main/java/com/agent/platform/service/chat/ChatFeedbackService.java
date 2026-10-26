@@ -10,17 +10,17 @@ import java.util.Map;
  */
 public interface ChatFeedbackService {
 
-    public Map<String, Object> stats();
+    Map<String, Object> stats();
 
     /**
      * @param labeled 0未标注 1已标注 空=全部
      * @param rating  好评good/差评bad（精确到评分）
      */
-    public Page<ChatLabelMessageVO> pageMessages(long page, long size, Long appId, Integer labeled, String rating, String keyword);
+    Page<ChatLabelMessageVO> pageMessages(long page, long size, Long appId, Integer labeled, String rating, String keyword);
 
     /** 按 messageId 保存反馈（存在则更新，否则新增） */
-    public ChatMessageFeedback saveFeedback(Long messageId, String rating, String labelType, String correctedAnswer, String note);
+    ChatMessageFeedback saveFeedback(Long messageId, String rating, String labelType, String correctedAnswer, String note);
 
     /** 删除反馈（取消标注） */
-    public void removeFeedback(Long feedbackId);
+    void removeFeedback(Long feedbackId);
 }

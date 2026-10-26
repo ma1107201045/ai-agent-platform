@@ -25,55 +25,55 @@ import java.util.List;
  */
 public interface AppSkillService {
 
-    public Page<AppSkill> page(long page, long size, String keyword, String category, String type);
+    Page<AppSkill> page(long page, long size, String keyword, String category, String type);
 
     /** 启用技能列表（应用绑定下拉 / Agent 节点选择） */
-    public List<AppSkill> listEnabled(String category, String type);
+    List<AppSkill> listEnabled(String category, String type);
 
-    public AppSkill getById(Long id);
+    AppSkill getById(Long id);
 
     /** 创建技能：初始版本 v1 并写入快照 */
-    public AppSkill create(AppSkill skill);
+    AppSkill create(AppSkill skill);
 
     /**
      * 更新技能：基础信息（名称/描述/分类/类型/状态）直接更新；
      * 指令正文、变量定义、依赖工具或参考数据集变化时自动升版快照。
      */
-    public AppSkill update(AppSkill skill);
+    AppSkill update(AppSkill skill);
 
     /** 删除技能：若已被应用绑定则拒绝（需先解绑），软删除进回收站（版本快照保留，恢复时还原） */
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 引用该技能的应用数量（app_agent.skill_ids 为 JSON 数组） */
-    public long referencingAppCount(Long skillId);
+    long referencingAppCount(Long skillId);
 
     /** 引用该技能的应用（供前端提示哪些应用在用） */
-    public List<AppAgent> referencingApps(Long skillId);
+    List<AppAgent> referencingApps(Long skillId);
 
-    public List<AppSkillVersion> versions(Long skillId);
+    List<AppSkillVersion> versions(Long skillId);
 
-    public AppSkillVersion getVersion(Long skillId, Integer version);
+    AppSkillVersion getVersion(Long skillId, Integer version);
 
     /** 回退到指定历史版本：目标内容写回主表并生成新版本快照留痕 */
-    public AppSkill rollback(Long skillId, Integer version);
+    AppSkill rollback(Long skillId, Integer version);
 
     /** 导出技能：返回当前版本自包含数据（含元信息 + 指令 + 依赖），供分享/备份 */
-    public AppSkill exportSkill(Long skillId);
+    AppSkill exportSkill(Long skillId);
 
     /** 导入技能：按外部 JSON 新建技能（id 清零重新落库），code 冲突时自动追加后缀 */
-    public AppSkill importSkill(AppSkill skill);
+    AppSkill importSkill(AppSkill skill);
 
     // ---------- 运行期能力解析（Agent 注入） ----------
 
     /** 运行期能力解析结果 */
-    public record SkillRuntimeBO(String instructions, List<Long> toolIds, List<Long> datasetIds) {
+    record SkillRuntimeBO(String instructions, List<Long> toolIds, List<Long> datasetIds) {
     }
 
     /**
      * 解析绑定技能（JSON 数组）为运行期注入信息：指令 / 依赖工具 / 参考数据集。
      * 忽略已禁用技能；技能数量超过阈值时按与用户问题的相关度择优。
      */
-    public SkillRuntimeBO resolveRuntime(String skillIdsJson, String query);
+    SkillRuntimeBO resolveRuntime(String skillIdsJson, String query);
 
-    public SkillRuntimeBO resolveRuntime(List<Long> skillIds, String query);
+    SkillRuntimeBO resolveRuntime(List<Long> skillIds, String query);
 }

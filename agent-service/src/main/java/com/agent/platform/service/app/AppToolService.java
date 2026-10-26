@@ -14,22 +14,22 @@ import java.util.List;
  */
 public interface AppToolService {
 
-    public Page<AppTool> page(long page, long size);
+    Page<AppTool> page(long page, long size);
 
-    public List<AppTool> listEnabled();
+    List<AppTool> listEnabled();
 
-    public AppTool getById(Long id);
+    AppTool getById(Long id);
 
-    public AppTool create(AppTool tool);
+    AppTool create(AppTool tool);
 
-    public void update(AppTool tool);
+    void update(AppTool tool);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 转换为 LLM FunctionTool（供 ChatRequest.tools 使用） */
-    public FunctionTool toFunctionTool(AppTool tool);
+    FunctionTool toFunctionTool(AppTool tool);
 
-    public List<FunctionTool> toFunctionTools(List<AppTool> tools);
+    List<FunctionTool> toFunctionTools(List<AppTool> tools);
 
     /**
      * 执行工具。
@@ -38,5 +38,5 @@ public interface AppToolService {
      * @param arguments 模型生成的参数（JSON 对象字符串，可为 null）
      * @return 执行结果文本
      */
-    public String execute(AppTool tool, String arguments);
+    String execute(AppTool tool, String arguments);
 }

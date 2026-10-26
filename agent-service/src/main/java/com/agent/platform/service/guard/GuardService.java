@@ -12,24 +12,24 @@ import java.util.Map;
  */
 public interface GuardService {
 
-    public Page<GuardRule> page(long page, long size, String direction, String matchType, String action, Integer enabled, String keyword);
+    Page<GuardRule> page(long page, long size, String direction, String matchType, String action, Integer enabled, String keyword);
 
-    public GuardRule get(Long id);
+    GuardRule get(Long id);
 
-    public GuardRule create(GuardRule rule);
+    GuardRule create(GuardRule rule);
 
-    public GuardRule update(Long id, GuardRule req);
+    GuardRule update(Long id, GuardRule req);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 命中测试：对文本执行一组规则（空=全部启用规则），返回命中详情与处理结果 */
-    public Map<String, Object> testHit(List<Long> ruleIds, String text);
+    Map<String, Object> testHit(List<Long> ruleIds, String text);
 
-    public List<GuardAppBindVO> bindList();
+    List<GuardAppBindVO> bindList();
 
-    public GuardAppBind getBind(Long appId);
+    GuardAppBind getBind(Long appId);
 
-    public GuardAppBind saveBind(Long appId, List<Long> ruleIds, String mode, Integer enabled);
+    GuardAppBind saveBind(Long appId, List<Long> ruleIds, String mode, Integer enabled);
 
-    public void deleteBind(Long appId);
+    void deleteBind(Long appId);
 }

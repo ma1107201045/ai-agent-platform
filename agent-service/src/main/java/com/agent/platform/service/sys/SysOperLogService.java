@@ -9,14 +9,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 public interface SysOperLogService {
 
     /** 供切面/登录等调用方记录一条操作日志（用户信息取自当前上下文） */
-    public void record(String module, String operation, String method, String uri, String ip,
+    void record(String module, String operation, String method, String uri, String ip,
                        boolean success, String errorMsg, long costMs);
 
     /** 显式指定用户信息（如登录场景上下文尚未建立） */
-    public void record(String module, String operation, String method, String uri, String ip,
+    void record(String module, String operation, String method, String uri, String ip,
                        boolean success, String errorMsg, long costMs,
                        Long tenantId, Long userId, String username);
 
-    public Page<SysOperLog> page(long page, long size, String keyword, String module,
+    Page<SysOperLog> page(long page, long size, String keyword, String module,
                                  Integer success, String startTime, String endTime);
 }

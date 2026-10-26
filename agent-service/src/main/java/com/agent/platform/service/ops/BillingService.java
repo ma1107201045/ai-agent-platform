@@ -10,17 +10,17 @@ import java.util.Map;
  */
 public interface BillingService {
 
-    public Map<String, Object> summary(String month);
+    Map<String, Object> summary(String month);
 
     /** 当月每日成本（缺日补零） */
-    public List<Map<String, Object>> dailyTrend(String month);
+    List<Map<String, Object>> dailyTrend(String month);
 
     /** 按应用拆解当月费用（降序） */
-    public List<Map<String, Object>> byApp(String month);
+    List<Map<String, Object>> byApp(String month);
 
     /** 按模型拆解当月费用（降序） */
-    public List<Map<String, Object>> byModel(String month);
+    List<Map<String, Object>> byModel(String month);
 
     /** 保存/更新月度预算 */
-    public void setBudget(String month, BigDecimal budget, Integer notifyEnabled);
+    void setBudget(String month, BigDecimal budget, Integer notifyEnabled);
 }

@@ -13,25 +13,25 @@ import org.springframework.stereotype.Service;
  */
 public interface AppToolConnectorService {
 
-    public Page<AppToolConnector> page(long page, long size, String keyword, String type, Integer status);
+    Page<AppToolConnector> page(long page, long size, String keyword, String type, Integer status);
 
-    public AppToolConnector getById(Long id);
+    AppToolConnector getById(Long id);
 
-    public AppToolConnector create(AppToolConnector connector);
+    AppToolConnector create(AppToolConnector connector);
 
-    public void update(Long id, AppToolConnector connector);
+    void update(Long id, AppToolConnector connector);
 
-    public void updateStatus(Long id, Integer status);
+    void updateStatus(Long id, Integer status);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /**
      * 连通性测试：不抛异常，以可读文本返回成功或失败原因（便于前端直接展示）。
      */
-    public String test(Long id);
+    String test(Long id);
 
     /**
      * 将 HTTP 连接器一键生成为可被智能体调用的 HTTP 工具（app_agent_tool），打通「数据集成 → 工具 → 模型调用」。
      */
-    public AppTool createHttpTool(Long connectorId);
+    AppTool createHttpTool(Long connectorId);
 }

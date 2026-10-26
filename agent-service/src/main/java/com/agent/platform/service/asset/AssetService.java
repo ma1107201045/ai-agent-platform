@@ -13,16 +13,16 @@ import java.util.UUID;
  */
 public interface AssetService {
 
-    public AssetFile upload(MultipartFile file, String name, String category);
+    AssetFile upload(MultipartFile file, String name, String category);
 
-    public Page<AssetFile> page(long page, long size, String category, String keyword);
+    Page<AssetFile> page(long page, long size, String category, String keyword);
 
-    public AssetFile getAsset(Long id);
+    AssetFile getAsset(Long id);
 
-    public AssetFile updateMeta(Long id, String name, String category, Integer status);
+    AssetFile updateMeta(Long id, String name, String category, Integer status);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 读取文件字节（用于下载/预览） */
-    public byte[] readContent(Long id);
+    byte[] readContent(Long id);
 }

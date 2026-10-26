@@ -482,7 +482,8 @@ public class DataStoreServiceImpl implements DataStoreService {
     private DataRecordVO toView(DataRecord record) {
         Map<String, Object> data;
         try {
-            data = objectMapper.readValue(record.getDataJson(), new TypeReference<Map<String, Object>>() {});
+            data = objectMapper.readValue(record.getDataJson(), new TypeReference<>() {
+            });
         } catch (IOException e) {
             data = new HashMap<>();
             data.put("_error", "行数据解析失败");
@@ -533,7 +534,7 @@ public class DataStoreServiceImpl implements DataStoreService {
             }
         }
         // 收尾：无换行结尾的最后一个单元格
-        if (cell.length() > 0 || !row.isEmpty()) {
+        if (!cell.isEmpty() || !row.isEmpty()) {
             row.add(cell.toString());
             cell.setLength(0);
         }

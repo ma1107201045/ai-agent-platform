@@ -24,40 +24,40 @@ import java.util.Map;
  */
 public interface AppPromptTemplateService {
 
-    public Page<AppPromptTemplate> page(long page, long size, String keyword, String category);
+    Page<AppPromptTemplate> page(long page, long size, String keyword, String category);
 
-    public List<AppPromptTemplate> listEnabled(String category);
+    List<AppPromptTemplate> listEnabled(String category);
 
-    public AppPromptTemplate getById(Long id);
+    AppPromptTemplate getById(Long id);
 
     /** 创建模板：初始版本 v1 并写入快照 */
-    public AppPromptTemplate create(AppPromptTemplate template);
+    AppPromptTemplate create(AppPromptTemplate template);
 
     /**
      * 更新模板：基础信息（名称/描述/分类/状态）直接更新；
      * 正文或变量定义有变化时自动生成新版本快照。
      */
-    public AppPromptTemplate update(AppPromptTemplate template);
+    AppPromptTemplate update(AppPromptTemplate template);
 
     /** 删除模板：软删除进回收站（版本快照保留，恢复时还原） */
-    public void delete(Long id);
+    void delete(Long id);
 
-    public List<AppPromptVersion> versions(Long templateId);
+    List<AppPromptVersion> versions(Long templateId);
 
-    public AppPromptVersion getVersion(Long templateId, Integer version);
+    AppPromptVersion getVersion(Long templateId, Integer version);
 
     /** 回退到指定历史版本：目标内容写回主表并生成新版本快照留痕 */
-    public AppPromptTemplate rollback(Long id, Integer version);
+    AppPromptTemplate rollback(Long id, Integer version);
 
     /**
      * 渲染模板正文：将 {{var}} 占位替换为变量值。
      * 返回渲染后文本；未提供的变量保持原样以便前端提示。
      */
-    public String render(String content, Map<String, Object> variables);
+    String render(String content, Map<String, Object> variables);
 
     /** 从正文提取占位变量名列表 */
-    public List<String> extractVariables(String content);
+    List<String> extractVariables(String content);
 
     /** 解析变量定义 JSON（宽松解析，失败返回空 map） */
-    public Map<String, String> parseVariableDefs(String variablesJson);
+    Map<String, String> parseVariableDefs(String variablesJson);
 }

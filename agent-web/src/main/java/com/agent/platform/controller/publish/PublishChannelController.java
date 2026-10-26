@@ -55,13 +55,17 @@ public class PublishChannelController {
         return Result.ok();
     }
 
-    /** 启停开关 */
+    /**
+     * 启停开关
+     */
     @PutMapping("/{id}/enabled")
     public Result<PublishChannel> toggle(@PathVariable Long id, @RequestParam Integer enabled) {
         return Result.ok(channelService.toggle(id, enabled));
     }
 
-    /** 配置校验（不改库，仅返回缺失的必填配置键） */
+    /**
+     * 配置校验（不改库，仅返回缺失的必填配置键）
+     */
     @PostMapping("/config/validate")
     public Result<Map<String, Object>> validate(@RequestBody Map<String, String> req) {
         List<String> missing = channelService.validateConfig(req.get("channelType"), req.get("configJson"));
@@ -71,7 +75,9 @@ public class PublishChannelController {
         return Result.ok(result);
     }
 
-    /** 三方渠道回调（WebConfig 放行）。body: {content?, fromUser?} */
+    /**
+     * 三方渠道回调（WebConfig 放行）。body: {content?, fromUser?}
+     */
     @PostMapping("/{id}/callback")
     public Result<PublishChannelMsg> callback(@PathVariable Long id,
                                               @RequestBody(required = false) Map<String, String> body) {
@@ -81,7 +87,9 @@ public class PublishChannelController {
         return Result.ok(channelService.receive(id, body.get("content"), body.get("fromUser")));
     }
 
-    /** 渠道消息分页 */
+    /**
+     * 渠道消息分页
+     */
     @GetMapping("/{id}/messages")
     public Result<Page<PublishChannelMsg>> messages(@PathVariable Long id,
                                                     @RequestParam(defaultValue = "1") long page,
@@ -91,7 +99,9 @@ public class PublishChannelController {
         return Result.ok(channelService.messages(page, size, id, direction, keyword));
     }
 
-    /** 渠道统计 */
+    /**
+     * 渠道统计
+     */
     @GetMapping("/{id}/stats")
     public Result<Map<String, Object>> stats(@PathVariable Long id) {
         return Result.ok(channelService.stats(id));

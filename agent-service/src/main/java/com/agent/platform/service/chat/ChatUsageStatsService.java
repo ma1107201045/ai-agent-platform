@@ -22,7 +22,7 @@ public interface ChatUsageStatsService {
      * @param channel console 控制台会话 / public 公开 API
      * @param mode    direct / agent / workflow
      */
-    public void recordUsage(Long tenantId, Long appId, Long conversationId, Long userId,
+    void recordUsage(Long tenantId, Long appId, Long conversationId, Long userId,
                             Long modelId, String channel, String mode, Usage usage);
 
     /**
@@ -32,5 +32,5 @@ public interface ChatUsageStatsService {
      * @param from  起始日期（null 默认今天往前 6 天）
      * @param to    结束日期（null 默认今天）
      */
-    public ChatUsageSummaryVO summary(Long appId, LocalDate from, LocalDate to);
+    ChatUsageSummaryVO summary(Long appId, LocalDate from, LocalDate to);
 }

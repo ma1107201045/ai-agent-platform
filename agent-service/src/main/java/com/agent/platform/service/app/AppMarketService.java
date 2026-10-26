@@ -11,15 +11,15 @@ import java.util.Map;
 public interface AppMarketService {
 
     /** 展示上架条目（官方 + 当前租户共享 + 已公开的共享） */
-    public Page<AppMarketItem> page(long page, long size, String category, String type, String keyword);
+    Page<AppMarketItem> page(long page, long size, String category, String type, String keyword);
 
     /** 分类及安装量统计 */
-    public Map<String, Object> stats();
+    Map<String, Object> stats();
 
-    public AppMarketItem get(Long id);
+    AppMarketItem get(Long id);
 
     /**
      * 一键安装：拷贝条目创建应用并自动发布，返回新应用ID。
      */
-    public AppAgent install(Long itemId);
+    AppAgent install(Long itemId);
 }

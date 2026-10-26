@@ -15,15 +15,15 @@ public interface ModelRuntimeService {
     /**
      * 根据模型记录创建 ChatModel 实例（供应商须启用）
      */
-    public ChatModel chatModelOf(Long modelId);
+    ChatModel chatModelOf(Long modelId);
 
     /**
      * 根据模型记录创建 EmbeddingModel 实例
      */
-    public EmbeddingModel embeddingModelOf(Long modelId);
+    EmbeddingModel embeddingModelOf(Long modelId);
 
     /**
      * 根据模型记录创建 RerankModel 实例
      */
-    public RerankModel rerankModelOf(Long modelId);
+    RerankModel rerankModelOf(Long modelId);
 }

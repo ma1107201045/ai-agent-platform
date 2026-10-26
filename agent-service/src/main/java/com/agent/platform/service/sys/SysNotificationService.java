@@ -10,30 +10,30 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
  */
 public interface SysNotificationService {
 
-    public static final String TYPE_SYSTEM = "system";
+    static final String TYPE_SYSTEM = "system";
 
-    public static final String TYPE_ANNOUNCEMENT = "announcement";
+    static final String TYPE_ANNOUNCEMENT = "announcement";
 
-    public static final String TYPE_RUN = "run";
+    static final String TYPE_RUN = "run";
 
-    public static final String TYPE_ALERT = "alert";
+    static final String TYPE_ALERT = "alert";
 
-    public Page<SysNotification> page(long page, long size, String type, Integer read);
+    Page<SysNotification> page(long page, long size, String type, Integer read);
 
     /** 未读数量 */
-    public long unreadCount();
+    long unreadCount();
 
     /** 标记单条为已读（仅限自己的消息） */
-    public void markRead(Long id);
+    void markRead(Long id);
 
     /** 全部标为已读 */
-    public long markReadAll();
+    long markReadAll();
 
     /** 删除单条（仅限自己的消息） */
-    public void remove(Long id);
+    void remove(Long id);
 
     /** 给单个用户发送通知 */
-    public void send(Long userId, String type, String title, String content,
+    void send(Long userId, String type, String title, String content,
                      String bizType, Long bizId);
 
     /**
@@ -41,6 +41,6 @@ public interface SysNotificationService {
      *
      * @return 实际投递条数
      */
-    public long broadcast(String type, String title, String content,
+    long broadcast(String type, String title, String content,
                           String bizType, Long bizId);
 }

@@ -18,7 +18,7 @@ public interface AppToolMarketplaceService {
     // ---------- 模板定义 ----------
 
     @Data
-    public static class Template {
+    static class Template {
         /** 模板唯一标识（安装接口使用） */
         private String key;
         /** 工具名称（英文标识符，安装后即 app_agent_tool.name） */
@@ -37,10 +37,10 @@ public interface AppToolMarketplaceService {
     /**
      * 模板目录（含已安装标记）。可按分类 / 关键字过滤。
      */
-    public List<AppToolTemplateVO> templates(String category, String keyword);
+    List<AppToolTemplateVO> templates(String category, String keyword);
 
     /**
      * 按模板一键安装：以模板内容创建一条真实工具记录。
      */
-    public AppTool install(String key);
+    AppTool install(String key);
 }

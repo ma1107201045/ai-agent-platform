@@ -9,7 +9,7 @@ package com.agent.platform.service.common;
 public interface AppExecuteService {
 
     /** 执行结果 */
-    public record Reply(String answer, Object detail) {
+    record Reply(String answer, Object detail) {
     }
 
     /**
@@ -18,8 +18,8 @@ public interface AppExecuteService {
      * @param appId   应用ID（须为已发布 status=1）
      * @param content 用户输入
      */
-    public Reply runApp(Long appId, String content);
+    Reply runApp(Long appId, String content);
 
     /** 直连模型执行（评测“模型模式”使用） */
-    public Reply runModel(Long modelId, String content);
+    Reply runModel(Long modelId, String content);
 }

@@ -8,13 +8,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
  */
 public interface SysUserService {
 
-    public Page<SysUser> page(long page, long size);
+    Page<SysUser> page(long page, long size);
 
-    public SysUser getById(Long id);
+    SysUser getById(Long id);
 
-    public SysUser create(SysUser user);
+    SysUser create(SysUser user);
 
-    public void update(SysUser user);
+    void update(SysUser user);
 
-    public void delete(Long id);
+    void delete(Long id);
 }

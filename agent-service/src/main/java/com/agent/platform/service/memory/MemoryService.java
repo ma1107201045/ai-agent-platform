@@ -16,26 +16,26 @@ public interface MemoryService {
     /**
      * 获取某应用的记忆策略；不存在时返回一份默认配置（enabled=0 需用户显式开启）。
      */
-    public MemStrategy getStrategy(Long appId);
+    MemStrategy getStrategy(Long appId);
 
     /**
      * 保存记忆策略（按 appId upsert）。
      */
-    public MemStrategy saveStrategy(MemStrategy strategy);
+    MemStrategy saveStrategy(MemStrategy strategy);
 
-    public List<MemVariable> listVariables(Long appId, String scope, String keyword);
+    List<MemVariable> listVariables(Long appId, String scope, String keyword);
 
-    public MemVariable createVariable(Long appId, MemVariable variable);
+    MemVariable createVariable(Long appId, MemVariable variable);
 
-    public void updateVariable(Long id, MemVariable variable);
+    void updateVariable(Long id, MemVariable variable);
 
-    public void deleteVariable(Long id);
+    void deleteVariable(Long id);
 
-    public List<MemItem> listItems(Long appId, String category, String scope, String keyword);
+    List<MemItem> listItems(Long appId, String category, String scope, String keyword);
 
-    public MemItem createItem(Long appId, MemItem item);
+    MemItem createItem(Long appId, MemItem item);
 
-    public void updateItem(Long id, MemItem item);
+    void updateItem(Long id, MemItem item);
 
-    public void deleteItem(Long id);
+    void deleteItem(Long id);
 }

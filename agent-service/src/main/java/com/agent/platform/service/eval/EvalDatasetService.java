@@ -10,26 +10,26 @@ import java.util.List;
  */
 public interface EvalDatasetService {
 
-    public Page<EvalDataset> page(long page, long size, String keyword, Integer status);
+    Page<EvalDataset> page(long page, long size, String keyword, Integer status);
 
     /** 启用的数据集（下拉选项） */
-    public List<EvalDataset> options();
+    List<EvalDataset> options();
 
-    public EvalDataset get(Long id);
+    EvalDataset get(Long id);
 
-    public EvalDataset create(EvalDataset dataset);
+    EvalDataset create(EvalDataset dataset);
 
-    public EvalDataset update(Long id, EvalDataset req);
+    EvalDataset update(Long id, EvalDataset req);
 
-    public void delete(Long id);
+    void delete(Long id);
 
-    public Page<EvalSample> samples(long page, long size, Long datasetId, String keyword);
+    Page<EvalSample> samples(long page, long size, Long datasetId, String keyword);
 
-    public EvalSample addSample(Long datasetId, EvalSample sample);
+    EvalSample addSample(Long datasetId, EvalSample sample);
 
-    public EvalSample updateSample(Long datasetId, Long sampleId, EvalSample req);
+    EvalSample updateSample(Long datasetId, Long sampleId, EvalSample req);
 
-    public void deleteSample(Long datasetId, Long sampleId);
+    void deleteSample(Long datasetId, Long sampleId);
 
     /**
      * 批量导入样本：支持两种格式
@@ -38,5 +38,5 @@ public interface EvalDatasetService {
      *   <li>每行一条样本，用制表符分隔：提问\t参考答案</li>
      * </ul>
      */
-    public int importSamples(Long datasetId, String text);
+    int importSamples(Long datasetId, String text);
 }

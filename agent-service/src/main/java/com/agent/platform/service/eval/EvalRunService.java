@@ -11,24 +11,24 @@ import java.util.Map;
  */
 public interface EvalRunService {
 
-    public Page<EvalRunVO> page(long page, long size, String status, Long datasetId, Long experimentId, String keyword);
+    Page<EvalRunVO> page(long page, long size, String status, Long datasetId, Long experimentId, String keyword);
 
-    public EvalRunVO get(Long id);
+    EvalRunVO get(Long id);
 
     /** 评测中心聚合统计 */
-    public Map<String, Object> stats();
+    Map<String, Object> stats();
 
     /**
      * 创建并立即运行评测任务。
      * body: name/datasetId/experimentId(可选)/(appId + appVersionId 可选 或 modelId)
      */
-    public EvalRunVO createAndRun(EvalRun req);
+    EvalRunVO createAndRun(EvalRun req);
 
     /** 重跑已结束/失败的任务 */
-    public EvalRunVO rerun(Long id);
+    EvalRunVO rerun(Long id);
 
     /** 停止运行中的任务（worker 会在下个样本前退出） */
-    public void stop(Long id);
+    void stop(Long id);
 
-    public void delete(Long id);
+    void delete(Long id);
 }

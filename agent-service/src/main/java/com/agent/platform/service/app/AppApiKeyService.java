@@ -21,22 +21,22 @@ import java.time.LocalDateTime;
  */
 public interface AppApiKeyService {
 
-    public Page<AppApiKey> page(long page, long size, String keyword, Long appId, Integer status);
+    Page<AppApiKey> page(long page, long size, String keyword, Long appId, Integer status);
 
-    public AppApiKey getById(Long id);
+    AppApiKey getById(Long id);
 
     /** 创建密钥：明文仅在本次返回，落库仅存前缀与哈希 */
-    public AppApiKey create(Long appId, String name, LocalDateTime expiresAt, Integer rateLimit, String remark);
+    AppApiKey create(Long appId, String name, LocalDateTime expiresAt, Integer rateLimit, String remark);
 
     /** 更新基础信息（编辑框整体提交；expiresAt/rateLimit/remark 为空即清除） */
-    public AppApiKey update(Long id, String name, LocalDateTime expiresAt, Integer rateLimit, String remark);
+    AppApiKey update(Long id, String name, LocalDateTime expiresAt, Integer rateLimit, String remark);
 
-    public void setStatus(Long id, int status);
+    void setStatus(Long id, int status);
 
-    public void delete(Long id);
+    void delete(Long id);
 
     /** 轮换密钥：生成新明文并作废旧哈希，同时清零用量统计 */
-    public AppApiKey rotate(Long id);
+    AppApiKey rotate(Long id);
 
     /**
      * 明文密钥鉴权：密钥须存在、启用、未过期；
@@ -45,5 +45,5 @@ public interface AppApiKeyService {
      * @param appId     请求目标应用
      * @param plainKey  请求携带的明文密钥
      */
-    public void authenticate(Long appId, String plainKey);
+    void authenticate(Long appId, String plainKey);
 }

@@ -8,7 +8,7 @@ import com.agent.platform.dao.vo.sys.SysWorkspaceVO;
  */
 public interface SysWorkspaceService {
 
-    public SysWorkspaceVO current();
+    SysWorkspaceVO current();
 
-    public SysWorkspaceVO update(SysTenant update);
+    SysWorkspaceVO update(SysTenant update);
 }

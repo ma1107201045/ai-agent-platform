@@ -13,45 +13,45 @@ import java.util.List;
  */
 public interface KnowledgeService {
 
-    public Page<KnowledgeDataset> datasetPage(long page, long size);
+    Page<KnowledgeDataset> datasetPage(long page, long size);
 
-    public KnowledgeDataset getDataset(Long id);
+    KnowledgeDataset getDataset(Long id);
 
-    public KnowledgeDataset createDataset(KnowledgeDataset ds);
+    KnowledgeDataset createDataset(KnowledgeDataset ds);
 
-    public void updateDataset(KnowledgeDataset ds);
+    void updateDataset(KnowledgeDataset ds);
 
-    public void deleteDataset(Long id);
+    void deleteDataset(Long id);
 
-    public Page<KnowledgeDocument> documentPage(Long datasetId, long page, long size);
+    Page<KnowledgeDocument> documentPage(Long datasetId, long page, long size);
 
-    public KnowledgeDocument getDocument(Long id);
+    KnowledgeDocument getDocument(Long id);
 
     /**
      * 创建文档并立即向量化入库（同步）。
      * 文本过长或向量化失败时文档标记为 failed，可重试。
      */
-    public KnowledgeDocument createDocument(Long datasetId, String name, String content);
+    KnowledgeDocument createDocument(Long datasetId, String name, String content);
 
     /**
      * 从上传文件解析文本并创建文档（同步向量化）。
      * 支持格式：txt / md / pdf / docx
      */
-    public KnowledgeDocument createDocumentFromFile(Long datasetId, MultipartFile file);
+    KnowledgeDocument createDocumentFromFile(Long datasetId, MultipartFile file);
 
     /**
      * 重新向量化（用于失败后重试或更换模型后重建）。
      * 在原文档行上重建分块，不新建文档行。
      */
-    public KnowledgeDocument reindexDocument(Long documentId);
+    KnowledgeDocument reindexDocument(Long documentId);
 
-    public void deleteDocument(Long id);
+    void deleteDocument(Long id);
 
-    public List<KnowledgeChunk> chunks(Long documentId);
+    List<KnowledgeChunk> chunks(Long documentId);
 
     /**
      * 向量检索：对 query 向量化 → pgvector 在库内按余弦距离排序取 topK。
      * 可选 rerankModelId 时，对 topK 候选再用 rerank 模型精排。
      */
-    public List<KnowledgeSearchHitVO> search(Long datasetId, String query, int topK, Long rerankModelId);
+    List<KnowledgeSearchHitVO> search(Long datasetId, String query, int topK, Long rerankModelId);
 }
