@@ -54,6 +54,7 @@ public class MybatisPlusConfig {
 
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
+
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
 
         // 租户隔离：自动为 SQL 追加 tenant_id 条件（SELECT/UPDATE/DELETE/INSERT）
@@ -72,12 +73,14 @@ public class MybatisPlusConfig {
         interceptor.addInnerInterceptor(tenant);
 
         // 在租户隔离之后、分页之前处理，使分页总数与数据查询使用相同的删除过滤条件。
-        interceptor.addInnerInterceptor(new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
+        LogicDeleteInnerInterceptor logicDelete = new LogicDeleteInnerInterceptor(new LogicDeleteHandler() {
             @Override
             public String getDefaultSchema() {
                 return defaultSchema;
             }
-        }));
+        });
+        interceptor.addInnerInterceptor(logicDelete);
+
 
         PaginationInnerInterceptor pagination = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
         pagination.setMaxLimit(500L);
