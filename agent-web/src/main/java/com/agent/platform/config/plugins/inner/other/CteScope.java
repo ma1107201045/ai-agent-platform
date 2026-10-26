@@ -1,15 +1,16 @@
 package com.agent.platform.config.plugins.inner.other;
 
+import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.SelectBody;
+import net.sf.jsqlparser.statement.select.WithItem;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.function.Consumer;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.SelectBody;
-import net.sf.jsqlparser.statement.select.WithItem;
+import java.util.function.Consumer;
 
 /**
  * 每个拦截器独立持有的 CTE 可见域；退出作用域时始终清理线程状态。

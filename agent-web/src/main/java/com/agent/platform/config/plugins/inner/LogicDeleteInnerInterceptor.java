@@ -1,41 +1,36 @@
 package com.agent.platform.config.plugins.inner;
 
 import com.agent.platform.config.plugins.handler.LogicDeleteHandler;
-import com.agent.platform.config.plugins.inner.other.DmlSqlSupport;
+import com.agent.platform.config.plugins.inner.other.ScopedSelectSupport;
 import com.agent.platform.config.plugins.inner.other.InsertValueSupport;
 import com.agent.platform.config.plugins.inner.other.QueryJoinSupport;
-import com.agent.platform.config.plugins.inner.other.ScopedSelectSupport;
 import com.agent.platform.config.plugins.inner.other.WriteSqlSupport;
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.baomidou.mybatisplus.extension.plugins.inner.BaseMultiTableInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
-import java.sql.Connection;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Locale;
-import java.util.Objects;
 import net.sf.jsqlparser.expression.Expression;
+import com.agent.platform.config.plugins.inner.other.DmlSqlSupport;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.NullValue;
+import net.sf.jsqlparser.expression.TimeKeyExpression;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.StringValue;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
-import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.TimeKeyExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectBody;
+import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.update.Update;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.statement.StatementHandler;
@@ -43,6 +38,12 @@ import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+
+import java.sql.Connection;
+import java.util.Objects;
+import java.util.Locale;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * 与租户插件同级，复用公共基类的别名、JOIN、子查询和 UNION 遍历逻辑。

@@ -1,141 +1,80 @@
-# 租户隔离与逻辑删除插件
+# SQL 逻辑删除插件
 
-MyBatis-Plus 3.5.5 / JSqlParser 4.6，面向项目的 PostgreSQL 数据访问层。
-MyBatis-Plus 内置方法、Mapper XML 和注解 SQL 共用同一套执行前处理。
+`LogicDeleteInnerInterceptor` 与租户拦截器同级，继承 `BaseMultiTableInnerInterceptor`
+并实现 `InnerInterceptor`，复用公共基类的 SQL AST 遍历能力，
+在租户拦截器之后、分页拦截器之前注册。对内置方法、XML、注解 SQL 统一生效。
 
-- [使用与配置](#使用与配置)
-- [忽略某个方法或 Mapper](#忽略某个方法或-mapper)
-- [SQL 行为](#sql-行为)
-- [支持范围与限制](#支持范围与限制)
-- [运行测试](#运行测试)
-- [实现设计与维护约束](DESIGN.md)
+- 默认 SELECT 自动添加 `deleted = 0`，支持别名、INNER/LEFT/RIGHT JOIN、子查询、UNION、CTE。
+- UPDATE 同时过滤目标表、WHERE/SET 子查询和 FROM/JOIN 来源表；即使目标没有逻辑删除字段，
+  也会处理来源表。多表条件使用表名或别名限定，避免字段歧义。
+- 标准单表 DELETE 转为 `UPDATE ... SET deleted = 1, deleted_time = CURRENT_TIMESTAMP`，
+  保留原 WHERE、参数顺序及租户约束，并追加 `deleted = 0`。
+- INSERT 显式列清单缺少 `deleted` 时自动补充 `0`，支持单条、批量 VALUES 和 INSERT SELECT
+  （包括 UNION 各分支）。已经指定删除字段时保留原值，不影响参数顺序。
+  INSERT SELECT 始终过滤来源查询，包括已经显式指定 `deleted` 或目标没有逻辑删除字段的情况。
+  逻辑删除插件单独使用时无列清单不补列；完整拦截链对租户表要求显式列清单。
+- PostgreSQL `ON CONFLICT DO UPDATE` 的更新分支同时追加目标租户和未删除条件，
+  不能更新其他租户或已删除的冲突记录；原有 WHERE 与子查询仍保留并过滤。
+  分支内逻辑删除同样补充删除时间。`DO NOTHING` 保持原有语义。
+- 删除字段、正常值和删除值来自已注册实体的 `TableInfo`，与 `@TableLogic` 及 MyBatis-Plus
+  全局配置一致，不再维护固定表清单。支持字符串标记和 `NULL` 正常值（生成 `IS NULL`）。
+  未注册 MyBatis-Plus 实体元数据的表默认不启用逻辑删除；可通过 handler 扩展。
+- 有 `deletedTime` 实体属性时使用其映射列补充删除时间；自定义 DELETE 和内置逻辑删除
+  UPDATE 都会补充 `CURRENT_TIMESTAMP`。调用方已显式赋值时保留原值；普通更新不补时间。
+  参数化 `SET deleted = ?` 无法仅凭 AST 判断运行值，需要业务显式写入删除时间。
+- 兼容现有 `@TableLogic`；通过 AST 识别当前作用域中已有的未删除等值条件，避免重复追加。
+  AND 任一分支具有约束即可，OR 则要求所有分支都具有约束。按表别名分别判断，
+  子查询独立处理，不把子查询的条件当作外层约束；参数值未知时仍追加过滤。
+  多表查询中无表限定的列无法可靠归属，保守地保留追加条件。
+  纯内连接可复用 WHERE 中已有条件，避免再向 ON 重复追加；混合外连接保守地局部去重。
+- CTE 定义与引用分开处理，支持同名实体遮蔽、递归和嵌套作用域；引用 CTE 时不要求输出
+  `deleted` 或 `tenant_id`。作用域线程状态在正常结束、异常退出时都会清理。
 
-## 使用与配置
+`ScopedTenantLineInnerInterceptor` 扩展原生租户插件，使用同样的 CTE 作用域识别，
+并补齐 INSERT SELECT、UPDATE FROM 和子查询的来源租户过滤。目标显式包含 `tenant_id`
+时也过滤来源；未包含时补当前租户常量，支持 VALUES、UNION 和 CTE。
+显式写入或修改 `tenant_id` 时必须等于当前租户。字面量直接校验，MyBatis 参数在执行前
+通过 BoundSql/ParameterMapping 读取，兼容实体、Map 和 foreach 额外参数，不改变 JDBC 绑定顺序。
+INSERT SELECT 直接投影的租户列统一替换为当前租户常量；其他无法验证的租户表达式会拒绝。
+更新时应省略无需修改的租户字段（包括冗余的 `tenant_id = EXCLUDED.tenant_id`）。
+无上下文时仍沿用项目租户 1 的默认策略。
 
-项目已在 [MybatisPlusConfig](../MybatisPlusConfig.java) 注册：
+写入 SQL 在 `beforeGetBoundSql` 阶段完成校验与改写，早于 BATCH/REUSE 的语句复用判断，
+每次调用都会使用实际参数。`beforePrepare` 仅作 SIMPLE 执行器的兜底，同一 BoundSql 使用内部
+处理标记避免重复改写。租户切换会生成不同的 SQL 复用键，防止沿用上一租户的常量条件。
 
-```text
-ScopedTenantLineInnerInterceptor → LogicDeleteInnerInterceptor → PaginationInnerInterceptor
-```
+逻辑删除元数据使用完整的 `schema.table` 匹配，不会把不同 schema 的同名表混用。
+未引用标识符按 PostgreSQL 规则转小写；双引号保留大小写、内部的点及转义双引号。
+默认 schema 为 `public`，可用 `platform.mybatis.default-schema` / `MYBATIS_DEFAULT_SCHEMA`
+设置，必须与连接的默认 schema/search_path 保持一致；多 schema 场景建议 SQL 和实体都明确限定。
+运行中通过 SQL 动态改变 search_path 不会自动更新该配置。
 
-租户 ID 来自 `UserContext`。逻辑删除字段和值来自已注册实体的 MyBatis-Plus `TableInfo`，与 `@TableLogic`、全局逻辑删除配置保持一致，不需要维护表清单。
-
-```java
-@TableName(value = "app_agent", schema = "public")
-public class AppAgent {
-    @TableId
-    private Long id;
-    private Long tenantId;
-    @TableLogic(value = "0", delval = "1")
-    private Integer deleted;
-    private LocalDateTime deletedTime;
-}
-```
-
-删除时间只在实体存在 `deletedTime` 属性时补充，列名服从该属性的映射。
-
-| 配置 | 默认值 | 说明 |
-| --- | --- | --- |
-| `platform.mybatis.default-schema` | `public` | 用于解析未限定 schema 的表名 |
-| `MYBATIS_DEFAULT_SCHEMA` | `public` | 上述配置对应的环境变量 |
-
-配置必须与连接的默认 schema/search_path 一致；动态修改 search_path 不会自动更新插件配置。多 schema 场景建议同时限定实体和 SQL 的表名。引号内的大小写、点和转义双引号会保留，不同 schema 的同名表分别匹配。
-
-**当前兼容策略：** 没有租户上下文时使用租户 `1`。后台任务需要主动建立、清理正确的 `UserContext`，插件不会自动传播异步上下文。
-
-## 忽略某个方法或 Mapper
-
-只关闭自定义逻辑删除，保留租户隔离：
+回收站等需要查询已删除记录、恢复或物理删除的 Mapper/方法使用：
 
 ```java
 @InterceptorIgnore(others = {"logicDelete@true"})
-@Select("SELECT * FROM app_agent WHERE deleted = 1")
-List<AppAgent> selectDeleted();
 ```
 
-`logicDelete@true` 的格式是 `插件标识@是否忽略`。同一注解也可以放在整个 Mapper 接口上；现有 `TrashMapper` 已这样配置，供查询回收站、恢复和物理删除使用。
+该配置仅跳过逻辑删除插件，仍执行租户隔离。现有 `TrashMapper` 已配置。
+请勿用 `tenantLine = "true"` 代替；租户插件的跳过配置不会关闭逻辑删除。
 
-```java
-@Mapper
-@InterceptorIgnore(others = {"logicDelete@true"})
-public interface TrashMapper {
-    @Update("UPDATE app_agent SET deleted = 0, deleted_time = NULL WHERE id = #{id}")
-    int restore(@Param("id") Long id);
+DELETE 的 USING/JOIN/RETURNING/LIMIT 等非标准单表形式会明确报错，
+防止转换时丢失语义。此类需求应编写显式 UPDATE；确需物理删除时单独豁免。
+FULL/NATURAL/CROSS JOIN 不在公共解析基类的可靠处理范围内，两个插件都会明确报错，
+避免静默漏过滤或改变外连接语义。CROSS JOIN 可等价改写成 INNER JOIN ... ON 1 = 1。
+物理 DELETE 的 WHERE 子查询也执行租户与逻辑删除过滤；DELETE USING/JOIN 暂不支持自动隔离。
+来源子查询遍历覆盖 WHERE、SET、ON、HAVING、ORDER BY、GROUP BY、DISTINCT ON、
+LIMIT/OFFSET、窗口定义及 INSERT/UPDATE/物理 DELETE 的 RETURNING。
+MySQL `ON DUPLICATE KEY UPDATE` 无法安全追加目标行过滤条件，对受保护表明确拒绝。
+插件依赖项目当前的 MyBatis-Plus 3.5.5 / JSqlParser 4.6，升级时应运行回归测试：
 
-    @Delete("DELETE FROM app_agent WHERE id = #{id}")
-    int purge(@Param("id") Long id);
-}
+```shell
+mvn -pl agent-web -am test -Dtest=LogicDeleteInnerInterceptorTest,LogicDeleteBoundaryTest,LogicDeleteSchemaTest -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-注意：
-
-- 注解放在 Mapper 接口或方法上，Service 上不生效。
-- 该开关不关闭 MyBatis-Plus 内置方法生成的 `@TableLogic` SQL；恢复和物理删除应使用自定义 SQL。
-- 忽略租户使用独立的 `@InterceptorIgnore(tenantLine = "true")`，不要与回收站逻辑删除豁免混为一体。
-- 逻辑删除单独豁免后，跨租户写入校验与租户条件仍然执行。
-
-## SQL 行为
-
-以下以当前租户 `2`、正常值 `0`、删除值 `1` 为例。
-
-| SQL | 行为 |
-| --- | --- |
-| SELECT | 追加当前租户、未删除条件；分页统计使用相同过滤规则 |
-| UPDATE | 过滤目标表、WHERE/SET 子查询及 FROM/JOIN 来源；禁止修改为其他租户 |
-| 单表 DELETE | 逻辑删除表转换为 UPDATE，标记删除并补时间；其他表物理删除，仍过滤来源子查询 |
-| INSERT VALUES | 缺少租户/删除字段时补当前租户与正常值，支持批量行 |
-| 显式租户字段 | 校验字面量及真实 MyBatis 参数；与当前租户不符或无法验证时拒绝 |
-| INSERT SELECT | 始终过滤来源，包括目标豁免或已包含租户/删除字段时；直接投影的租户字段统一写当前租户 |
-| ON CONFLICT DO UPDATE | 更新分支过滤目标租户和未删除状态，保留原 WHERE；逻辑删除赋值也会补时间 |
-| ON CONFLICT DO NOTHING | 保留冲突时不更新的语义，插入值仍受校验 |
-
-示例：
-
-```sql
--- 原 SQL
-DELETE FROM app_agent WHERE id = ?;
-
--- 改写后（条件顺序可能不同）
-UPDATE app_agent
-SET deleted = 1, deleted_time = CURRENT_TIMESTAMP
-WHERE id = ? AND app_agent.tenant_id = 2 AND deleted = 0;
-```
-
-已有效约束当前表的 `deleted = 0` 不会重复追加。AND 任一分支具备约束即可，OR 要求所有分支都具备约束；子查询按各自作用域判断。纯内连接可以复用 WHERE 条件；外连接按保留侧语义保守处理，不追求全局去重。
-
-SIMPLE、REUSE、BATCH 均在实际 SQL 执行前处理。语句复用前逐条校验参数；租户切换产生相应的 SQL 复用键，不沿用上一租户的常量条件。
-
-## 支持范围与限制
-
-支持别名、INNER/LEFT/RIGHT JOIN、UNION、普通/递归/嵌套 CTE、同名 CTE 遮蔽，以及 WHERE、SET、ON、HAVING、ORDER BY、GROUP BY、DISTINCT ON、LIMIT/OFFSET、窗口和 RETURNING 中的来源子查询。
-
-| 场景 | 当前约束 |
-| --- | --- |
-| FULL/NATURAL/CROSS JOIN | 明确拒绝；CROSS JOIN 可改写为 INNER JOIN ... ON 1 = 1 |
-| DELETE USING/JOIN | 明确拒绝自动隔离，可改用 WHERE 子查询 |
-| 逻辑 DELETE 的 RETURNING/LIMIT 等复杂形式 | 明确拒绝，改用显式 UPDATE；物理 DELETE 的 RETURNING 子查询会被过滤 |
-| MySQL ON DUPLICATE KEY UPDATE | 对受保护表明确拒绝，当前只支持 PostgreSQL 的安全 UPSERT |
-| 租户表 INSERT 无列清单 | 明确拒绝；显式租户列的 INSERT SELECT 也要求明确投影，不能使用 SELECT * |
-| `SET tenant_id = EXCLUDED.tenant_id` 等表达式 | 不作为可验证的租户赋值；省略无需修改的租户字段 |
-| 参数化或计算得到的 UPDATE 删除标记 | 不保证自动补删除时间，业务应显式设置 `deleted_time` |
-| 未注册实体元数据的表 | 默认不启用逻辑删除，可通过 `LogicDeleteHandler` 扩展 |
-
-插件仅覆盖上述 MyBatis SQL 路径，不覆盖原生 JDBC、MERGE/TRUNCATE、存储过程等路径。SQL 解析或受保护语法不支持时，不会通过捕获异常静默放行。
-
-## 运行测试
-
-在仓库根目录运行，不需要启动 Spring 应用：
-
-```powershell
-mvn -pl agent-web -am test '-Dtest=LogicDeleteInnerInterceptorTest,LogicDeleteBoundaryTest,LogicDeleteSchemaTest' '-Dsurefire.failIfNoSpecifiedTests=false'
-```
-
-PostgreSQL 集成测试使用专用测试库，连接用户为 `postgres`：
-
-```powershell
-$env:LOGIC_DELETE_TEST_JDBC_URL = 'jdbc:postgresql://127.0.0.1:5432/agent_plugin_test'
-$env:LOGIC_DELETE_TEST_DB_PASSWORD = '<测试库密码>'
-mvn -pl agent-web -am test '-Dtest=LogicDeleteInnerInterceptorTest,LogicDeleteBoundaryTest,LogicDeleteSchemaTest,LogicDeletePostgresTest,LogicDeleteSchemaPostgresTest' '-Dsurefire.failIfNoSpecifiedTests=false'
-```
-
-未设置测试连接地址时跳过实库测试。测试使用临时表或事务内 schema/表，结束时回滚并关闭连接，不读取项目业务库配置。测试覆盖参数绑定、SIMPLE/REUSE/BATCH、租户切换、回收站豁免、跨 schema 同名表及引号名称。
+PostgreSQL 集成测试通过完整 MyBatis 拦截链执行真实 SQL，验证实际返回行、修改行数和删除时间。
+使用专用测试库，设置 `LOGIC_DELETE_TEST_JDBC_URL` 和 `LOGIC_DELETE_TEST_DB_PASSWORD`
+（用户 `postgres`），再将 `LogicDeletePostgresTest,LogicDeleteSchemaPostgresTest` 加入 `-Dtest`。
+未设置连接地址时跳过实库测试。覆盖 SIMPLE/BATCH/REUSE、逐条参数校验、租户切换、
+跨 schema 同名表、引号名称及 schema 表的增删改查。
+每项测试仅使用事务内临时表，结束后回滚并关闭连接；无需修改项目业务库配置。

@@ -1,10 +1,11 @@
 package com.agent.platform.config.plugins.inner.other;
 
-import java.util.function.Consumer;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.statement.select.SubSelect;
+
+import java.util.function.Consumer;
 
 /**
  * JSqlParser 4.6 的窗口表达式默认 visitor 存在空指针及遗漏分区、FILTER 的问题。

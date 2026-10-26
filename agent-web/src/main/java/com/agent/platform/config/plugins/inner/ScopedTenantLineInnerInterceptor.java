@@ -7,8 +7,6 @@ import com.agent.platform.config.plugins.inner.other.WriteSqlSupport;
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
-import java.sql.Connection;
-import java.util.Objects;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
@@ -23,6 +21,9 @@ import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.update.Update;
 import org.apache.ibatis.executor.statement.StatementHandler;
+
+import java.sql.Connection;
+import java.util.Objects;
 
 /**
  * 租户策略入口：保留原生租户查询规则，扩展来源过滤、写入校验和安全 UPSERT。

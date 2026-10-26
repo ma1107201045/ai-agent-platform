@@ -1,7 +1,8 @@
 package com.agent.platform.config.plugins.inner.other;
 
-import java.util.List;
 import net.sf.jsqlparser.statement.select.Join;
+
+import java.util.List;
 
 /**
  * 公共基类不能安全改写的连接形式必须显式失败，不能静默遗漏过滤条件。

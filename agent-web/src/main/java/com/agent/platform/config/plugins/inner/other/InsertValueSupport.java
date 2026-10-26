@@ -1,17 +1,18 @@
 package com.agent.platform.config.plugins.inner.other;
 
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.RowConstructor;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.values.ValuesStatement;
+
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /**
  * 给 INSERT 的每行或每个 SELECT 分支追加一个值，不改变原有 JDBC 参数顺序。

@@ -1,14 +1,15 @@
 package com.agent.platform.config.plugins.inner.other;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
-import java.math.BigDecimal;
-import java.util.function.Supplier;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.update.Update;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.session.Configuration;
+
+import java.math.BigDecimal;
+import java.util.function.Supplier;
 
 /**
  * 租户写入规则及实际 MyBatis 参数读取；与 SQL 遍历、写入生命周期分离。

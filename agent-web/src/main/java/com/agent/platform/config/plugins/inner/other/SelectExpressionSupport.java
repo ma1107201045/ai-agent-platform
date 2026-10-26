@@ -1,10 +1,11 @@
 package com.agent.platform.config.plugins.inner.other;
 
-import java.util.function.Consumer;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+
+import java.util.function.Consumer;
 
 /**
  * 公共基类未遍历的 SELECT 表达式位置；子查询作用域由调用方处理。

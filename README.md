@@ -86,9 +86,6 @@ mvn test        # 全模块：引擎 DAG/变量渲染、SafeMvel 沙箱、限流
 
 ## 文档
 
-- [SQL 插件使用说明](agent-web/src/main/java/com/agent/platform/config/plugins/README.md) —— 租户隔离、逻辑删除、忽略注解、schema 配置与测试
-- [SQL 插件实现设计](agent-web/src/main/java/com/agent/platform/config/plugins/DESIGN.md) —— 公共机制、写入生命周期与维护约束
-
 - `docs/project-analysis.md` —— 项目分析报告（2026-09 快照，部分已过时）
 - `docs/orchestrator-改造交付说明.md` —— 工作流引擎改造说明
 - `sql/README.md` —— 数据库脚本使用与变更约定

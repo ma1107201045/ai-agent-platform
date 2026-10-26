@@ -1,12 +1,13 @@
 package com.agent.platform.config.plugins.inner.other;
 
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
+import org.apache.ibatis.executor.statement.StatementHandler;
+import org.apache.ibatis.mapping.SqlCommandType;
+
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.Objects;
-import org.apache.ibatis.executor.statement.StatementHandler;
-import org.apache.ibatis.mapping.SqlCommandType;
 
 /**
  * 两个写入钩子共用的幂等入口；状态跟随实际 BoundSql，不跟随被复用的 Statement。
