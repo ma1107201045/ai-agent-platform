@@ -40,11 +40,17 @@
         <jjwt.version>0.12.5</jjwt.version>
         <mvel.version>2.5.2.Final</mvel.version>
         <pdfbox.version>3.0.8</pdfbox.version>
+        <commons-csv.version>1.10.0</commons-csv.version>
         <poi.version>5.2.5</poi.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-csv</artifactId>
+                <version>${commons-csv.version}</version>
+            </dependency>
             <!-- 内部模块 -->
             <dependency>
                 <groupId>com.agent</groupId>

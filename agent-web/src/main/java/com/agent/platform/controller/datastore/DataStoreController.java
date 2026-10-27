@@ -90,7 +90,9 @@ public class DataStoreController {
         return Result.ok();
     }
 
-    /** 批量删除行记录 {ids: [...]}，返回实际删除行数 */
+    /**
+     * 批量删除行记录 {ids: [...]}，返回实际删除行数
+     */
     @PostMapping("/records/batch-delete")
     public Result<Map<String, Integer>> batchDeleteRecords(@RequestBody Map<String, List<Long>> body) {
         int removed = dataStoreService.deleteRecordBatch(body.get("ids"));
@@ -99,19 +101,25 @@ public class DataStoreController {
 
     // ---------- 导入导出 ----------
 
-    /** JSON 数组导入：[{列key: 值}, ...] */
+    /**
+     * JSON 数组导入：[{列key: 值}, ...]
+     */
     @PostMapping("/tables/{id}/import-json")
     public Result<Integer> importJson(@PathVariable Long id, @RequestBody List<Map<String, Object>> rows) {
         return Result.ok(dataStoreService.importJson(id, rows));
     }
 
-    /** CSV 文件导入：首行为表头（列名或列 key） */
+    /**
+     * CSV 文件导入：首行为表头（列名或列 key）
+     */
     @PostMapping(value = "/tables/{id}/import-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<Integer> importCsv(@PathVariable Long id, @RequestParam("file") MultipartFile file) throws IOException {
         return Result.ok(dataStoreService.importCsv(id, file));
     }
 
-    /** 导出为 CSV（UTF-8 BOM），触发浏览器下载 */
+    /**
+     * 导出为 CSV（UTF-8 BOM），触发浏览器下载
+     */
     @GetMapping("/tables/{id}/export-csv")
     public ResponseEntity<String> exportCsv(@PathVariable Long id) {
         String csv = dataStoreService.exportCsv(id);

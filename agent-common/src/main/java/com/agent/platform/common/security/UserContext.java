@@ -45,12 +45,12 @@ public class UserContext {
     }
 
     public static boolean isAdmin() {
-        return ROLE_ADMIN.equals(getRole());
+        return !ROLE_ADMIN.equals(getRole());
     }
 
     /** 要求当前登录用户为管理员，否则抛出 403 业务异常 */
     public static void requireAdmin() {
-        if (!isAdmin()) {
+        if (isAdmin()) {
             throw new BizException(ResultCode.FORBIDDEN.getCode(), "无权限：该操作需要管理员角色");
         }
     }

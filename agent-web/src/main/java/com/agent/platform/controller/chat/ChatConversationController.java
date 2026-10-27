@@ -31,7 +31,9 @@ public class ChatConversationController {
     private final ChatConversationService conversationService;
     private final ExecutorService streamExecutor = Executors.newCachedThreadPool();
 
-    /** 当前用户的会话列表（可按应用、对话模式过滤） */
+    /**
+     * 当前用户的会话列表（可按应用、对话模式过滤）
+     */
     @GetMapping
     public Result<Page<ChatConversation>> page(@RequestParam(required = false) Long appId,
                                                @RequestParam(required = false) String mode,
@@ -40,7 +42,9 @@ public class ChatConversationController {
         return Result.ok(conversationService.page(appId, mode, page, size, UserContext.getUserId()));
     }
 
-    /** 创建会话 */
+    /**
+     * 创建会话
+     */
     @PostMapping
     public Result<ChatConversation> create(@RequestBody ChatConversationCreateDTO req) {
         return Result.ok(conversationService.create(
@@ -52,40 +56,52 @@ public class ChatConversationController {
                 req.getModelId()));
     }
 
-    /** 会话详情 */
+    /**
+     * 会话详情
+     */
     @GetMapping("/{id}")
     public Result<ChatConversation> getById(@PathVariable Long id) {
         return Result.ok(conversationService.getById(id, UserContext.getUserId()));
     }
 
-    /** 重命名会话 */
+    /**
+     * 重命名会话
+     */
     @PutMapping("/{id}")
     public Result<Void> rename(@PathVariable Long id, @RequestBody ChatConversationRenameDTO req) {
         conversationService.rename(id, UserContext.getUserId(), req.getTitle());
         return Result.ok();
     }
 
-    /** 删除会话（连带删除消息） */
+    /**
+     * 删除会话（连带删除消息）
+     */
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         conversationService.delete(id, UserContext.getUserId());
         return Result.ok();
     }
 
-    /** 批量删除会话 {ids: [...]}，返回实际删除数量 */
+    /**
+     * 批量删除会话 {ids: [...]}，返回实际删除数量
+     */
     @PostMapping("/batch-delete")
     public Result<Map<String, Integer>> batchDelete(@RequestBody Map<String, List<Long>> body) {
         int removed = conversationService.deleteBatch(body.get("ids"), UserContext.getUserId());
         return Result.ok(Map.of("removed", removed));
     }
 
-    /** 会话消息列表 */
+    /**
+     * 会话消息列表
+     */
     @GetMapping("/{id}/messages")
     public Result<List<ChatMessage>> messages(@PathVariable Long id) {
         return Result.ok(conversationService.messages(id, UserContext.getUserId()));
     }
 
-    /** 发送消息（非流式；直连模型 / 工作流通用） */
+    /**
+     * 发送消息（非流式；直连模型 / 工作流通用）
+     */
     @PostMapping("/{id}/messages")
     public Result<ChatMessage> send(@PathVariable Long id, @RequestBody ChatConversationSendDTO req) {
         return Result.ok(conversationService.send(id, UserContext.getUserId(), req.getContent(), req.getModelId()));

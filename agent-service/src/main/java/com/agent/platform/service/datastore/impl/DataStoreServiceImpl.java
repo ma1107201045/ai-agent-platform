@@ -15,6 +15,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -22,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -284,7 +289,18 @@ public class DataStoreServiceImpl implements DataStoreService {
         List<DataColumnDefDTO> columns = parseColumns(table.getColumnsJson());
         List<List<String>> lines;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-            lines = readCsv(reader);
+            reader.mark(1);
+            if (reader.read() != '\uFEFF') {
+                reader.reset();
+            }
+            try (CSVParser parser = CSVFormat.RFC4180.parse(reader)) {
+                lines = new ArrayList<>();
+                for (CSVRecord record : parser.getRecords()) {
+                    lines.add(record.toList());
+                }
+            } catch (UncheckedIOException e) {
+                throw e.getCause();
+            }
         }
         if (lines.size() < 2) {
             throw new BizException("CSV 至少需要 1 行表头和 1 行数据");
@@ -326,26 +342,27 @@ public class DataStoreServiceImpl implements DataStoreService {
                 .orderByAsc(DataRecord::getId));
         StringBuilder sb = new StringBuilder();
         sb.append('\uFEFF'); // Excel 中文兼容 BOM
-        for (int i = 0; i < columns.size(); i++) {
-            if (i > 0) sb.append(',');
-            sb.append(csvField(columns.get(i).getLabel() == null || columns.get(i).getLabel().isBlank()
-                    ? columns.get(i).getKey() : columns.get(i).getLabel()));
-        }
-        sb.append("\r\n");
-        for (DataRecord record : records) {
-            Map<String, Object> row;
-            try {
-                row = objectMapper.readValue(record.getDataJson(), new TypeReference<Map<String, Object>>() {});
-            } catch (IOException e) {
-                log.warn("解析行数据失败 id={}: {}", record.getId(), e.getMessage());
-                continue;
+        try (CSVPrinter printer = new CSVPrinter(sb, CSVFormat.RFC4180)) {
+            printer.printRecord(columns.stream()
+                    .map(col -> StringUtils.hasText(col.getLabel()) ? col.getLabel() : col.getKey())
+                    .toList());
+            for (DataRecord record : records) {
+                Map<String, Object> row;
+                try {
+                    row = objectMapper.readValue(record.getDataJson(), new TypeReference<Map<String, Object>>() {});
+                } catch (IOException e) {
+                    log.warn("解析行数据失败 id={}: {}", record.getId(), e.getMessage());
+                    continue;
+                }
+                List<String> values = new ArrayList<>(columns.size());
+                for (DataColumnDefDTO column : columns) {
+                    Object value = row.get(column.getKey());
+                    values.add(value == null ? "" : String.valueOf(value));
+                }
+                printer.printRecord(values);
             }
-            for (int i = 0; i < columns.size(); i++) {
-                if (i > 0) sb.append(',');
-                Object value = row.get(columns.get(i).getKey());
-                sb.append(csvField(value == null ? "" : String.valueOf(value)));
-            }
-            sb.append("\r\n");
+        } catch (IOException e) {
+            throw new BizException("CSV 导出失败: " + e.getMessage());
         }
         return sb.toString();
     }
@@ -499,73 +516,4 @@ public class DataStoreServiceImpl implements DataStoreService {
         return record;
     }
 
-    /** 简易 RFC4180 CSV 解析：支持引号包裹字段与字段内逗号/引号（"" 转义） */
-    private List<List<String>> readCsv(BufferedReader reader) throws IOException {
-        List<List<String>> rows = new ArrayList<>();
-        List<String> row = new ArrayList<>();
-        StringBuilder cell = new StringBuilder();
-        boolean inQuote = false;
-        int c;
-        while ((c = reader.read()) != -1) {
-            char ch = (char) c;
-            if (inQuote) {
-                if (ch == '"') {
-                    int next = reader.read();
-                    if (next == -1) {
-                        inQuote = false;
-                    } else if (next == '"') {
-                        cell.append('"');
-                    } else {
-                        inQuote = false;
-                        // 引号结束后的普通字符（逗号/换行）按行外逻辑处理
-                        if (consumeCsvChar((char) next, row, cell)) {
-                            rows.add(row);
-                            row = new ArrayList<>();
-                        }
-                    }
-                } else {
-                    cell.append(ch);
-                }
-            } else if (ch == '"') {
-                inQuote = true;
-            } else if (consumeCsvChar(ch, row, cell)) {
-                rows.add(row);
-                row = new ArrayList<>();
-            }
-        }
-        // 收尾：无换行结尾的最后一个单元格
-        if (!cell.isEmpty() || !row.isEmpty()) {
-            row.add(cell.toString());
-            cell.setLength(0);
-        }
-        if (!row.isEmpty()) {
-            rows.add(row);
-        }
-        return rows;
-    }
-
-    /** 处理 CSV 行外普通字符；返回 true 表示已结束一行（换行） */
-    private boolean consumeCsvChar(char ch, List<String> row, StringBuilder cell) {
-        if (ch == ',') {
-            row.add(cell.toString());
-            cell.setLength(0);
-        } else if (ch == '\n') {
-            row.add(cell.toString());
-            cell.setLength(0);
-            return true;
-        } else if (ch != '\r') {
-            cell.append(ch);
-        }
-        return false;
-    }
-
-    private String csvField(String value) {
-        if (value == null) {
-            return "";
-        }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
-    }
 }

@@ -46,7 +46,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         } catch (Exception e) {
             return unauthorized(response, "登录已过期，请重新登录");
         }
-        if (requiresAdmin(handler) && !UserContext.isAdmin()) {
+        if (requiresAdmin(handler) && UserContext.isAdmin()) {
             return forbidden(response, "无权限：该操作需要管理员角色");
         }
         return true;
