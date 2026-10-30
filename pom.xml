@@ -42,6 +42,8 @@
         <pdfbox.version>3.0.8</pdfbox.version>
         <commons-csv.version>1.10.0</commons-csv.version>
         <poi.version>5.2.5</poi.version>
+        <fastexcel.version>1.3.0</fastexcel.version>
+        <wxjava.version>4.8.0</wxjava.version>
     </properties>
 
     <dependencyManagement>
@@ -147,8 +149,32 @@
             </dependency>
 
 
+
         </dependencies>
     </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>cn.idev.excel</groupId>
+            <artifactId>fastexcel</artifactId>
+            <version>${fastexcel.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>wx-java-cp-spring-boot-starter</artifactId>
+            <version>${wxjava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>wx-java-mp-spring-boot-starter</artifactId>
+            <version>${wxjava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>
+            <version>${wxjava.version}</version>
+        </dependency>
+    </dependencies>
 
     <build>
         <pluginManagement>
