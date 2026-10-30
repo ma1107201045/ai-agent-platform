@@ -33,7 +33,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
-        <postgresql.version>42.7.4</postgresql.version>
+        <postgresql.version>42.7.12</postgresql.version>
         <pgvector.version>0.1.6</pgvector.version>
         <springdoc.version>2.5.0</springdoc.version>
         <lombok.version>1.18.48</lombok.version>
