@@ -111,8 +111,9 @@ async function handleLogin() {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #292b2f;
-  color: #f4f4f5;
+  background: var(--bg-aside);
+  color: var(--text-primary);
+  border-inline-end: 1px solid var(--border-color);
   padding: clamp(30px, 4.5vw, 76px);
 }
 .brand {
@@ -122,10 +123,6 @@ async function handleLogin() {
   font-size: 21px;
   font-weight: 650;
   letter-spacing: -0.7px;
-}
-.brand img {
-  border: 1px solid #696b71;
-  border-radius: 7px;
 }
 .studio-body {
   width: 100%;
@@ -140,7 +137,7 @@ async function handleLogin() {
   margin-bottom: 28px;
 }
 .blueprint {
-  border-block: 1px solid #62646a;
+  border-block: 1px solid var(--border-color);
 }
 figcaption {
   display: flex;
@@ -151,7 +148,7 @@ figcaption {
 }
 figcaption small {
   font-size: 12px;
-  color: #cccdd0;
+  color: var(--text-secondary);
 }
 .flow {
   list-style: none;
@@ -159,7 +156,7 @@ figcaption small {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   row-gap: 32px;
   padding: 26px 6px 44px;
-  background-image: radial-gradient(#484a50 1px, transparent 1px);
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
   background-size: 14px 14px;
 }
 .flow li {
@@ -168,8 +165,8 @@ figcaption small {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #34363b;
-  border: 1px solid #74777f;
+  background: var(--bg-card);
+  border: 1px solid var(--flow-edge);
   border-radius: 5px;
   min-height: 48px;
   font-size: 13px;
@@ -178,9 +175,9 @@ figcaption small {
 .flow li:nth-child(2) {
   grid-column: 2;
   grid-row: 2;
-  background: #e2e3e6;
-  border-color: #e2e3e6;
-  color: #292b2f;
+  background: var(--accent-surface);
+  border-color: var(--text-secondary);
+  font-weight: 600;
 }
 .flow li:nth-child(3) {
   grid-column: 3;
@@ -193,10 +190,11 @@ figcaption small {
   top: 100%;
   width: calc(100% + 1px);
   height: 32px;
+  --connector: linear-gradient(var(--text-tertiary), var(--text-tertiary));
   background:
-    linear-gradient(#a2a4aa, #a2a4aa) left top / 1px 50%,
-    linear-gradient(#a2a4aa, #a2a4aa) center / 100% 1px,
-    linear-gradient(#a2a4aa, #a2a4aa) right bottom / 1px 50%;
+    var(--connector) left top / 1px 50%,
+    var(--connector) center / 100% 1px,
+    var(--connector) right bottom / 1px 50%;
   background-repeat: no-repeat;
 }
 .entry {
@@ -261,6 +259,8 @@ figcaption small {
   }
   .studio {
     padding: 20px 24px;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--border-color);
   }
   .studio-body {
     display: none;

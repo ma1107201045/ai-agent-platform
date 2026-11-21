@@ -22,7 +22,7 @@ function readMode(): ThemeMode {
   } catch {
     /* localStorage 不可用时忽略 */
   }
-  return 'auto'
+  return 'light'
 }
 
 export const useThemeStore = defineStore('theme', () => {

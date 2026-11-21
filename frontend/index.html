@@ -11,7 +11,7 @@
         try {
           var key = 'agentforge-theme-mode'
           var mode = localStorage.getItem(key)
-          if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') mode = 'auto'
+          if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') mode = 'light'
           var dark =
             mode === 'dark' ||
             (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
