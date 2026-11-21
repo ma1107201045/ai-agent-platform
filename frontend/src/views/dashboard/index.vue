@@ -1,309 +1,283 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Connection, Cpu, Files, MagicStick, Right } from '@element-plus/icons-vue'
+import { Box, Collection, Connection, Cpu, Files, Grid, Plus, Right } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
 import { modelApi } from '@/api/model'
 import { knowledgeApi } from '@/api/knowledge'
+import type { AppAgent } from '@/api/types'
+import { useUserStore } from '@/stores/user'
+import { formatTime } from '@/utils/format'
+import { typeLabels } from '@/views/app/agents/agentMeta'
+import CreateAppDialog from '@/views/app/agents/components/CreateAppDialog.vue'
 
-const router = useRouter()
-
+const user = useUserStore()
+const createDialog = ref<InstanceType<typeof CreateAppDialog>>()
+const apps = ref<AppAgent[]>([])
+const appCount = ref<number>()
+const datasetCount = ref<number>()
+const providerCount = ref<number>()
 const loading = ref(true)
-const stats = ref([
-  {
-    key: 'apps',
-    label: '智能体应用',
-    value: 0,
-    icon: MagicStick,
-    color: '#5b6cff',
-    bg: 'rgba(91,108,255,0.12)'
-  },
-  {
-    key: 'datasets',
-    label: '知识库数据集',
-    value: 0,
-    icon: Files,
-    color: '#8b5cf6',
-    bg: 'rgba(139,92,246,0.12)'
-  },
-  {
-    key: 'providers',
-    label: '模型供应商',
-    value: 0,
-    icon: Cpu,
-    color: '#0ea5e9',
-    bg: 'rgba(14,165,233,0.12)'
-  },
-  {
-    key: 'published',
-    label: '已发布应用',
-    value: 0,
-    icon: Connection,
-    color: '#10b981',
-    bg: 'rgba(16,185,129,0.12)'
-  }
-])
 
-const quickActions = [
-  {
-    title: '创建智能体应用',
-    desc: '对话流 / 工作流 / 智能体',
-    icon: MagicStick,
-    path: '/app/agents',
-    color: '#5b6cff'
-  },
-  {
-    title: '导入知识库',
-    desc: '文档切块、向量化、RAG 检索',
-    icon: Files,
-    path: '/data/knowledge',
-    color: '#8b5cf6'
-  },
-  {
-    title: '接入模型',
-    desc: '配置 DeepSeek 等供应商',
-    icon: Cpu,
-    path: '/models',
-    color: '#0ea5e9'
-  }
-]
+async function load() {
+  loading.value = true
+  const [applications, datasets, providers] = await Promise.allSettled([
+    appAgentApi.page({ page: 1, size: 5 }),
+    knowledgeApi.datasetPage({ page: 1, size: 1 }),
+    modelApi.providerPage({ page: 1, size: 1 })
+  ])
+  appCount.value = applications.status === 'fulfilled' ? applications.value.total : undefined
+  apps.value = applications.status === 'fulfilled' ? applications.value.records : []
+  datasetCount.value = datasets.status === 'fulfilled' ? datasets.value.total : undefined
+  providerCount.value = providers.status === 'fulfilled' ? providers.value.total : undefined
+  loading.value = false
+}
 
-onMounted(async () => {
-  try {
-    const [appRes, dsRes, pvRes] = await Promise.all([
-      appAgentApi.page({ page: 1, size: 1 }),
-      knowledgeApi.datasetPage({ page: 1, size: 1 }),
-      modelApi.providerPage({ page: 1, size: 1 })
-    ])
-    const published = appRes.records?.filter((a) => a.status === 1).length ?? 0
-    stats.value = [
-      { ...stats.value[0], value: appRes.total },
-      { ...stats.value[1], value: dsRes.total },
-      { ...stats.value[2], value: pvRes.total },
-      { ...stats.value[3], value: published }
-    ]
-  } finally {
-    loading.value = false
-  }
-})
+onMounted(load)
 </script>
 
 <template>
   <div class="dashboard">
-    <!-- 欢迎横幅 -->
-    <div class="welcome-banner">
-      <div class="welcome-glow glow-1"></div>
-      <div class="welcome-glow glow-2"></div>
-      <div class="welcome-text">
-        <h1>你好，欢迎回来 👋</h1>
-        <p>开始构建你的下一个 AI 智能体，从灵感走向生产。</p>
+    <header class="overview-head">
+      <h1>工作台概览</h1>
+      <el-button type="primary" :icon="Plus" @click="createDialog?.open()">新建应用</el-button>
+    </header>
+    <dl class="metrics" aria-label="工作空间资源数量" :aria-busy="loading">
+      <div>
+        <dt>
+          <el-icon><Grid /></el-icon>智能体应用
+        </dt>
+        <dd>{{ appCount ?? '—' }}</dd>
       </div>
-      <el-button class="btn-gradient welcome-btn" @click="router.push('/app/agents')">
-        创建应用
-      </el-button>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="stat-grid">
-      <div v-for="s in stats" :key="s.key" v-loading="loading" class="stat-card hover-card">
-        <div class="stat-icon" :style="{ background: s.bg, color: s.color }">
-          <el-icon :size="22"><component :is="s.icon" /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ loading ? '—' : s.value }}</div>
-          <div class="stat-label">{{ s.label }}</div>
-        </div>
+      <div>
+        <dt>
+          <el-icon><Files /></el-icon>知识库数据集
+        </dt>
+        <dd>{{ datasetCount ?? '—' }}</dd>
       </div>
-    </div>
-
-    <!-- 快捷操作 -->
-    <div class="section">
-      <div class="section-head">
-        <h3>快捷操作</h3>
+      <div>
+        <dt>
+          <el-icon><Cpu /></el-icon>模型供应商
+        </dt>
+        <dd>{{ providerCount ?? '—' }}</dd>
       </div>
-      <div class="quick-grid">
-        <div
-          v-for="q in quickActions"
-          :key="q.title"
-          class="quick-card hover-card"
-          @click="router.push(q.path)"
-        >
-          <div class="quick-icon" :style="{ background: `${q.color}18`, color: q.color }">
-            <el-icon :size="22"><component :is="q.icon" /></el-icon>
+    </dl>
+    <div class="work-sections">
+      <section>
+        <header class="section-head">
+          <h2>最近创建的应用</h2>
+          <router-link to="/app/agents"
+            >全部应用 <el-icon><Right /></el-icon
+          ></router-link>
+        </header>
+        <div class="recent-list" :aria-busy="loading">
+          <p v-if="loading" class="list-note">正在读取应用…</p>
+          <div v-else-if="appCount === undefined" class="list-note">
+            应用列表暂时无法加载<el-button link type="primary" @click="load">重试</el-button>
           </div>
-          <div class="quick-body">
-            <div class="quick-title">{{ q.title }}</div>
-            <div class="quick-desc">{{ q.desc }}</div>
+          <div v-else-if="!apps.length" class="list-note">
+            <el-icon :size="26"><Box /></el-icon>
+            <p>还没有应用</p>
+            <el-button link type="primary" @click="createDialog?.open()">创建第一个应用</el-button>
           </div>
-          <el-icon class="quick-arrow"><Right /></el-icon>
+          <router-link
+            v-for="app in apps"
+            :key="app.id"
+            class="recent-row"
+            :to="`/app/agents/${app.id}/edit`"
+          >
+            <span class="row-info"
+              ><strong>{{ app.name }}</strong
+              ><small
+                >{{ typeLabels[app.type] || app.type }} · {{ formatTime(app.createTime) }}</small
+              ></span
+            >
+            <span class="status" :class="{ published: app.status === 1 }">{{
+              app.status === 1 ? '已发布' : '草稿'
+            }}</span>
+            <el-icon><Right /></el-icon>
+          </router-link>
         </div>
-      </div>
+      </section>
+      <section>
+        <header class="section-head"><h2>常用入口</h2></header>
+        <nav class="shortcuts" aria-label="常用入口">
+          <router-link to="/data/knowledge"
+            ><el-icon><Collection /></el-icon>管理知识库<el-icon><Right /></el-icon
+          ></router-link>
+          <router-link :to="user.isAdmin ? '/models' : '/models/playground'"
+            ><el-icon><Cpu /></el-icon>{{ user.isAdmin ? '接入模型' : '模型广场'
+            }}<el-icon><Right /></el-icon
+          ></router-link>
+          <router-link to="/publish"
+            ><el-icon><Connection /></el-icon>已发布应用<el-icon><Right /></el-icon
+          ></router-link>
+        </nav>
+      </section>
     </div>
+    <CreateAppDialog ref="createDialog" @created="load" />
   </div>
 </template>
 
 <style scoped>
 .dashboard {
-  padding: 24px;
-  max-width: 1280px;
+  max-width: 1360px;
   margin: 0 auto;
+  padding: clamp(24px, 3.5vw, 54px) clamp(16px, 3.5vw, 54px);
 }
-
-/* ---------- 欢迎横幅 ---------- */
-.welcome-banner {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(120deg, #5b6cff 0%, #7c4dff 60%, #9b5cff 100%);
-  padding: 36px 40px;
+.overview-head,
+.section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #fff;
-  box-shadow: 0 12px 32px rgba(91, 108, 255, 0.28);
+  gap: 10px;
 }
-.welcome-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(50px);
-  opacity: 0.5;
-  animation: pulse 6s ease-in-out infinite;
+.overview-head {
+  margin-bottom: 28px;
 }
-.glow-1 {
-  width: 260px;
-  height: 260px;
-  background: #ff8f6b;
-  top: -90px;
-  right: 8%;
+h1 {
+  font-size: clamp(22px, 2.4vw, 34px);
+  letter-spacing: -0.045em;
+  font-weight: 620;
 }
-.glow-2 {
-  width: 200px;
-  height: 200px;
-  background: #5be3ff;
-  bottom: -80px;
-  left: 20%;
-  animation-delay: 3s;
+h2 {
+  font-size: 17px;
+  font-weight: 600;
 }
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.15);
-  }
-}
-.welcome-text {
-  position: relative;
-  z-index: 1;
-}
-.welcome-text h1 {
-  font-size: 26px;
-  font-weight: 700;
-}
-.welcome-text p {
-  margin-top: 10px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-}
-.welcome-btn {
-  position: relative;
-  z-index: 1;
-  background: #fff !important;
-  color: #5b6cff !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-}
-
-/* ---------- 统计卡片 ---------- */
-.stat-grid {
+.metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--border-color);
+  border-top: 2px solid var(--brand-1);
+  background: var(--bg-card);
+  border-radius: 5px;
 }
-.stat-card {
+.metrics > div {
+  padding: clamp(14px, 2.3vw, 32px);
+}
+.metrics > div + div {
+  border-left: 1px solid var(--border-color);
+}
+dt {
   display: flex;
+  gap: 8px;
   align-items: center;
-  gap: 14px;
-  padding: 20px;
-}
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.stat-value {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-.stat-label {
-  margin-top: 4px;
   font-size: 13px;
   color: var(--text-secondary);
 }
-
-/* ---------- 快捷操作 ---------- */
-.section {
-  margin-top: 28px;
+dd {
+  margin-top: 12px;
+  font-size: clamp(28px, 3.4vw, 46px);
+  font-weight: 520;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
 }
-.section-head h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 14px;
-}
-.quick-grid {
+.work-sections {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.9fr) minmax(190px, 1fr);
+  gap: clamp(22px, 3vw, 44px);
+  margin-top: 38px;
 }
-.quick-card {
+.section-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.section-head a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--brand-1);
+}
+.recent-row,
+.shortcuts a {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 20px;
-  cursor: pointer;
+  gap: 12px;
+  padding: 15px 4px;
+  border-bottom: 1px solid var(--border-color);
 }
-.quick-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.recent-row:hover,
+.shortcuts a:hover {
+  background: var(--accent-surface);
 }
-.quick-body {
+.row-info {
   flex: 1;
   min-width: 0;
 }
-.quick-title {
-  font-size: 14.5px;
+.row-info strong,
+.row-info small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-info strong {
+  font-size: 14px;
   font-weight: 600;
 }
-.quick-desc {
-  margin-top: 3px;
-  font-size: 12.5px;
-  color: var(--text-tertiary);
+.row-info small {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
-.quick-arrow {
-  color: var(--text-tertiary);
-  transition: transform 0.2s ease;
+.status {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
-.quick-card:hover .quick-arrow {
-  transform: translateX(4px);
+.published {
+  color: var(--published-text);
 }
-
-@media (max-width: 1100px) {
-  .stat-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .quick-grid {
+.shortcuts a {
+  font-size: 14px;
+  min-height: 54px;
+}
+.shortcuts .el-icon:last-child {
+  margin-left: auto;
+}
+.recent-row > .el-icon,
+.shortcuts .el-icon {
+  color: var(--text-secondary);
+}
+.list-note {
+  padding: 32px 12px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+@media (max-width: 950px) {
+  .work-sections {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .dashboard {
+    padding: 22px 12px;
+  }
+  .overview-head {
+    margin-bottom: 18px;
+  }
+  .metrics > div {
+    padding: 14px 7px;
+  }
+  dt {
+    font-size: 12px;
+  }
+  dt .el-icon {
+    display: none;
+  }
+  .work-sections {
+    margin-top: 24px;
+  }
+  .recent-row {
+    gap: 6px;
   }
 }
 </style>

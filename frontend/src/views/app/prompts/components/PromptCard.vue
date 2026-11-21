@@ -9,7 +9,7 @@ import {
   VideoPlay
 } from '@element-plus/icons-vue'
 import type { PromptTemplate } from '@/api/types'
-import { categoryLabelOf, coverGradientOf } from '../promptMeta'
+import { categoryLabelOf } from '../promptMeta'
 import { formatTime } from '@/utils/format'
 
 defineProps<{ row: PromptTemplate }>()
@@ -25,10 +25,8 @@ const emit = defineEmits<{
 
 <template>
   <div class="prompt-card hover-card">
-    <!-- 渐变封面 -->
-    <div class="prompt-cover" :style="{ background: coverGradientOf(row.category) }">
-      <div class="cover-deco"></div>
-      <el-icon :size="32" class="cover-icon"><Collection /></el-icon>
+    <div class="prompt-cover">
+      <el-icon :size="16"><Collection /></el-icon>
       <span v-if="row.category" class="cover-category">{{ categoryLabelOf(row.category) }}</span>
     </div>
 
@@ -49,32 +47,31 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- hover 浮现操作 -->
     <div class="prompt-actions">
       <el-tooltip content="编辑模板" placement="top">
-        <div class="action-btn" @click="emit('edit', row)">
+        <button aria-label="编辑模板" class="action-btn" @click="emit('edit', row)">
           <el-icon :size="16"><Edit /></el-icon>
-        </div>
+        </button>
       </el-tooltip>
       <el-tooltip content="版本历史" placement="top">
-        <div class="action-btn" @click="emit('versions', row)">
+        <button aria-label="版本历史" class="action-btn" @click="emit('versions', row)">
           <el-icon :size="16"><Clock /></el-icon>
-        </div>
+        </button>
       </el-tooltip>
       <el-tooltip content="调试试跑" placement="top">
-        <div class="action-btn" @click="emit('debug', row)">
+        <button aria-label="调试试跑" class="action-btn" @click="emit('debug', row)">
           <el-icon :size="16"><VideoPlay /></el-icon>
-        </div>
+        </button>
       </el-tooltip>
       <el-tooltip :content="row.status === 1 ? '禁用' : '启用'" placement="top">
-        <div class="action-btn" @click="emit('toggle', row)">
+        <button aria-label="切换启用状态" class="action-btn" @click="emit('toggle', row)">
           <el-icon :size="16"><Promotion /></el-icon>
-        </div>
+        </button>
       </el-tooltip>
       <el-tooltip content="删除" placement="top">
-        <div class="action-btn danger" @click="emit('remove', row)">
+        <button aria-label="删除" class="action-btn danger" @click="emit('remove', row)">
           <el-icon :size="16"><Delete /></el-icon>
-        </div>
+        </button>
       </el-tooltip>
     </div>
   </div>
@@ -84,62 +81,18 @@ const emit = defineEmits<{
 .prompt-card {
   position: relative;
   overflow: hidden;
-  cursor: pointer;
   display: flex;
   flex-direction: column;
 }
 
-/* 渐变封面（对齐智能体应用卡片） */
 .prompt-cover {
-  position: relative;
-  height: 92px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
+  gap: 6px;
+  padding: 16px 16px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
-.cover-deco {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  top: -80px;
-  right: -50px;
-}
-.cover-deco::after {
-  content: '';
-  position: absolute;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  bottom: -60px;
-  left: -30px;
-}
-.cover-icon {
-  position: relative;
-  z-index: 1;
-  color: #fff;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.22));
-  transition: transform 0.25s ease;
-}
-.prompt-card:hover .cover-icon {
-  transform: scale(1.18) rotate(-6deg);
-}
-.cover-category {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.92);
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 9px;
-  border-radius: 10px;
-  backdrop-filter: blur(4px);
-}
-
 /* 信息区 */
 .prompt-body {
   padding: 13px 16px 14px;
@@ -194,48 +147,32 @@ const emit = defineEmits<{
   color: var(--text-tertiary);
 }
 
-/* hover 从底部浮现操作（对齐智能体应用卡片） */
 .prompt-actions {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px 16px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  background: linear-gradient(180deg, transparent, var(--bg-card) 34%);
-  opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 0.22s ease,
-    transform 0.22s ease;
-}
-.prompt-card:hover .prompt-actions {
-  opacity: 1;
-  transform: translateY(0);
-}
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: var(--brand-gradient-soft);
-  color: var(--brand-1);
-  transition: all 0.18s ease;
+  gap: 8px;
+  padding: 5px 12px;
+  border-top: 1px solid var(--border-color);
+}
+.action-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
 }
 .action-btn:hover {
-  background: var(--brand-gradient);
-  color: #fff;
+  color: var(--brand-1);
+  background: var(--accent-surface);
 }
 .action-btn.danger {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  margin-left: auto;
 }
 .action-btn.danger:hover {
-  background: #ef4444;
-  color: #fff;
+  color: var(--el-color-danger);
 }
 </style>

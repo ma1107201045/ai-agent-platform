@@ -2,7 +2,7 @@
 import { Clock } from '@element-plus/icons-vue'
 import type { Skill } from '@/api/types'
 import { formatTime } from '@/utils/format'
-import { coverGradientOf, categoryLabelOf, typeLabelOf, typeMeta, parseIdList } from '../skillMeta'
+import { categoryLabelOf, typeLabelOf, typeMeta, parseIdList } from '../skillMeta'
 
 /** 技能卡片：封面/标签/依赖/操作 */
 const props = defineProps<{
@@ -27,7 +27,7 @@ const datasetNameOf = (id: number) =>
 <template>
   <div class="skill-card hover-card">
     <div class="card-top">
-      <div class="card-icon" :style="{ background: coverGradientOf(row.category) }">
+      <div class="card-icon">
         {{ row.icon || typeMeta[row.type]?.icon || '⚡' }}
       </div>
       <div class="card-tags">
@@ -107,6 +107,7 @@ const datasetNameOf = (id: number) =>
   gap: 8px;
 }
 .card-icon {
+  background: var(--accent-surface);
   width: 44px;
   height: 44px;
   border-radius: 12px;

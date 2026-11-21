@@ -7,18 +7,6 @@ export const categoryOptions = [
   { value: 'custom', label: '自定义', desc: '个人自定义能力' }
 ]
 
-const coverGradients: Record<string, [string, string]> = {
-  general: ['#64748b', '#94a3b8'],
-  system: ['#d97706', '#f59e0b'],
-  business: ['#059669', '#34d399'],
-  custom: ['#4f46e5', '#8b5cf6']
-}
-
-export function coverGradientOf(c?: string): string {
-  const g = (c && coverGradients[c]) || coverGradients.general
-  return `linear-gradient(135deg, ${g[0]} 0%, ${g[1]} 100%)`
-}
-
 export function categoryLabelOf(c?: string): string {
   const it = categoryOptions.find((x) => x.value === c)
   return it ? it.label : c || ''

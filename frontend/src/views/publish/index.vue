@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { CopyDocument, Promotion, Right } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent'
 import type { AppAgent, AppAgentVersion, AppAgentStats } from '@/api/types'
+import { typeMeta } from '@/views/app/agents/agentMeta'
 import { formatTime } from '@/utils/format'
 import { copyText } from '@/utils/clipboard'
 
@@ -12,23 +13,6 @@ const loading = ref(false)
 const list = ref<AppAgent[]>([])
 const versions = ref<Record<number, AppAgentVersion>>({})
 const stats = ref<Record<number, AppAgentStats>>({})
-
-const typeMeta: Record<string, { label: string; icon: string; color: string }> = {
-  chatflow: { label: '对话流', icon: '💬', color: '#5b6cff' },
-  workflow: { label: '工作流', icon: '⚙️', color: '#0ea5e9' },
-  agent: { label: '智能体', icon: '🤖', color: '#8b5cf6' }
-}
-
-const coverColors: Record<string, [string, string]> = {
-  chatflow: ['#5b6cff', '#8b5cf6'],
-  workflow: ['#0ea5e9', '#5b6cff'],
-  agent: ['#8b5cf6', '#d946ef']
-}
-
-const gradientOf = (row: AppAgent) => {
-  const c = coverColors[row.type] || coverColors.chatflow
-  return `linear-gradient(135deg, ${c[0]} 0%, ${c[1]} 100%)`
-}
 
 const publicUrl = (id: number) => `${location.origin}/public/${id}`
 
@@ -65,7 +49,7 @@ onMounted(load)
     <div class="publish-head">
       <div>
         <h2 class="head-title">发布与集成</h2>
-        <p class="head-desc">将智能体能力嵌入现有业务流：WebApp 链接、线上版本与运行数据</p>
+        <p class="head-desc">查看已发布版本、访问链接和会话数量。</p>
       </div>
       <el-button type="primary" class="btn-gradient" @click="router.push('/app/agents')">
         <el-icon><Right /></el-icon>&nbsp;去应用列表
@@ -74,8 +58,8 @@ onMounted(load)
 
     <div v-loading="loading" class="pub-grid">
       <div v-for="row in list" :key="row.id" class="pub-card hover-card">
-        <div class="pub-cover" :style="{ background: gradientOf(row) }">
-          <span class="pub-icon">{{ typeMeta[row.type]?.icon }}</span>
+        <div class="pub-cover">
+          <el-icon><component :is="typeMeta[row.type]?.icon" /></el-icon>
           <span class="pub-type">{{ typeMeta[row.type]?.label }}</span>
         </div>
         <div class="pub-body">
@@ -152,7 +136,7 @@ onMounted(load)
 
 .pub-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 20px;
   min-height: 200px;
 }
@@ -163,25 +147,12 @@ onMounted(load)
   flex-direction: column;
 }
 .pub-cover {
-  position: relative;
-  height: 76px;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-.pub-icon {
-  font-size: 30px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-}
-.pub-type {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 10px;
+  gap: 6px;
+  padding: 16px 16px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 .pub-body {
   padding: 14px 16px 16px;

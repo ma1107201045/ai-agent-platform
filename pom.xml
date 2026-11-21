@@ -159,21 +159,21 @@
             <version>${fastexcel.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.github.binarywang</groupId>
-            <artifactId>wx-java-cp-spring-boot-starter</artifactId>
-            <version>${wxjava.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.binarywang</groupId>
-            <artifactId>wx-java-mp-spring-boot-starter</artifactId>
-            <version>${wxjava.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.binarywang</groupId>
-            <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>
-            <version>${wxjava.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.github.binarywang</groupId>-->
+<!--            <artifactId>wx-java-cp-spring-boot-starter</artifactId>-->
+<!--            <version>${wxjava.version}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.github.binarywang</groupId>-->
+<!--            <artifactId>wx-java-mp-spring-boot-starter</artifactId>-->
+<!--            <version>${wxjava.version}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.github.binarywang</groupId>-->
+<!--            <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>-->
+<!--            <version>${wxjava.version}</version>-->
+<!--        </dependency>-->
     </dependencies>
 
     <build>

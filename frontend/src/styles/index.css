@@ -1,6 +1,3 @@
-/* ============================================================
-   全局设计令牌 & 基础样式（现代 AI 平台风格）
-   ============================================================ */
 * {
   margin: 0;
   padding: 0;
@@ -8,112 +5,81 @@
 }
 
 :root {
-  /* 品牌色 */
-  --brand-1: #5b6cff;
-  --brand-2: #8b5cf6;
-  --brand-3: #4facfe;
-  --color-primary: #5b6cff; /* 主色（与 Element 主色一致），供页面 var(--color-primary) 使用 */
-  --brand-gradient: linear-gradient(135deg, #5b6cff 0%, #8b5cf6 100%);
-  --brand-gradient-soft: linear-gradient(
-    135deg,
-    rgba(91, 108, 255, 0.12),
-    rgba(139, 92, 246, 0.12)
-  );
-
-  /* 背景 & 表面 */
-  --bg-page: #f5f7fc;
+  --brand-1: #34363a;
+  --brand-2: #42454a;
+  --brand-3: #51555b;
+  --action-bg: #34363a;
+  --action-hover: #24262a;
+  --accent-surface: #e8e9eb;
+  --published-text: #27634e;
+  --published-bg: #e8f0eb;
+  --bg-page: #f7f7f8;
   --bg-card: #ffffff;
-  --bg-elevated: #ffffff; /* 弹层 / 下拉 / 抽屉 */
-  --bg-header: rgba(255, 255, 255, 0.85);
-  --bg-aside: rgba(255, 255, 255, 0.9);
-  --fill-light: #f5f7fa; /* 次级填充 */
-  --fill-lighter: #fafbfe; /* 更浅的填充 */
-  --bg-fill: #f5f7fa; /* 次级填充别名（组件内 var(--bg-fill, #f5f7fa) 使用，需随主题切换） */
-  --border-color: #e8ecf4;
-  --hover-bg: rgba(31, 36, 55, 0.06);
-
-  /* 流程画布（Vue Flow） */
-  --canvas-bg: #fafbfc;
-  --canvas-dot: rgba(148, 163, 184, 0.4);
-  --flow-edge: #c2c8d1;
-
-  /* 文本 */
-  --text-primary: #1f2437;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-
-  /* 圆角 / 阴影 */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --shadow-card: 0 1px 2px rgba(31, 36, 55, 0.04), 0 4px 12px rgba(31, 36, 55, 0.06);
-  --shadow-card-hover: 0 6px 16px rgba(31, 36, 55, 0.1), 0 12px 24px rgba(31, 36, 55, 0.12);
-  --shadow-pop: 0 12px 32px rgba(31, 36, 55, 0.14);
-
-  /* Element Plus 主题覆盖 */
-  --el-color-primary: #5b6cff;
-  --el-color-primary-light-3: #7c8aff;
-  --el-color-primary-light-5: #9da8ff;
-  --el-color-primary-light-7: #bec5ff;
-  --el-color-primary-light-8: #ced3ff;
-  --el-color-primary-light-9: #eef0ff;
-  --el-color-primary-dark-2: #4a57d6;
-  --el-border-radius-base: 8px;
-  --el-border-radius-small: 6px;
-  --el-border-radius-round: 20px;
-  --el-font-family:
-    'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial,
-    sans-serif;
-  --el-box-shadow-light: var(--shadow-card);
+  --bg-elevated: #ffffff;
+  --bg-aside: #f1f1f2;
+  --fill-light: #efeff0;
+  --fill-lighter: #fafafa;
+  --border-color: #dcdde0;
+  --hover-bg: #e7e7e9;
+  --canvas-bg: #fafafa;
+  --canvas-dot: #cecfd2;
+  --flow-edge: #a5a7ab;
+  --text-primary: #222326;
+  --text-secondary: #56585d;
+  --text-tertiary: #66686d;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --shadow-card: none;
+  --shadow-card-hover: 0 2px 6px rgb(32 33 36 / 6%);
+  --shadow-pop: 0 8px 24px rgb(32 33 36 / 14%);
+  --el-border-radius-base: 5px;
+  --el-border-radius-small: 4px;
+  --el-font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-/* ============================================================
-   暗色主题（html.dark 由 theme store 切换）
-   ============================================================ */
 html.dark {
-  --brand-1: #7d8bff;
-  --brand-2: #a78bfa;
-  --brand-3: #38bdf8;
-  --color-primary: #6b78ff; /* 主色（暗色，与 Element 主色一致） */
-  --brand-gradient: linear-gradient(135deg, #6b78ff 0%, #9b6bfa 100%);
-  --brand-gradient-soft: linear-gradient(
-    135deg,
-    rgba(109, 120, 255, 0.2),
-    rgba(155, 107, 250, 0.2)
-  );
+  --brand-1: #dedfe2;
+  --brand-2: #bfc1c5;
+  --brand-3: #9fa2a8;
+  --action-bg: #52555b;
+  --action-hover: #62656b;
+  --accent-surface: #37383c;
+  --published-text: #99cbb2;
+  --published-bg: #293b31;
+  --bg-page: #191a1c;
+  --bg-card: #222326;
+  --bg-elevated: #292a2e;
+  --bg-aside: #1e1f21;
+  --fill-light: #2e2f32;
+  --fill-lighter: #26272a;
+  --border-color: #3f4045;
+  --hover-bg: #37383c;
+  --canvas-bg: #1d1e21;
+  --canvas-dot: #494a4e;
+  --flow-edge: #717379;
+  --text-primary: #f1f1f2;
+  --text-secondary: #c5c6c9;
+  --text-tertiary: #aaabb0;
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 25%);
+}
 
-  --bg-page: #0f1220;
-  --bg-card: #171a2b;
-  --bg-elevated: #1c2033;
-  --bg-header: rgba(21, 24, 40, 0.82);
-  --bg-aside: rgba(21, 24, 40, 0.88);
-  --fill-light: #1e2233;
-  --fill-lighter: #1a1d2c;
-  --bg-fill: #1e2233; /* 与 --fill-light 同步，保证暗色下次级填充块正确换肤 */
-  --border-color: #2a2f47;
-  --hover-bg: rgba(255, 255, 255, 0.08);
-
-  --canvas-bg: #12151f;
-  --canvas-dot: rgba(120, 132, 165, 0.45);
-  --flow-edge: #3f4763;
-
-  --text-primary: #e6e8f0;
-  --text-secondary: #a3a9c2;
-  --text-tertiary: #737a94;
-
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.32);
-  --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.5), 0 12px 28px rgba(0, 0, 0, 0.42);
-  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
-
-  /* Element Plus 暗色主色同步 */
-  --el-color-primary: #6b78ff;
-  --el-color-primary-light-3: #808cff;
-  --el-color-primary-light-5: #99a3ff;
-  --el-color-primary-light-7: #b7bfff;
-  --el-color-primary-light-8: #c7ccff;
-  --el-color-primary-light-9: #1e2338;
-  --el-color-primary-dark-2: #5560d6;
+/* 同一组主题令牌用于界面、Element Plus 和现有业务组件。 */
+:root,
+html.dark {
+  --color-primary: var(--brand-1);
+  --brand-gradient: var(--action-bg);
+  --brand-gradient-soft: var(--accent-surface);
+  --bg-header: var(--bg-card);
+  --bg-fill: var(--fill-light);
+  --el-color-primary: var(--brand-1);
+  --el-color-primary-light-3: color-mix(in srgb, var(--brand-1) 76%, var(--bg-card));
+  --el-color-primary-light-5: color-mix(in srgb, var(--brand-1) 55%, var(--bg-card));
+  --el-color-primary-light-7: color-mix(in srgb, var(--brand-1) 30%, var(--bg-card));
+  --el-color-primary-light-8: color-mix(in srgb, var(--brand-1) 19%, var(--bg-card));
+  --el-color-primary-light-9: var(--accent-surface);
+  --el-color-primary-dark-2: var(--action-hover);
   --el-bg-color: var(--bg-card);
   --el-bg-color-page: var(--bg-page);
   --el-bg-color-overlay: var(--bg-elevated);
@@ -121,7 +87,7 @@ html.dark {
   --el-border-color-light: var(--border-color);
   --el-border-color-lighter: var(--border-color);
   --el-border-color-extra-light: var(--border-color);
-  --el-fill-color: #232840;
+  --el-fill-color: var(--fill-light);
   --el-fill-color-light: var(--fill-light);
   --el-fill-color-lighter: var(--fill-lighter);
   --el-fill-color-blank: var(--bg-card);
@@ -129,7 +95,7 @@ html.dark {
   --el-text-color-regular: var(--text-secondary);
   --el-text-color-secondary: var(--text-secondary);
   --el-text-color-placeholder: var(--text-tertiary);
-  --el-box-shadow-light: var(--shadow-card);
+  --el-box-shadow-light: var(--shadow-pop);
 }
 
 /* ---------- Vue Flow 暗色适配 ---------- */
@@ -207,7 +173,7 @@ body,
   margin-bottom: 16px;
 }
 
-/* ---------- 卡片 hover 上浮（通用交互） ---------- */
+/* 资源卡片 */
 .hover-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -219,14 +185,23 @@ body,
     border-color 0.25s ease;
 }
 .hover-card:hover {
-  border-color: rgba(91, 108, 255, 0.45);
+  border-color: var(--brand-1);
   box-shadow: var(--shadow-card-hover);
 }
 
-/* ---------- 渐变按钮 ---------- */
+/* 主操作 */
+.el-button--primary:not(.is-plain, .is-text, .is-link) {
+  --el-button-bg-color: var(--action-bg);
+  --el-button-border-color: var(--action-bg);
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: var(--action-hover);
+  --el-button-hover-border-color: var(--action-hover);
+  --el-button-active-bg-color: var(--action-hover);
+}
+
 .btn-gradient {
   border: none !important;
-  background: var(--brand-1) !important;
+  background: var(--action-bg) !important;
   color: #fff !important;
   transition:
     background-color 0.18s ease,
@@ -239,20 +214,32 @@ body,
   opacity: 0.9;
 }
 
-/* ---------- 页面切换过渡 ---------- */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  transition: opacity 0.12s ease;
 }
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(10px);
-}
+.fade-slide-enter-from,
 .fade-slide-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+}
+:focus-visible {
+  outline: 2px solid var(--brand-1);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-slide-enter-active,
+  .fade-slide-leave-active,
+  html.theme-transition * {
+    transition: none !important;
+  }
+}
+@media (max-width: 640px) {
+  .page-container {
+    padding: 20px 14px 28px;
+  }
+  .el-dialog {
+    max-width: calc(100vw - 24px);
+  }
 }
 
 /* ---------- 滚动条美化 ---------- */

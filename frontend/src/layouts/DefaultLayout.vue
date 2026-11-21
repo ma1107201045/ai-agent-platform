@@ -1,16 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  ArrowDown,
-  Bell,
-  Expand,
-  Fold,
-  Lock,
-  Monitor,
-  Search,
-  SwitchButton
-} from '@element-plus/icons-vue'
+import { ArrowDown, Bell, Expand, Fold, Lock, SwitchButton } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 import { DEFAULT_HOME, menuGroups, menuItems } from '@/config/menu'
@@ -25,7 +16,13 @@ const notificationStore = useNotificationStore()
 let unreadTimer: number | undefined
 
 /** 侧边栏收起：仅保留 64px 图标导航 */
-const collapsed = ref(false)
+const narrowScreen = window.matchMedia('(max-width: 760px)')
+const compact = ref(narrowScreen.matches)
+const folded = ref(false)
+const collapsed = computed(() => compact.value || folded.value)
+function syncWidth() {
+  compact.value = narrowScreen.matches
+}
 
 /** 高亮匹配：精确命中优先，其次子路径前缀命中，最后按路由一级分组命中首个菜单 */
 const activeMenu = computed(() => {
@@ -87,6 +84,7 @@ function onVisibilityChange() {
 }
 
 onMounted(() => {
+  narrowScreen.addEventListener('change', syncWidth)
   if (userStore.token && !userStore.profile) {
     userStore.fetchMe().catch(() => {})
   }
@@ -99,6 +97,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  narrowScreen.removeEventListener('change', syncWidth)
   if (unreadTimer) window.clearInterval(unreadTimer)
   document.removeEventListener('visibilitychange', onVisibilityChange)
 })
@@ -124,15 +123,43 @@ if (import.meta.env.DEV) {
   <el-container class="layout">
     <!-- 侧边导航：手风琴菜单（分组同一时间仅展开一个，整体折叠仅留图标） -->
     <div class="sidebar" :class="{ collapsed }">
-      <div class="logo" @click="go(DEFAULT_HOME)">
-        <div class="logo-badge">
-          <el-icon :size="19"><Monitor /></el-icon>
-        </div>
+      <button class="logo" aria-label="AgentForge 工作台" @click="go(DEFAULT_HOME)">
+        <img src="/favicon.svg" width="32" height="32" alt="" />
         <span v-show="!collapsed" class="logo-text">AgentForge</span>
-      </div>
+      </button>
 
       <div class="menu-scroll">
+        <nav v-if="compact" class="mobile-nav" aria-label="主导航">
+          <el-dropdown
+            v-for="group in visibleMenuGroups"
+            :key="group.key"
+            placement="right-start"
+            trigger="click"
+            @command="onMenuSelect"
+          >
+            <button
+              class="group-button"
+              :class="{ current: group.key === activeGroupKey }"
+              :aria-label="group.title"
+            >
+              <el-icon :size="18"><component :is="group.icon" /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  v-for="item in group.items"
+                  :key="item.path"
+                  :command="item.path"
+                  :aria-current="activeMenu === item.path ? 'page' : undefined"
+                >
+                  {{ item.title }}<span v-if="item.planned" class="planned-badge">规划</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </nav>
         <el-menu
+          v-else
           :key="menuKey"
           :default-active="activeMenu"
           :default-openeds="[activeGroupKey]"
@@ -158,13 +185,17 @@ if (import.meta.env.DEV) {
         </el-menu>
       </div>
 
-      <div class="sidebar-footer">
+      <div v-if="!compact" class="sidebar-footer">
         <el-tooltip
           :content="collapsed ? '展开菜单' : '收起菜单'"
           placement="right"
           :show-after="200"
         >
-          <button class="fold-btn" @click="collapsed = !collapsed">
+          <button
+            class="fold-btn"
+            :aria-label="collapsed ? '展开菜单' : '收起菜单'"
+            @click="folded = !folded"
+          >
             <el-icon :size="16"><Expand v-if="collapsed" /><Fold v-else /></el-icon>
             <span v-show="!collapsed" class="fold-text">收起菜单</span>
           </button>
@@ -175,14 +206,13 @@ if (import.meta.env.DEV) {
     <el-container>
       <el-header class="header">
         <div class="header-left">
+          <span class="breadcrumb">{{
+            menuGroups.find((g) => g.key === activeGroupKey)?.title
+          }}</span>
+          <span class="breadcrumb" aria-hidden="true">/</span>
           <span class="page-title">{{ route.meta.title }}</span>
         </div>
         <div class="header-right">
-          <div class="search-box">
-            <el-icon class="search-icon"><Search /></el-icon>
-            <input class="search-input" placeholder="搜索应用、知识库、模型…" />
-            <kbd class="search-kbd">⌘K</kbd>
-          </div>
           <el-tooltip
             :content="
               notificationStore.unread > 0
@@ -197,7 +227,11 @@ if (import.meta.env.DEV) {
               :hidden="notificationStore.unread === 0"
               class="notif-badge"
             >
-              <button class="header-icon-btn" @click="router.push('/workbench/notifications')">
+              <button
+                class="header-icon-btn"
+                aria-label="通知中心"
+                @click="router.push('/workbench/notifications')"
+              >
                 <el-icon :size="17"><Bell /></el-icon>
               </button>
             </el-badge>
@@ -247,196 +281,126 @@ if (import.meta.env.DEV) {
   height: 100%;
   background: var(--bg-page);
 }
-
-/* ============================================================
-   侧边导航（一体式折叠菜单）
-   ============================================================ */
 .sidebar {
-  width: 240px;
-  height: 100%;
-  flex-shrink: 0;
+  width: 216px;
+  flex: none;
   display: flex;
   flex-direction: column;
-  background: #000;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-aside);
+  border-right: 1px solid var(--border-color);
   overflow: hidden;
-  transition: width 0.25s ease;
 }
 .sidebar.collapsed {
   width: 64px;
 }
-
-/* ---------- Logo ---------- */
 .logo {
   height: 64px;
-  flex-shrink: 0;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
   cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  white-space: nowrap;
-  overflow: hidden;
+  font: inherit;
 }
-.sidebar.collapsed .logo {
+.logo-text {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.8px;
+}
+.sidebar.collapsed .logo,
+.sidebar.collapsed .fold-btn {
   justify-content: center;
   padding: 0;
 }
-.logo-badge {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--brand-gradient);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-card);
-  transition: transform 0.2s ease;
-}
-.logo:hover .logo-badge {
-  transform: scale(1.06);
-}
-.logo-text {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* ---------- 菜单滚动区 ---------- */
 .menu-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px;
+  padding: 14px 10px;
 }
 .sidebar.collapsed .menu-scroll {
-  padding: 10px 0;
+  padding: 14px 0;
 }
 .menu-scroll :deep(.sidebar-menu) {
   --el-menu-bg-color: transparent;
-  --el-menu-text-color: rgba(255, 255, 255, 0.65);
-  --el-menu-hover-text-color: #fff;
-  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
-  --el-menu-active-color: #fff;
-  --el-menu-item-height: 40px;
-  --el-menu-sub-item-height: 40px;
-  border-right: none;
+  --el-menu-text-color: var(--text-secondary);
+  --el-menu-hover-bg-color: var(--hover-bg);
+  --el-menu-active-color: var(--brand-1);
+  --el-menu-item-height: 39px;
+  --el-menu-sub-item-height: 35px;
+  --el-menu-base-level-padding: 12px;
+  border: 0;
 }
-
-/* 手风琴分组标题（可点击展开/收起） */
-.menu-scroll :deep(.el-sub-menu__title) {
-  height: 40px;
-  margin-bottom: 2px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.65);
-  background: transparent;
+.sidebar.collapsed :deep(.sidebar-menu) {
+  --el-menu-base-level-padding: 20px;
 }
-.menu-scroll :deep(.el-sub-menu__title:hover) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-.menu-scroll :deep(.el-sub-menu__title .el-icon) {
-  flex-shrink: 0;
-  margin-right: 12px;
-  color: inherit;
-}
-.menu-scroll :deep(.el-sub-menu__icon-arrow) {
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 12px;
-}
-.menu-scroll :deep(.el-sub-menu__title:hover .el-sub-menu__icon-arrow) {
-  color: #fff;
-}
-/* 子项命中当前路由时，分组标题一并高亮 */
-.menu-scroll :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
-  color: #fff;
-}
-
-/* 分组子项：收起分组的上下间距 */
-.menu-scroll :deep(.el-sub-menu .el-menu) {
-  background: transparent;
-}
-
-/* 菜单项 */
+.menu-scroll :deep(.el-sub-menu__title),
 .menu-scroll :deep(.el-menu-item) {
-  margin-bottom: 2px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  border-radius: 5px;
+  margin: 2px 0;
 }
-.menu-scroll :deep(.el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+.menu-scroll :deep(.el-sub-menu__title) {
+  font-weight: 550;
 }
 .menu-scroll :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, rgba(91, 108, 255, 0.35), rgba(139, 92, 246, 0.35));
-  color: #fff;
-  font-weight: 600;
+  background: var(--accent-surface);
+  color: var(--brand-1);
+  font-weight: 650;
+  box-shadow: inset 3px 0 var(--brand-1);
 }
-.menu-scroll :deep(.el-menu-item .el-icon) {
-  flex-shrink: 0;
-  margin-right: 12px;
-  color: inherit;
+.menu-scroll :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: var(--text-primary);
 }
-.menu-scroll :deep(.el-menu-item .item-label) {
-  color: inherit;
+.mobile-nav {
+  display: grid;
+  justify-content: center;
+  gap: 2px;
 }
-
-/* 折叠状态：分组标题只留图标，箭头与文字隐藏（Element Plus 自动处理），子菜单走 hover 浮层 */
-
-/* ---------- 底部折叠按钮 ---------- */
+.group-button {
+  width: 44px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+.group-button.current,
+.group-button:hover {
+  color: var(--brand-1);
+  background: var(--accent-surface);
+}
 .sidebar-footer {
-  flex-shrink: 0;
   padding: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-.sidebar.collapsed .sidebar-footer {
-  padding: 10px 0;
+  border-top: 1px solid var(--border-color);
 }
 .fold-btn {
   width: 100%;
-  height: 40px;
+  height: 36px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  border: none;
-  border-radius: 8px;
+  border: 0;
+  border-radius: 5px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
-  font-family: inherit;
-  font-size: 13px;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition:
-    background-color 0.18s ease,
-    color 0.18s ease;
-}
-.sidebar.collapsed .fold-btn {
-  justify-content: center;
-  padding: 0;
+  font: inherit;
+  font-size: 13px;
 }
 .fold-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--hover-bg);
 }
-.fold-text {
-  white-space: nowrap;
-}
-
-/* ============================================================
-   顶栏
-   ============================================================ */
 .header {
   height: 64px;
   background: var(--bg-header);
@@ -444,65 +408,25 @@ if (import.meta.env.DEV) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  padding: 0 clamp(16px, 2.5vw, 40px);
+  gap: 8px;
 }
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
+.header-left,
 .header-right {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
-
-/* 顶栏随主题切换，头部按钮颜色直接继承全局主题变量 */
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  background: var(--fill-light);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  width: 260px;
-  transition: all 0.2s ease;
-}
-.search-box:focus-within {
-  border-color: var(--brand-1);
-  box-shadow: 0 0 0 3px rgba(91, 108, 255, 0.12);
-  background: var(--bg-card);
-}
-.search-icon {
-  color: var(--text-tertiary);
-}
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
+.page-title,
+.breadcrumb {
   font-size: 13px;
-  color: var(--text-primary);
 }
-.search-input::placeholder {
+.page-title {
+  font-weight: 550;
+}
+.breadcrumb {
   color: var(--text-tertiary);
 }
-.search-kbd {
-  font-size: 11px;
-  padding: 2px 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  background: var(--bg-elevated);
-  color: var(--text-tertiary);
-}
-
 .header-icon-btn {
   display: flex;
   align-items: center;
@@ -544,7 +468,7 @@ if (import.meta.env.DEV) {
   align-items: center;
   gap: 8px;
   color: var(--text-primary);
-  outline: none;
+
   padding: 4px 8px;
   border-radius: 10px;
   transition: background-color 0.2s ease;
@@ -553,12 +477,10 @@ if (import.meta.env.DEV) {
   background: var(--hover-bg);
 }
 .avatar-ring {
-  padding: 2px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
+  display: flex;
 }
 .avatar {
-  background: var(--bg-card);
+  background: var(--accent-surface);
   color: var(--brand-1);
   font-size: 13px;
   font-weight: 600;
@@ -606,54 +528,36 @@ if (import.meta.env.DEV) {
   background: var(--bg-page);
 }
 
-/* 折叠过渡 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+@media (max-width: 760px) {
+  .header {
+    height: 52px;
+    padding: 0 10px;
+  }
+  .header-right {
+    gap: 2px;
+  }
+  .breadcrumb,
+  .user-name,
+  .user-arrow {
+    display: none;
+  }
+  .logo {
+    height: 52px;
+  }
 }
 </style>
 
 <style>
-/* ---------- 规划徽章（含折叠浮层内的菜单项） ---------- */
 .planned-badge {
-  flex-shrink: 0;
-  margin-left: 4px;
-  padding: 1px 6px;
-  border-radius: 6px;
+  margin-left: 5px;
+  padding: 1px 4px;
   font-size: 10px;
-  line-height: 1.5;
-  letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-/* ---------- 折叠状态 hover 弹出的子菜单浮层 ---------- */
-.el-menu--popup {
-  --el-menu-bg-color: #17181f;
-  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
-  --el-menu-active-color: #fff;
-  --el-menu-text-color: rgba(255, 255, 255, 0.65);
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow: var(--shadow-pop);
-}
-.el-menu--popup .el-menu-item {
-  height: 36px;
-  border-radius: 6px;
-  margin-bottom: 1px;
-  font-size: 13px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 3px;
 }
 .el-menu--popup .el-menu-item.is-active {
-  background: linear-gradient(135deg, rgba(91, 108, 255, 0.35), rgba(139, 92, 246, 0.35));
-  color: #fff;
+  background: var(--accent-surface);
   font-weight: 600;
-}
-.el-menu--popup .el-menu-item.is-active .planned-badge {
-  color: #fff;
 }
 </style>

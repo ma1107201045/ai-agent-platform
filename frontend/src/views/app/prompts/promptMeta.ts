@@ -11,19 +11,6 @@ const categoryLabels: Record<string, string> = Object.fromEntries(
   categoryOptions.map((c) => [c.value, c.label])
 )
 
-/** 分类封面渐变色（与智能体应用卡片同套封面表达） */
-const coverGradients: Record<string, [string, string]> = {
-  general: ['#64748b', '#94a3b8'],
-  system: ['#d97706', '#f59e0b'],
-  business: ['#059669', '#34d399'],
-  custom: ['#4f46e5', '#8b5cf6']
-}
-
-export function coverGradientOf(c?: string): string {
-  const g = (c && coverGradients[c]) || coverGradients.general
-  return `linear-gradient(135deg, ${g[0]} 0%, ${g[1]} 100%)`
-}
-
 export function categoryLabelOf(c?: string): string {
   return c ? categoryLabels[c] || c : ''
 }

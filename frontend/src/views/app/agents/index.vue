@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MagicStick, Plus, Search } from '@element-plus/icons-vue'
+import { Grid, Plus, Search } from '@element-plus/icons-vue'
 import { appAgentApi } from '@/api/app-agent.ts'
 import type { AppAgent } from '@/api/types'
 import { typeMeta } from './agentMeta'
@@ -108,7 +108,7 @@ onMounted(load)
     <div class="apps-head">
       <div>
         <h2 class="head-title">智能体应用</h2>
-        <p class="head-desc">共 {{ total }} 个应用，点击卡片快速进入编排或对话</p>
+        <p class="head-desc">共 {{ total }} 个应用</p>
       </div>
       <el-button type="primary" class="btn-gradient create-btn" @click="createDialog?.open()">
         <el-icon><Plus /></el-icon>&nbsp;新建应用
@@ -155,17 +155,13 @@ onMounted(load)
       <!-- 空状态 -->
       <div v-if="!loading && list.length === 0" class="empty-state">
         <div class="empty-icon">
-          <el-icon :size="40"><MagicStick /></el-icon>
+          <el-icon :size="24"><Grid /></el-icon>
         </div>
         <p>
-          {{
-            keyword || typeFilter
-              ? '没有匹配的应用，换个条件试试'
-              : '还没有应用，创建你的第一个智能体吧'
-          }}
+          {{ keyword || typeFilter ? '没有符合筛选条件的应用' : '还没有应用' }}
         </p>
         <el-button type="primary" class="btn-gradient" @click="createDialog?.open()"
-          >立即创建</el-button
+          >新建应用</el-button
         >
       </div>
     </div>
@@ -234,7 +230,7 @@ onMounted(load)
 /* ---------- 卡片网格 ---------- */
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 20px;
   min-height: 200px;
 }
@@ -249,9 +245,9 @@ onMounted(load)
   padding: 60px 0;
 }
 .empty-icon {
-  width: 84px;
-  height: 84px;
-  border-radius: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
   background: var(--brand-gradient-soft);
   color: var(--brand-1);
   display: flex;
@@ -261,5 +257,14 @@ onMounted(load)
 .empty-state p {
   color: var(--text-secondary);
   font-size: 14px;
+}
+@media (max-width: 600px) {
+  .apps-toolbar {
+    flex-wrap: wrap;
+  }
+  .toolbar-type,
+  .toolbar-search {
+    width: 100%;
+  }
 }
 </style>

@@ -2,7 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Lock, Monitor, User } from '@element-plus/icons-vue'
+import { ChatLineSquare, Collection, Cpu, Right } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import ThemeSwitch from '@/components/ThemeSwitch.vue'
 
@@ -17,6 +17,7 @@ const form = reactive({
 })
 
 async function handleLogin() {
+  if (loading.value) return
   if (!form.username || !form.password) {
     ElMessage.warning('请输入用户名和密码')
     return
@@ -36,236 +37,242 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="login-page">
-    <!-- 背景光斑：与 Dashboard 欢迎横幅同源的柔和氛围层（纯 radial 渐变，无 filter/毛玻璃，
-         不参与任何重采样，主题切换零抖动） -->
-    <div class="deco deco-a"></div>
-    <div class="deco deco-b"></div>
-    <div class="deco deco-c"></div>
-
-    <!-- 主题切换：直接使用组件默认样式，与主页顶栏同款透明图标按钮 -->
-    <div class="theme-corner">
-      <ThemeSwitch />
-    </div>
-
-    <div class="login-wrap">
-      <!-- 品牌标识：与主页侧边栏同款（渐变方块 badge + 渐变文字） -->
-      <div class="brand">
-        <div class="logo-badge">
-          <el-icon :size="20"><Monitor /></el-icon>
-        </div>
-        <span class="logo-text">AgentForge</span>
+  <main class="login-page">
+    <section class="studio">
+      <div class="brand"><img src="/favicon.svg" alt="" width="34" height="34" />AgentForge</div>
+      <div class="studio-body">
+        <h2>智能体开发工作台</h2>
+        <figure class="blueprint">
+          <figcaption><span>知识库问答</span><small>对话流示例</small></figcaption>
+          <ol class="flow">
+            <li>
+              <el-icon><ChatLineSquare /></el-icon><span>用户提问</span>
+            </li>
+            <li>
+              <el-icon><Collection /></el-icon><span>知识库检索</span>
+            </li>
+            <li>
+              <el-icon><Cpu /></el-icon><span>生成回答</span>
+            </li>
+          </ol>
+        </figure>
       </div>
-      <p class="brand-sub">一站式智能体开发平台</p>
-
-      <!-- 表单卡片：沿用全局 hover-card 卡片体系（bg-card / border-color / radius-xl） -->
-      <div class="login-card">
-        <div class="card-head">
-          <h2>欢迎回来</h2>
-          <p>登录你的账号，继续智能体之旅</p>
-        </div>
-
-        <el-form @submit.prevent="handleLogin">
-          <el-form-item>
+    </section>
+    <section class="entry">
+      <div class="theme-corner"><ThemeSwitch /></div>
+      <div class="login-form">
+        <h1>登录工作台</h1>
+        <el-form label-position="top" @submit.prevent="handleLogin">
+          <el-form-item label="用户名">
             <el-input
               v-model="form.username"
               size="large"
-              placeholder="用户名"
-              :prefix-icon="User"
+              placeholder="输入用户名"
               autocomplete="username"
-              @keyup.enter="handleLogin"
             />
           </el-form-item>
-          <el-form-item>
+          <el-form-item label="密码">
             <el-input
               v-model="form.password"
-              size="large"
               type="password"
-              placeholder="密码"
-              :prefix-icon="Lock"
-              show-password
+              size="large"
+              placeholder="输入密码"
               autocomplete="current-password"
-              @keyup.enter="handleLogin"
+              show-password
             />
           </el-form-item>
           <el-button
+            class="submit"
             type="primary"
             size="large"
-            class="submit btn-gradient"
+            native-type="submit"
             :loading="loading"
-            @click="handleLogin"
           >
-            {{ loading ? '登录中…' : '登 录' }}
+            {{ loading ? '正在登录…' : '登录' }}<el-icon v-if="!loading"><Right /></el-icon>
           </el-button>
         </el-form>
-
-        <p class="tip">默认账号：admin / admin（首次登录后建议修改密码）</p>
+        <details class="account-note">
+          <summary>首次登录</summary>
+          <p>默认用户名和密码均为 <code>admin</code>。登录后可在「账号与安全」中修改密码。</p>
+        </details>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </template>
 
 <style scoped>
-/* 整页复用全局主题令牌：亮色下为浅灰蓝内容页背景，暗色下自动切换为 #0f1220，
-   与登录后的主页内容区视觉同源，随主题整体切换 */
 .login-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--bg-card);
+}
+.studio {
   position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 32px 24px;
-  background: var(--bg-page);
-}
-
-.theme-corner {
-  position: absolute;
-  top: 20px;
-  right: 24px;
-  z-index: 5;
-}
-
-/* ---------- 背景光斑（无动画、无模糊滤镜，仅柔和渐变圆，主题切换不会引起重绘抖动） ---------- */
-.deco {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.deco-a {
-  width: 560px;
-  height: 560px;
-  top: -180px;
-  left: -140px;
-  background: radial-gradient(closest-side, rgba(91, 108, 255, 0.18), transparent 72%);
-}
-.deco-b {
-  width: 640px;
-  height: 640px;
-  bottom: -220px;
-  right: -180px;
-  background: radial-gradient(closest-side, rgba(139, 92, 246, 0.16), transparent 72%);
-}
-.deco-c {
-  width: 320px;
-  height: 320px;
-  top: 4%;
-  right: 10%;
-  background: radial-gradient(closest-side, rgba(79, 172, 254, 0.1), transparent 72%);
-}
-:global(html.dark) .deco-a {
-  background: radial-gradient(closest-side, rgba(106, 122, 255, 0.22), transparent 72%);
-}
-:global(html.dark) .deco-b {
-  background: radial-gradient(closest-side, rgba(155, 107, 250, 0.2), transparent 72%);
-}
-:global(html.dark) .deco-c {
-  background: radial-gradient(closest-side, rgba(56, 189, 248, 0.12), transparent 72%);
-}
-
-.login-wrap {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  background: #292b2f;
+  color: #f4f4f5;
+  padding: clamp(30px, 4.5vw, 76px);
 }
-
-/* ---------- 品牌标识：同 DefaultLayout 侧边栏（渐变 badge + 渐变文字） ---------- */
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  animation: rise 0.5s ease-out both;
+  gap: 10px;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.7px;
 }
-.logo-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--brand-gradient);
-  color: #fff;
+.brand img {
+  border: 1px solid #696b71;
+  border-radius: 7px;
+}
+.studio-body {
+  width: 100%;
+  max-width: 520px;
+  margin: auto;
+  padding: 54px 0;
+}
+.studio-body h2 {
+  font-size: clamp(27px, 3vw, 46px);
+  font-weight: 580;
+  letter-spacing: -0.05em;
+  margin-bottom: 28px;
+}
+.blueprint {
+  border-block: 1px solid #62646a;
+}
+figcaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 16px 0;
+  font-size: 14px;
+}
+figcaption small {
+  font-size: 12px;
+  color: #cccdd0;
+}
+.flow {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  row-gap: 32px;
+  padding: 26px 6px 44px;
+  background-image: radial-gradient(#484a50 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.flow li {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 20px rgba(91, 108, 255, 0.28);
-}
-.logo-text {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.brand-sub {
-  margin-top: 12px;
+  gap: 8px;
+  background: #34363b;
+  border: 1px solid #74777f;
+  border-radius: 5px;
+  min-height: 48px;
   font-size: 13px;
-  letter-spacing: 1px;
-  color: var(--text-tertiary);
-  animation: rise 0.5s ease-out 0.06s both;
+  white-space: nowrap;
 }
-
-/* ---------- 登录卡片：全局卡片体系（hover-card 同源） ---------- */
-.login-card {
-  width: 420px;
-  max-width: 100%;
-  margin-top: 36px;
-  padding: 38px 40px 30px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-  animation: rise 0.5s ease-out 0.12s both;
+.flow li:nth-child(2) {
+  grid-column: 2;
+  grid-row: 2;
+  background: #e2e3e6;
+  border-color: #e2e3e6;
+  color: #292b2f;
 }
-.card-head {
-  margin-bottom: 26px;
+.flow li:nth-child(3) {
+  grid-column: 3;
+  grid-row: 3;
 }
-.card-head h2 {
-  font-size: 22px;
-  font-weight: 700;
+.flow li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: calc(100% + 1px);
+  height: 32px;
+  background:
+    linear-gradient(#a2a4aa, #a2a4aa) left top / 1px 50%,
+    linear-gradient(#a2a4aa, #a2a4aa) center / 100% 1px,
+    linear-gradient(#a2a4aa, #a2a4aa) right bottom / 1px 50%;
+  background-repeat: no-repeat;
+}
+.entry {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 80px clamp(30px, 6vw, 108px);
+}
+.theme-corner {
+  position: absolute;
+  right: 28px;
+  top: 22px;
+}
+.login-form {
+  width: 100%;
+  max-width: 360px;
+}
+.login-form h1 {
+  font-size: 32px;
+  font-weight: 620;
+  letter-spacing: -0.055em;
+  margin-bottom: 34px;
+}
+.login-form :deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+.login-form :deep(.el-form-item__label) {
+  font-weight: 560;
   color: var(--text-primary);
 }
-.card-head p {
-  margin-top: 8px;
-  font-size: 13.5px;
-  color: var(--text-secondary);
+.login-form :deep(.el-input__wrapper) {
+  min-height: 44px;
 }
-
 .submit {
   width: 100%;
-  margin-top: 2px;
   height: 44px;
-  font-size: 15px;
-  letter-spacing: 4px;
+  margin-top: 6px;
+  font-weight: 600;
 }
-.tip {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-tertiary);
+.submit .el-icon {
+  margin-left: 10px;
 }
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.account-note {
+  margin-top: 26px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+  color: var(--text-secondary);
 }
-
-@media (max-width: 520px) {
+.account-note summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.account-note p {
+  margin-top: 10px;
+  line-height: 1.7;
+}
+@media (max-width: 760px) {
   .login-page {
-    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
   }
-  .login-card {
-    padding: 28px 22px 20px;
+  .studio {
+    padding: 20px 24px;
   }
-  .deco {
+  .studio-body {
     display: none;
+  }
+  .entry {
+    flex: 1;
+    align-items: start;
+    padding: clamp(65px, 14vh, 110px) 26px 50px;
+  }
+  .theme-corner {
+    top: 14px;
+    right: 18px;
   }
 }
 </style>

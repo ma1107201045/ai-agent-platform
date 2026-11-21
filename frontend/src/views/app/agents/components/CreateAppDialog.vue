@@ -97,25 +97,22 @@ defineExpose({ open })
 
     <!-- Step 1：选择创建方式 -->
     <div v-if="step === 'choose'" class="create-ways">
-      <div class="way-card" @click="goTemplate">
-        <div class="way-icon" style="background: linear-gradient(135deg, #5b6cff, #8b5cf6)">
+      <button type="button" class="way-card" @click="goTemplate">
+        <div class="way-icon">
           <el-icon :size="26"><Files /></el-icon>
         </div>
-        <div class="way-title">
-          从模板创建
-          <el-tag size="small" type="primary" effect="light" class="way-tag">推荐</el-tag>
-        </div>
-        <div class="way-desc">基于内置场景模板快速开始，自动预填配置，适合首次使用</div>
+        <div class="way-title">从模板创建</div>
+        <div class="way-desc">使用场景模板预填名称、类型和描述。</div>
         <div class="way-go">查看场景模板 →</div>
-      </div>
-      <div class="way-card" @click="goBlank">
-        <div class="way-icon" style="background: linear-gradient(135deg, #0ea5e9, #38bdf8)">
+      </button>
+      <button type="button" class="way-card" @click="goBlank">
+        <div class="way-icon">
           <el-icon :size="26"><EditPen /></el-icon>
         </div>
         <div class="way-title">空白创建</div>
-        <div class="way-desc">从零开始搭建，完全自定义应用类型、名称与配置</div>
+        <div class="way-desc">自行填写应用信息，并选择应用类型。</div>
         <div class="way-go">自定义创建 →</div>
-      </div>
+      </button>
     </div>
 
     <!-- Step 2a：模板选择 -->
@@ -124,17 +121,15 @@ defineExpose({ open })
         选择场景模板将自动预填应用名称与描述，创建后仍可在编辑器中修改
       </div>
       <div class="template-grid">
-        <div
+        <button
+          type="button"
           v-for="tpl in appTemplates"
           :key="tpl.key"
           class="template-card"
           @click="selectTemplate(tpl)"
         >
-          <div
-            class="tpl-cover"
-            :style="{ background: `linear-gradient(135deg, ${tpl.color[0]}, ${tpl.color[1]})` }"
-          >
-            <span class="tpl-icon">{{ tpl.icon }}</span>
+          <div class="tpl-cover">
+            <el-icon :size="22"><component :is="tpl.icon" /></el-icon>
           </div>
           <div class="tpl-body">
             <div class="tpl-title-row">
@@ -147,7 +142,7 @@ defineExpose({ open })
               <span class="tpl-arrow">使用 →</span>
             </div>
           </div>
-        </div>
+        </button>
       </div>
     </div>
 
@@ -162,19 +157,21 @@ defineExpose({ open })
       />
       <div class="create-field-label">应用类型</div>
       <div class="type-grid">
-        <div
+        <button
+          type="button"
           v-for="(meta, key) in typeMeta"
           :key="key"
           class="type-option"
+          :aria-pressed="createForm.type === key"
           :class="{ active: createForm.type === key }"
           @click="createForm.type = key as AppAgentType"
         >
-          <span class="type-emoji">{{ meta.icon }}</span>
+          <el-icon :size="20"><component :is="meta.icon" /></el-icon>
           <div class="type-info">
             <div class="type-name">{{ meta.label }}</div>
             <div class="type-desc">{{ meta.desc }}</div>
           </div>
-        </div>
+        </button>
       </div>
       <div class="create-field-label">应用描述</div>
       <el-input
@@ -206,6 +203,15 @@ defineExpose({ open })
 </template>
 
 <style scoped>
+.way-card,
+.template-card,
+.type-option {
+  font: inherit;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
 .create-dialog :deep(.el-dialog__body) {
   padding-top: 4px;
 }
@@ -233,14 +239,13 @@ defineExpose({ open })
 }
 .way-card:hover {
   border-color: var(--brand-1);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(91, 108, 255, 0.12);
 }
 .way-icon {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
-  color: #fff;
+  border-radius: 6px;
+  color: var(--brand-1);
+  background: var(--accent-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -252,9 +257,6 @@ defineExpose({ open })
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.way-tag {
-  margin-left: 4px;
 }
 .way-desc {
   font-size: 12.5px;
@@ -294,19 +296,15 @@ defineExpose({ open })
 }
 .template-card:hover {
   border-color: var(--brand-1);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(91, 108, 255, 0.12);
 }
 .tpl-cover {
+  background: var(--fill-light);
+  color: var(--brand-1);
   height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-}
-.tpl-icon {
-  font-size: 26px;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.18));
 }
 .tpl-body {
   padding: 10px 12px 12px;
@@ -384,15 +382,10 @@ defineExpose({ open })
 }
 .type-option:hover {
   border-color: var(--brand-1);
-  transform: translateY(-2px);
 }
 .type-option.active {
   border-color: var(--brand-1);
   background: var(--el-color-primary-light-9);
-  box-shadow: 0 0 0 3px rgba(91, 108, 255, 0.12);
-}
-.type-emoji {
-  font-size: 22px;
 }
 .type-name {
   font-size: 13.5px;
@@ -402,5 +395,19 @@ defineExpose({ open })
   font-size: 11.5px;
   color: var(--text-tertiary);
   line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .template-grid,
+  .create-ways,
+  .type-grid {
+    grid-template-columns: 1fr;
+  }
+  .template-grid {
+    max-height: 54dvh;
+    overflow-y: auto;
+  }
+  .way-card {
+    padding: 14px;
+  }
 }
 </style>

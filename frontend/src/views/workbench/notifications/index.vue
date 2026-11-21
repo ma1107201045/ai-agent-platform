@@ -308,10 +308,7 @@ onMounted(() => {
 .stat-num {
   font-size: 30px;
   font-weight: 800;
-  background: var(--brand-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--text-primary);
   line-height: 1.1;
 }
 .stat-label {
@@ -408,7 +405,7 @@ onMounted(() => {
 }
 .notif-item.unread {
   border-left: 3px solid var(--brand-1);
-  background: linear-gradient(90deg, rgba(91, 108, 255, 0.06), transparent 60%), var(--bg-card);
+  background: var(--accent-surface);
 }
 .notif-icon {
   width: 34px;
